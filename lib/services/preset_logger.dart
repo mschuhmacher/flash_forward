@@ -4,8 +4,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:training_schedule_app/_obsolete/obsolete_default_exercise_data.dart';
 import 'package:training_schedule_app/data/default_session_data.dart';
 import 'package:training_schedule_app/_obsolete/obsolete_default_workout_data.dart';
-import 'package:training_schedule_app/_obsolete/obsolete_workout.dart';
-import 'package:training_schedule_app/_obsolete/obsolete_exercise.dart';
 import 'package:training_schedule_app/models/exercise.dart';
 import 'package:training_schedule_app/models/session.dart';
 import 'package:training_schedule_app/models/workout.dart';

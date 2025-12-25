@@ -124,15 +124,16 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       widthFactor: 0.95,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
-                        children: List.from(workoutNames)..addAll([
-                          Text(
-                            '\n ${activeWorkout.description}',
-                            style: context.bodyMedium,
-                            textAlign: TextAlign.end,
-                          ),
+                        children: [...workoutNames, SizedBox(height: 8)],
+                        // List.from(workoutNames)..addAll([
+                        //   Text(
+                        //     '\n ${activeWorkout.description}',
+                        //     style: context.bodyMedium,
+                        //     textAlign: TextAlign.end,
+                        //   ),
 
-                          SizedBox(height: 8),
-                        ]),
+                        //   SizedBox(height: 8),
+                        // ]),
                         // Create new list from block names and add the block description to it with a whiteline in between
                       ),
                     ),

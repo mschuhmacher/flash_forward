@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:training_schedule_app/_obsolete/obsolete_exercise.dart';
 import 'package:training_schedule_app/models/exercise.dart';
 import 'package:training_schedule_app/presentation/widgets/label_dropdownbutton.dart';
 import 'package:training_schedule_app/presentation/widgets/my_arrow_button.dart';

@@ -8,7 +8,6 @@ import 'package:training_schedule_app/_UI_design_helper_screens/cheat_sheet_scre
 import 'package:training_schedule_app/_UI_design_helper_screens/colorscheme_demo_screen.dart';
 import 'package:training_schedule_app/presentation/widgets/my_calendar.dart';
 import 'package:training_schedule_app/presentation/widgets/start_session_button.dart';
-import 'package:training_schedule_app/providers/preset_provider.dart';
 import 'package:training_schedule_app/providers/session_log_provider.dart';
 import 'package:training_schedule_app/themes/app_shadow.dart';
 import 'package:training_schedule_app/themes/app_text_styles.dart';

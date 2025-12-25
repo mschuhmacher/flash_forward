@@ -1,4 +1,3 @@
-import 'package:training_schedule_app/_obsolete/obsolete_workout.dart';
 import 'package:training_schedule_app/models/workout.dart';
 import 'package:uuid/uuid.dart';
 
