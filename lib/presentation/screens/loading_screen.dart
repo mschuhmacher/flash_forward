@@ -1,10 +1,10 @@
 // loading_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:training_schedule_app/providers/preset_provider.dart';
-import 'package:training_schedule_app/providers/session_log_provider.dart';
-import 'package:training_schedule_app/presentation/screens/home_screen.dart';
-import 'package:training_schedule_app/themes/app_text_styles.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/presentation/screens/home_screen.dart';
+import 'package:flash_forward/themes/app_text_styles.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -17,7 +17,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    // Kick off initialization after first frame to avoid provider notifications
+    // during the widget tree build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeApp();
+    });
   }
 
   Future<void> _initializeApp() async {

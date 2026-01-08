@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:training_schedule_app/_obsolete/obsolete_exercise.dart';
-import 'package:training_schedule_app/models/exercise.dart';
-import 'package:training_schedule_app/presentation/widgets/label_dropdownbutton.dart';
-import 'package:training_schedule_app/presentation/widgets/my_arrow_button.dart';
-import 'package:training_schedule_app/providers/preset_provider.dart';
-import 'package:training_schedule_app/themes/app_text_styles.dart';
+import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/my_arrow_button.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/themes/app_text_styles.dart';
 
 class AddExerciseModalSheet extends StatefulWidget {
   const AddExerciseModalSheet({super.key});

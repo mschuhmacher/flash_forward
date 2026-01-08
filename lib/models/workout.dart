@@ -1,4 +1,4 @@
-import 'package:training_schedule_app/models/exercise.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:uuid/uuid.dart';
 
 class Workout {
