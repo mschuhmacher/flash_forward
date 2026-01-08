@@ -17,7 +17,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    // Kick off initialization after first frame to avoid provider notifications
+    // during the widget tree build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeApp();
+    });
   }
 
   Future<void> _initializeApp() async {

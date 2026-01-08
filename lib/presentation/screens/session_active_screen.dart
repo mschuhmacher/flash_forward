@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:training_schedule_app/_obsolete/obsolete_workout.dart';
+import 'package:training_schedule_app/models/exercise.dart';
 import 'package:training_schedule_app/models/workout.dart';
 import 'package:training_schedule_app/providers/preset_provider.dart';
 import 'package:training_schedule_app/presentation/widgets/session_active_bottom_bar.dart';
@@ -15,6 +15,14 @@ class ActiveSessionScreen extends StatefulWidget {
 }
 
 class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
+  bool _timerInitialized = false;
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<PresetProvider, SessionStateProvider>(
@@ -23,8 +31,20 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         final activeSession =
             presetData.presetSessions[sessionStateData.sessionIndex];
 
-        Workout activeWorkout =
-            activeSession.list[sessionStateData.workoutIndex];
+        // Initialize the timer once when the screen first builds.
+        if (!_timerInitialized) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // Guard again in case the widget unmounted before the callback.
+            if (!mounted || _timerInitialized) return;
+            sessionStateData.start(activeSession);
+            _timerInitialized = true;
+          });
+        }
+
+        final progress = sessionStateData.progress;
+
+        Workout activeWorkout = activeSession.list[progress.workoutIndex];
+        Exercise activeExercise = activeWorkout.list[progress.exerciseIndex];
 
         List<Widget> exerciseWidgets =
             activeWorkout.list
@@ -34,7 +54,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                     children: [
                       Text(
                         name.title,
-                        style: context.titleMedium?.copyWith(
+                        style: context.titleMedium.copyWith(
                           color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.bold,
                         ),
@@ -44,7 +64,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       SizedBox(height: 4),
                       Text(
                         '${name.description} \n',
-                        style: context.bodyMedium?.copyWith(
+                        style: context.bodyMedium.copyWith(
                           color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
@@ -66,7 +86,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                 .toList();
         // Highlight the title of the current block in a list of block titles
         for (int i = 0; i < workoutNames.length; i++) {
-          if (i == sessionStateData.workoutIndex) {
+          if (i == progress.workoutIndex) {
             workoutNames[i] = Text(
               activeSession.list[i].title,
               style: context.h3,
@@ -104,15 +124,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       widthFactor: 0.95,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
-                        children: List.from(workoutNames)..addAll([
-                          Text(
-                            '\n ${activeWorkout.description}',
-                            style: context.bodyMedium,
-                            textAlign: TextAlign.end,
-                          ),
-                          SizedBox(height: 8),
-                        ]),
-                        // Create new list from block names and add the block description to it with a whiteline in between
+                        children: [...workoutNames, SizedBox(height: 8)],
                       ),
                     ),
                   ),
@@ -142,7 +154,113 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: exerciseWidgets,
+                            children: [
+                              Center(
+                                child: switch (sessionStateData.phase) {
+                                  TimerPhase.setRest => Text(
+                                    'Rest between sets',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  TimerPhase.rep => Text(
+                                    'Rep',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  TimerPhase.repRest => Text(
+                                    'Rest between reps',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  TimerPhase.exerciseRest => Text(
+                                    'Rest between exercises',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  TimerPhase.workoutComplete => Text(
+                                    'Workout complete',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                },
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${progress.currentSet}/${activeExercise.sets} \nSets',
+                                    style: context.titleLarge.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatDuration(sessionStateData.remaining),
+                                    style: context.h1.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                    textScaler: TextScaler.linear(1.75),
+                                  ),
+
+                                  Text(
+                                    '${progress.currentRep}/${activeExercise.reps} \nReps',
+                                    style: context.titleLarge.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 8),
+
+                              Text(
+                                activeExercise.title,
+                                style: context.h3.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              if (activeExercise.description != null)
+                                Text(
+                                  activeExercise.description!,
+                                  style: context.bodyMedium.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                  ),
+                                ),
+
+                              SizedBox(height: 200),
+                            ],
                           ),
                         ),
                       ),
