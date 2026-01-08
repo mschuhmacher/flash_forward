@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:training_schedule_app/themes/app_colors.dart'; // adjust your import
+import 'package:flash_forward/themes/app_colors.dart'; // adjust your import
 
 class Material3ColorCheatSheet extends StatefulWidget {
   const Material3ColorCheatSheet({super.key});

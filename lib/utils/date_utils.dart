@@ -1,4 +1,4 @@
-import 'package:training_schedule_app/models/session.dart';
+import 'package:flash_forward/models/session.dart';
 
 DateTime startOfWeek(DateTime date) {
   int weekStart = DateTime.monday;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:training_schedule_app/models/label.dart';
+import 'package:flash_forward/models/label.dart';
 
 const Map<String, Label> kDefaultLabels = {
   'Warm-up': Label(name: 'Warm-up', icon: Icons.wb_sunny, color: Colors.amber),

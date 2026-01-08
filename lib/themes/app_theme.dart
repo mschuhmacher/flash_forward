@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:training_schedule_app/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
 import 'app_colors.dart';
 
 final ThemeData lightAppTheme = ThemeData(

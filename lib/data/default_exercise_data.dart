@@ -1,5 +1,5 @@
 // Default exercises
-import 'package:training_schedule_app/models/exercise.dart';
+import 'package:flash_forward/models/exercise.dart';
 
 List<Exercise> kDefaultExercises = [
   // FINGER STRENGTH

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:training_schedule_app/models/session.dart';
-import 'package:training_schedule_app/services/session_logger.dart';
-import 'package:training_schedule_app/utils/date_utils.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/services/session_logger.dart';
+import 'package:flash_forward/utils/date_utils.dart';
 
 class SessionLogProvider extends ChangeNotifier {
   /// The below variables and functions all pertain to retrieving the logged sessions and
