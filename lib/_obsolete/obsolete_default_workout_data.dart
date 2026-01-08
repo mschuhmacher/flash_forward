@@ -1,5 +1,5 @@
-import 'package:training_schedule_app/_obsolete/obsolete_default_exercise_data.dart';
-import 'package:training_schedule_app/_obsolete/obsolete_workout.dart';
+import 'package:flash_forward/_obsolete/obsolete_default_exercise_data.dart';
+import 'package:flash_forward/_obsolete/obsolete_workout.dart';
 
 final List<WorkoutObsolete> defaultWorkouts = [
   WorkoutObsolete(

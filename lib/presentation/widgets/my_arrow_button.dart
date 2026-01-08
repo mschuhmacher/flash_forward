@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:training_schedule_app/themes/app_shadow.dart';
+import 'package:flash_forward/themes/app_shadow.dart';
 
 class MyArrowButton extends StatelessWidget {
   const MyArrowButton({required this.icon, this.size = 30, super.key});

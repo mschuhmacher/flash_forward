@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:training_schedule_app/data/labels.dart';
+import 'package:flash_forward/data/labels.dart';
 
-import 'package:training_schedule_app/models/session.dart';
-import 'package:training_schedule_app/_UI_design_helper_screens/cheat_sheet_screen.dart';
-import 'package:training_schedule_app/_UI_design_helper_screens/colorscheme_demo_screen.dart';
-import 'package:training_schedule_app/presentation/widgets/my_calendar.dart';
-import 'package:training_schedule_app/presentation/widgets/start_session_button.dart';
-import 'package:training_schedule_app/providers/session_log_provider.dart';
-import 'package:training_schedule_app/themes/app_shadow.dart';
-import 'package:training_schedule_app/themes/app_text_styles.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/_UI_design_helper_screens/cheat_sheet_screen.dart';
+import 'package:flash_forward/_UI_design_helper_screens/colorscheme_demo_screen.dart';
+import 'package:flash_forward/presentation/widgets/my_calendar.dart';
+import 'package:flash_forward/presentation/widgets/start_session_button.dart';
+import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/themes/app_shadow.dart';
+import 'package:flash_forward/themes/app_text_styles.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

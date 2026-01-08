@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:training_schedule_app/themes/app_colors.dart'; // adjust import
+import 'package:flash_forward/themes/app_colors.dart'; // adjust import
 
 class ColorSchemeDemoScreen extends StatefulWidget {
   const ColorSchemeDemoScreen({super.key});

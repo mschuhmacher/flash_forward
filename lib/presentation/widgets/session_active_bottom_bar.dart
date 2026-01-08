@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:training_schedule_app/models/session.dart';
-import 'package:training_schedule_app/models/workout.dart';
-import 'package:training_schedule_app/presentation/widgets/my_arrow_button.dart';
-import 'package:training_schedule_app/presentation/widgets/label_dropdownbutton.dart';
-import 'package:training_schedule_app/providers/preset_provider.dart';
-import 'package:training_schedule_app/providers/session_log_provider.dart';
-import 'package:training_schedule_app/providers/session_state_provider.dart';
-import 'package:training_schedule_app/services/session_logger.dart';
-import 'package:training_schedule_app/themes/app_text_styles.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/presentation/widgets/my_arrow_button.dart';
+import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/services/session_logger.dart';
+import 'package:flash_forward/themes/app_text_styles.dart';
 
 class ActiveSessionBottomBar extends StatefulWidget {
   const ActiveSessionBottomBar({super.key});

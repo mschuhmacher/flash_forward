@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:training_schedule_app/models/session.dart';
-import 'package:training_schedule_app/models/workout.dart';
-import 'package:training_schedule_app/models/exercise.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/models/exercise.dart';
 
 /// Describes which part of the timer is active. Kept minimal so UI can branch
 /// on a single enum instead of separate booleans.

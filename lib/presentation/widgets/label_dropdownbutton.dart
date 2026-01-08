@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:training_schedule_app/data/labels.dart';
-import 'package:training_schedule_app/models/label.dart';
-import 'package:training_schedule_app/themes/app_text_styles.dart';
+import 'package:flash_forward/data/labels.dart';
+import 'package:flash_forward/models/label.dart';
+import 'package:flash_forward/themes/app_text_styles.dart';
 
 class MyLabelDropdownButton extends StatelessWidget {
   final String? value;

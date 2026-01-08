@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:training_schedule_app/data/default_session_data.dart';
-import 'package:training_schedule_app/providers/session_log_provider.dart';
-import 'package:training_schedule_app/presentation/screens/session_select_screen.dart';
-import 'package:training_schedule_app/_obsolete/my_app_bar.dart';
-import 'package:training_schedule_app/presentation/widgets/session_select_listview.dart';
+import 'package:flash_forward/data/default_session_data.dart';
+import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/presentation/screens/session_select_screen.dart';
+import 'package:flash_forward/_obsolete/my_app_bar.dart';
+import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
 
 class SessionOverviewScreen extends StatefulWidget {
   const SessionOverviewScreen({super.key});

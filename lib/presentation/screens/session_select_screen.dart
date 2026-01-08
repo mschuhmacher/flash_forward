@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:training_schedule_app/data/labels.dart';
-import 'package:training_schedule_app/presentation/screens/add_item_screen.dart';
-import 'package:training_schedule_app/providers/preset_provider.dart';
-import 'package:training_schedule_app/presentation/widgets/session_select_row.dart';
-import 'package:training_schedule_app/presentation/widgets/session_select_listview.dart';
-import 'package:training_schedule_app/presentation/widgets/start_session_button.dart';
-import 'package:training_schedule_app/providers/session_state_provider.dart';
-import 'package:training_schedule_app/themes/app_text_styles.dart';
+import 'package:flash_forward/data/labels.dart';
+import 'package:flash_forward/presentation/screens/add_item_screen.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/presentation/widgets/session_select_row.dart';
+import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
+import 'package:flash_forward/presentation/widgets/start_session_button.dart';
+import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/themes/app_text_styles.dart';
 
 class SessionSelectScreen extends StatefulWidget {
   final dynamic index;

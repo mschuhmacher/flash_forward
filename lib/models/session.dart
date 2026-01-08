@@ -1,4 +1,4 @@
-import 'package:training_schedule_app/models/workout.dart';
+import 'package:flash_forward/models/workout.dart';
 import 'package:uuid/uuid.dart';
 
 class Session {

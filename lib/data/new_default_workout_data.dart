@@ -1,7 +1,7 @@
 // Default workouts
-import 'package:training_schedule_app/models/exercise.dart';
-import 'package:training_schedule_app/models/workout.dart';
-import 'package:training_schedule_app/data/default_exercise_data.dart';
+import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/data/default_exercise_data.dart';
 
 // Helper function to find exercises by title
 Exercise _findExercise(String title) {

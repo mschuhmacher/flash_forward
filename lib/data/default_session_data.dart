@@ -1,6 +1,6 @@
-import 'package:training_schedule_app/data/default_workout_data.dart';
-import 'package:training_schedule_app/models/session.dart';
-import 'package:training_schedule_app/models/workout.dart';
+import 'package:flash_forward/data/default_workout_data.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/workout.dart';
 
 // Helper function for cleaner code
 Workout _findWorkout(String title) {

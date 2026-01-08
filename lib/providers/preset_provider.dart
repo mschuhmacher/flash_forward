@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
-import 'package:training_schedule_app/data/default_exercise_data.dart';
-import 'package:training_schedule_app/data/default_workout_data.dart';
-import 'package:training_schedule_app/models/exercise.dart';
-import 'package:training_schedule_app/models/workout.dart';
-import 'package:training_schedule_app/services/preset_logger.dart';
+import 'package:flash_forward/data/default_exercise_data.dart';
+import 'package:flash_forward/data/default_workout_data.dart';
+import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/services/preset_logger.dart';
 import '../models/session.dart';
 import '../data/default_session_data.dart';
 

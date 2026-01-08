@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:training_schedule_app/models/exercise.dart';
-import 'package:training_schedule_app/models/workout.dart';
-import 'package:training_schedule_app/providers/preset_provider.dart';
-import 'package:training_schedule_app/presentation/widgets/session_active_bottom_bar.dart';
-import 'package:training_schedule_app/providers/session_state_provider.dart';
-import 'package:training_schedule_app/themes/app_text_styles.dart';
+import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/presentation/widgets/session_active_bottom_bar.dart';
+import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/themes/app_text_styles.dart';
 
 class ActiveSessionScreen extends StatefulWidget {
   const ActiveSessionScreen({super.key});
