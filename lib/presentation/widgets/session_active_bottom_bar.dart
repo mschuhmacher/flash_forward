@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:training_schedule_app/models/session.dart';
+import 'package:training_schedule_app/models/workout.dart';
 import 'package:training_schedule_app/presentation/widgets/my_arrow_button.dart';
 import 'package:training_schedule_app/presentation/widgets/label_dropdownbutton.dart';
 import 'package:training_schedule_app/providers/preset_provider.dart';
@@ -24,8 +25,11 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         final Session activeSession =
             presetData.presetSessions[sessionStateData.sessionIndex];
 
+        final progress = sessionStateData.progress;
+        Workout activeWorkout = activeSession.list[progress.workoutIndex];
+
         return SizedBox(
-          height: 100,
+          height: 110,
           child: BottomAppBar(
             color: Theme.of(context).colorScheme.primary,
             child: Padding(
@@ -44,6 +48,14 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                         child: MyArrowButton(icon: Icons.arrow_back, size: 40),
                       )
                       : SizedBox.shrink(),
+
+                  if (progress.exerciseIndex + 1 < activeWorkout.list.length)
+                    Text(
+                      'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}',
+                      style: context.bodyLarge.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
 
                   (sessionStateData.workoutIndex >= 0 &&
                           sessionStateData.workoutIndex <

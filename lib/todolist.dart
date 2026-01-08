@@ -8,16 +8,18 @@
 // INTERACTION:
 // - edit preset sessions
 // - edit sets or reps during workout
-// - add app icon
-// - change app name
+// 
+// - onboarding screens
 // 
 // UI:
-// - add timer to active screen
 // - add supersets functionality
+// - add app icon
+// - change app name
 
 
 
 // IDEAS:
+// - user profiles
 // - user can start only a workout or exercise
 //     -toggle for starting a session or only a workout or exercise
 //

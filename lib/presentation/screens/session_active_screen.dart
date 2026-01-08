@@ -125,16 +125,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [...workoutNames, SizedBox(height: 8)],
-                        // List.from(workoutNames)..addAll([
-                        //   Text(
-                        //     '\n ${activeWorkout.description}',
-                        //     style: context.bodyMedium,
-                        //     textAlign: TextAlign.end,
-                        //   ),
-
-                        //   SizedBox(height: 8),
-                        // ]),
-                        // Create new list from block names and add the block description to it with a whiteline in between
                       ),
                     ),
                   ),
@@ -165,26 +155,111 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ...exerciseWidgets,
-                              SizedBox(height: 16),
+                              Center(
+                                child: switch (sessionStateData.phase) {
+                                  TimerPhase.setRest => Text(
+                                    'Rest between sets',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  TimerPhase.rep => Text(
+                                    'Rep',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  TimerPhase.repRest => Text(
+                                    'Rest between reps',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  TimerPhase.exerciseRest => Text(
+                                    'Rest between exercises',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  TimerPhase.workoutComplete => Text(
+                                    'Workout complete',
+                                    style: context.h2.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                },
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${progress.currentSet}/${activeExercise.sets} \nSets',
+                                    style: context.titleLarge.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatDuration(sessionStateData.remaining),
+                                    style: context.h1.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                    textScaler: TextScaler.linear(1.75),
+                                  ),
+
+                                  Text(
+                                    '${progress.currentRep}/${activeExercise.reps} \nReps',
+                                    style: context.titleLarge.copyWith(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 8),
+
                               Text(
-                                '${activeExercise.title}: Set ${progress.currentSet}/${activeExercise.sets} • '
-                                'Rep ${progress.currentRep}/${activeExercise.reps}',
-                                style: context.bodyMedium.copyWith(
+                                activeExercise.title,
+                                style: context.h3.copyWith(
                                   color:
                                       Theme.of(context).colorScheme.onPrimary,
                                 ),
-                                textAlign: TextAlign.end,
                               ),
-                              Text(
-                                'Phase: ${sessionStateData.phase.name} • Remaining: ${_formatDuration(sessionStateData.remaining)}',
-                                style: context.bodyLarge.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
+                              SizedBox(height: 4),
+                              if (activeExercise.description != null)
+                                Text(
+                                  activeExercise.description!,
+                                  style: context.bodyMedium.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                  ),
                                 ),
-                                textAlign: TextAlign.end,
-                              ),
+
+                              SizedBox(height: 200),
                             ],
                           ),
                         ),
