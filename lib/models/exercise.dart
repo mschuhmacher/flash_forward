@@ -16,6 +16,7 @@ class Exercise {
     this.equipment,
     this.muscleGroups,
     this.difficulty,
+    this.userId,
   }) : id = id ?? const Uuid().v4();
 
   final String id;
@@ -32,6 +33,7 @@ class Exercise {
   final String? equipment;
   final String? muscleGroups;
   final String? difficulty;
+  final String? userId;
 
   Map<String, dynamic> toJson() => {
     'title': title,
@@ -47,6 +49,7 @@ class Exercise {
     'equipment': equipment,
     'muscleGroups': muscleGroups,
     'difficulty': difficulty,
+    'userId': userId,
   };
 
   factory Exercise.fromJson(Map<String, dynamic> json) => Exercise(
@@ -64,5 +67,6 @@ class Exercise {
     equipment: json['equipment'],
     muscleGroups: json['muscleGroups'],
     difficulty: json['difficulty'],
+    userId: json['userId'],
   );
 }
