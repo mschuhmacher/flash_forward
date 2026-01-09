@@ -10,6 +10,7 @@ class Session {
     this.description,
     this.date,
     required this.list,
+    this.userId,
   }) : id = id ?? Uuid().v4();
   // ?? is null-coalescing operator, provides a default value if null. If id is null, then assign new id. If not null, then use existing id.
   // so, if left-hand value is null, use right-hand value
@@ -21,6 +22,7 @@ class Session {
   final String? description;
   final DateTime? date;
   final List<Workout> list;
+  final String? userId;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -30,6 +32,7 @@ class Session {
     'description': description,
     'date': date?.toIso8601String(),
     'list': list.map((b) => b.toJson()).toList(),
+    'userId': userId,
   };
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -43,5 +46,6 @@ class Session {
         (json['list'] as List<dynamic>? ?? [])
             .map((b) => Workout.fromJson(b))
             .toList(),
+    userId: json['userId'],
   );
 }
