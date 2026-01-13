@@ -39,6 +39,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  //TODO: add email confirmation workflow
   /// Sign up a new user
   Future<bool> signUp({
     required String email,
@@ -53,6 +54,13 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    // DEBUG: Log what we're signing up with
+    print('=== SIGNUP DEBUG ===');
+    print('Email: $email');
+    print('First Name: $firstName');
+    print('Last Name: $lastName');
+    print('Country: $country');
+
     try {
       await _authService.signUp(
         email: email,
@@ -63,8 +71,15 @@ class AuthProvider extends ChangeNotifier {
         country: country,
         marketingConsent: marketingConsent,
       );
+      print('Signup successful, loading profile...');
 
       await loadUserProfile();
+
+      print(
+        'Profile loaded: ${_userProfile?.firstName} ${_userProfile?.lastName}',
+      );
+      print('=== END DEBUG ===');
+
       _isLoading = false;
       notifyListeners();
       return true;
