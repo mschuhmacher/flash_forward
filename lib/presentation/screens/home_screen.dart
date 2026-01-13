@@ -8,7 +8,9 @@ import 'package:flash_forward/_UI_design_helper_screens/cheat_sheet_screen.dart'
 import 'package:flash_forward/_UI_design_helper_screens/colorscheme_demo_screen.dart';
 import 'package:flash_forward/presentation/widgets/my_calendar.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
+import 'package:flash_forward/presentation/screens/login_screen.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_styles.dart';
 
@@ -22,53 +24,140 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final Map<int, GlobalKey> _iconButtonKeys = {};
 
+  Future<void> _signOut() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Sign Out?', style: context.h3),
+          content: Text(
+            'Are you sure you want to sign out?',
+            style: context.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && mounted) {
+      await authProvider.signOut();
+
+      // Navigate to login screen
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<SessionLogProvider>(
-      builder: (BuildContext context, sessionLogData, Widget? child) {
+    return Consumer2<SessionLogProvider, AuthProvider>(
+      builder: (
+        BuildContext context,
+        sessionLogData,
+        authProvider,
+        Widget? child,
+      ) {
+        // DEBUG: Add these lines temporarily
+        print('Auth is authenticated: ${authProvider.isAuthenticated}');
+        print('User profile: ${authProvider.userProfile}');
+        print('First name: ${authProvider.userProfile?.firstName}');
+
         // Reverse the list to show the latest sessions first
         List<Session> selectedSessions =
             sessionLogData.selectedSessions.reversed.toList();
 
         return Scaffold(
-          // appBar: AppBar(
-          //   backgroundColor: Theme.of(context).colorScheme.surface,
-          //   title: SizedBox.shrink(),
-          // title: Row(
-          //   children: [
-          //     ElevatedButton(
-          //       onPressed: () {
-          //         Navigator.push(
-          //           context,
-          //           MaterialPageRoute(
-          //             builder: (context) => ColorSchemeDemoScreen(),
-          //           ),
-          //         );
-          //       },
-          //       child: Text(' test screen'),
-          //     ),
-          //     ElevatedButton(
-          //       onPressed: () {
-          //         Navigator.push(
-          //           context,
-          //           MaterialPageRoute(
-          //             builder: (context) => Material3ColorCheatSheet(),
-          //           ),
-          //         );
-          //       },
-          //       child: Text(' cheat sheet'),
-          //     ),
-          //   ],
-          // ),
-          //   centerTitle: true,
-          // ),
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 24, top: 24),
-                  child: Text('Hey, ready to climb?', style: context.h1),
+                  padding: const EdgeInsets.fromLTRB(24, 24, 16, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hey ${authProvider.userProfile?.firstName ?? "Climber"}!',
+                              style: context.h1,
+                            ),
+                            Text('Ready to climb?', style: context.bodyMedium),
+                          ],
+                        ),
+                      ),
+                      // Profile/Sign Out button
+                      PopupMenuButton<String>(
+                        icon: CircleAvatar(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          child: Text(
+                            authProvider.userProfile?.firstName
+                                    ?.substring(0, 1)
+                                    .toUpperCase() ??
+                                'U',
+                            style: context.titleMedium.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                        onSelected: (value) {
+                          if (value == 'signout') {
+                            _signOut();
+                          }
+                          // Add more menu options here later (profile, settings, etc.)
+                        },
+                        itemBuilder:
+                            (BuildContext context) => [
+                              PopupMenuItem<String>(
+                                enabled: false,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      authProvider.userProfile?.fullName ?? '',
+                                      style: context.titleMedium,
+                                    ),
+                                    Text(
+                                      authProvider.userProfile?.email ?? '',
+                                      style: context.bodyMedium.copyWith(
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem<String>(
+                                value: 'signout',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.logout),
+                                    SizedBox(width: 8),
+                                    Text('Sign Out'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                      ),
+                    ],
+                  ),
                 ),
 
                 SizedBox(height: 40),

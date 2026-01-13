@@ -1,9 +1,10 @@
-// loading_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/presentation/screens/home_screen.dart';
+import 'package:flash_forward/presentation/screens/login_screen.dart';
 import 'package:flash_forward/themes/app_text_styles.dart';
 
 class LoadingScreen extends StatefulWidget {
@@ -17,34 +18,54 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    // Kick off initialization after first frame to avoid provider notifications
-    // during the widget tree build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
     });
   }
 
   Future<void> _initializeApp() async {
-    // Run initialization and minimum duration in parallel
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Run initialization with minimum 2 second display time
     await Future.wait([
       _loadData(),
-      Future.delayed(const Duration(seconds: 2)), // Minimum 1 second
+      Future.delayed(const Duration(seconds: 2)),
     ]);
 
-    // Navigate to home screen after both complete
-    if (mounted) {
+    if (!mounted) return;
+
+    // Navigate based on auth state
+    if (authProvider.isAuthenticated) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     }
   }
 
   Future<void> _loadData() async {
-    // Initialize providers
-    await Provider.of<SessionLogProvider>(context, listen: false).init();
-    await Provider.of<PresetProvider>(context, listen: false).init();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // Add any other initialization tasks here
+    // Initialize auth first
+    await authProvider.init();
+
+    // If user is authenticated, load their data
+    if (authProvider.isAuthenticated) {
+      final userId = authProvider.userId;
+
+      // Pass userId to both providers
+      await Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      ).init(userId: userId);
+      await Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      ).init(userId: userId);
+    }
   }
 
   @override
@@ -55,7 +76,6 @@ class _LoadingScreenState extends State<LoadingScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // TODO: ensure proper licensing for the logo
             Image.asset(
               'assets/images/bouldering_logo.png',
               width: 120,
