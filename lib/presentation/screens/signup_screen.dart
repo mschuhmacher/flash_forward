@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/presentation/screens/home_screen.dart';
 import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/gestures.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -197,7 +199,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         )
                         : Text(
                           _currentPage < 2 ? 'Continue' : 'Create Account',
-                          style: context.titleMedium,
+                          style: context.titleLarge.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
               );
             },
@@ -425,35 +430,78 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(25),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+              child: RichText(
+                text: TextSpan(
+                  style: context.bodyMedium.copyWith(
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ), // Base style
+                  children: [
+                    TextSpan(text: 'By signing up, you agree to our '),
+                    TextSpan(
+                      text: 'Terms of Service',
+                      style: context.bodyMedium.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Privacy Notice',
-                        style: context.titleMedium.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
-                        ),
+
+                      recognizer:
+                          TapGestureRecognizer()
+                            ..onTap = () async {
+                              final url = Uri.parse(
+                                'https://studiofoam.dev/terms-of-service.html',
+                              );
+                              await launchUrl(url);
+                            },
+                    ),
+                    TextSpan(text: ' and '),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: context.bodyMedium.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your data is encrypted and stored securely. We never share your personal information with third parties.',
-                    style: context.bodyMedium.copyWith(fontSize: 12),
-                  ),
-                ],
+                      recognizer:
+                          TapGestureRecognizer()
+                            ..onTap = () async {
+                              final url = Uri.parse(
+                                'https://studiofoam.dev/privacy-policy.html',
+                              );
+                              await launchUrl(url);
+                            },
+                    ),
+                    TextSpan(text: '.'),
+                  ],
+                ),
               ),
+              // Column(
+              //   crossAxisAlignment: CrossAxisAlignment.start,
+              //   children: [
+              //     Row(
+              //       children: [
+              //         Icon(
+              //           Icons.info_outline,
+              //           color: Theme.of(context).colorScheme.onPrimary,
+              //         ),
+              //         const SizedBox(width: 8),
+              //         Text(
+              //           'Privacy Notice',
+              //           style: context.titleMedium.copyWith(
+              //             color:
+              //                 Theme.of(context).colorScheme.onPrimary,
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //     const SizedBox(height: 8),
+              //     Text(
+              //       'Your data is encrypted and stored securely. We never share your personal information with third parties.',
+              //       style: context.bodyMedium.copyWith(fontSize: 12),
+              //     ),
+              //   ],
+              // ),
             ),
           ],
         ),
