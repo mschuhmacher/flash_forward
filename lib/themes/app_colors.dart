@@ -30,10 +30,10 @@ class AppColorsLight {
   static final backgroundColor = Color(0xFFf0f1fe);
   static final primaryColor = Color(0xFF1c29ec);
   static final primaryFgColor = Color(0xFFf0f1fe);
-  static final secondaryColor = Color(0xFFf58c89);
-  static final secondaryFgColor = Color(0xFF030822);
-  static final accentColor = Color(0xFFf0ba49);
+  static final accentColor = Color(0xFFf58c89);
   static final accentFgColor = Color(0xFF030822);
+  static final secondaryColor = Color(0xFFf0ba49);
+  static final secondaryFgColor = Color(0xFF030822);
 
   // --- Derived colors ---
   static final _hslSurface = HSLColor.fromColor(backgroundColor);
@@ -165,11 +165,11 @@ class AppColorsDark {
   static final surfaceColor = HSLColor.fromAHSL(1, 247, 0.54, 0.04).toColor();
   static final primaryColor = HSLColor.fromAHSL(1, 247, 0.66, 0.49).toColor();
   static final onPrimaryColor = HSLColor.fromAHSL(1, 245, 0.38, 0.92).toColor();
-  static final secondaryColor = HSLColor.fromAHSL(1, 252, 0.82, 0.26).toColor();
+  static final accentColor = HSLColor.fromAHSL(1, 252, 0.82, 0.26).toColor();
+  static final onAccentColor = HSLColor.fromAHSL(1, 245, 0.38, 0.92).toColor();
+  static final secondaryColor = HSLColor.fromAHSL(1, 252, 0.94, 0.38).toColor();
   static final onSecondaryColor =
       HSLColor.fromAHSL(1, 245, 0.38, 0.92).toColor();
-  static final accentColor = HSLColor.fromAHSL(1, 252, 0.94, 0.38).toColor();
-  static final onAccentColor = HSLColor.fromAHSL(1, 245, 0.38, 0.92).toColor();
 
   // --- Derived colors ---
   static final _hslSurface = HSLColor.fromColor(surfaceColor);

@@ -158,7 +158,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                     color: Colors.white,
                                   ),
                                 )
-                                : Text('Sign In', style: context.titleMedium),
+                                : Text(
+                                  'Sign In',
+                                  style: context.titleLarge.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                  ),
+                                ),
                       );
                     },
                   ),
@@ -181,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         },
                         child: Text(
-                          'Sign Up',
+                          'Sign up',
                           style: context.bodyMedium.copyWith(
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
