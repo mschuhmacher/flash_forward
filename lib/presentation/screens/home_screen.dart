@@ -10,6 +10,7 @@ import 'package:flash_forward/presentation/widgets/my_calendar.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
 import 'package:flash_forward/presentation/screens/login_screen.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_styles.dart';
@@ -52,6 +53,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (confirm == true && mounted) {
+      // Reset providers to allow re-initialization with different user
+      Provider.of<SessionLogProvider>(context, listen: false).reset();
+      Provider.of<PresetProvider>(context, listen: false).reset();
+
       await authProvider.signOut();
 
       // Navigate to login screen

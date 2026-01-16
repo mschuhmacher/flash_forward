@@ -162,4 +162,19 @@ class SessionLogProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  /// Reset provider state on logout
+  /// This allows re-initialization with a different user
+  void reset() {
+    _isInitialized = false;
+    _isLoading = false;
+    _syncService = null;
+    _loggedSessions = [];
+    _selectedSessions = [];
+    currentDay = DateTime.now();
+    startDay = startOfWeek(currentDay);
+    endDay = currentDay;
+    calendarFormat = CalendarFormat.week;
+    notifyListeners();
+  }
 }
