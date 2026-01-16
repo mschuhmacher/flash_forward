@@ -187,4 +187,18 @@ class PresetProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  /// Reset provider state on logout
+  /// This allows re-initialization with a different user
+  void reset() {
+    _isInitialized = false;
+    _syncService = null;
+    _defaultSessions = [];
+    _defaultWorkouts = [];
+    _defaultExercises = [];
+    _userSessions = [];
+    _userWorkouts = [];
+    _userExercises = [];
+    notifyListeners();
+  }
 }
