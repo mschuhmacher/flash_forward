@@ -27,8 +27,8 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
       builder: (context, presetData, sessionStateData, child) {
         final currentSessionList = presetData.presetSessions;
 
-        // Guard clause: show loading indicator if sessions not yet loaded
-        if (currentSessionList.isEmpty) {
+        // Guard clause: show loading indicator if sessions are loading or not yet loaded
+        if (presetData.isLoading || currentSessionList.isEmpty) {
           return Scaffold(
             appBar: AppBar(
               title: Text('Today\'s session', style: context.h4),

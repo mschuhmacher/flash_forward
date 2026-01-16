@@ -40,10 +40,16 @@ class PresetProvider extends ChangeNotifier {
   List<Session> get presetUserSessions => _userSessions;
 
   bool _isInitialized = false;
+  bool _isLoading = false;
+
+  bool get isInitialized => _isInitialized;
+  bool get isLoading => _isLoading;
 
   Future<void> init({String? userId}) async {
     if (_isInitialized) return;
     _isInitialized = true;
+    _isLoading = true;
+    notifyListeners();
 
     // Seed the default data on first app installation
     await PresetLogger.seedDefaultData();
@@ -63,6 +69,7 @@ class PresetProvider extends ChangeNotifier {
       await _loadUserPresetDataFromLocal();
     }
 
+    _isLoading = false;
     notifyListeners();
   }
 
@@ -192,6 +199,7 @@ class PresetProvider extends ChangeNotifier {
   /// This allows re-initialization with a different user
   void reset() {
     _isInitialized = false;
+    _isLoading = false;
     _syncService = null;
     _defaultSessions = [];
     _defaultWorkouts = [];
