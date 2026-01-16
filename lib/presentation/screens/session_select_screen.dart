@@ -26,6 +26,20 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
     return Consumer2<PresetProvider, SessionStateProvider>(
       builder: (context, presetData, sessionStateData, child) {
         final currentSessionList = presetData.presetSessions;
+
+        // Guard clause: show loading indicator if sessions not yet loaded
+        if (currentSessionList.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Today\'s session', style: context.h4),
+              centerTitle: true,
+            ),
+            body: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
         final sessionLabel =
             kDefaultLabels[currentSessionList[sessionStateData.sessionIndex]
                 .label];
