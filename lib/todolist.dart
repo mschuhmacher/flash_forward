@@ -39,6 +39,7 @@
 // create tests for offline mode
 // conflict resolution between local and cloud data
 // in session_select_screen.dart, when no sessions exist, loading indicator shows forever?
+// remove print statements
 
 
 
