@@ -1,11 +1,11 @@
 // Default workouts
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/data/default_exercise_data.dart';
+import 'package:flash_forward/data/default_exercise_templates.dart';
 
 // Helper function to find exercises by title
 Exercise _findExercise(String title) {
-  return kDefaultExercises.firstWhere((e) => e.title == title);
+  return kDefaultExerciseTemplates.firstWhere((e) => e.title == title);
 }
 
 List<Workout> kDefaultWorkouts = [

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flash_forward/data/default_exercise_data.dart';
+import 'package:flash_forward/data/default_exercise_templates.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
@@ -58,7 +58,7 @@ class PresetProvider extends ChangeNotifier {
     // Load defaults
     _defaultSessions = List.from(kDefaultSessions);
     _defaultWorkouts = List.from(kDefaultWorkouts);
-    _defaultExercises = List.from(kDefaultExercises);
+    _defaultExercises = List.from(kDefaultExerciseTemplates);
 
     // If user is logged in, load their cloud data
     if (userId != null) {

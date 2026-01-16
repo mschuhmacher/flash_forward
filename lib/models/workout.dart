@@ -1,4 +1,5 @@
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:uuid/uuid.dart';
 
 class Workout {
@@ -22,7 +23,7 @@ class Workout {
   final String label;
   final String? description;
   final DateTime? date;
-  final List<Exercise> list;
+  final List<ExerciseInstance> list;
   final String? difficulty;
   final String? equipment;
   final int timeBetweenExercises;
@@ -38,7 +39,7 @@ class Workout {
     'list': list.map((e) => e.toJson()).toList(),
     'difficulty': difficulty,
     'equipment': equipment,
-    'restBetweenExercises': timeBetweenExercises,
+    'timeBetweenExercises': timeBetweenExercises,
     'userId': userId,
   };
 
@@ -51,11 +52,11 @@ class Workout {
     date: json['date'] != null ? DateTime.tryParse(json['date']) : null,
     list:
         (json['list'] as List<dynamic>? ?? [])
-            .map((e) => Exercise.fromJson(e))
+            .map((e) => ExerciseInstance.fromJson(e))
             .toList(),
     difficulty: json['difficulty'],
     equipment: json['equipment'],
-    timeBetweenExercises: json['restBetweenExercises'] ?? 60,
+    timeBetweenExercises: json['timeBetweenExercises'] ?? 120,
     userId: json['userId'],
   );
 }
