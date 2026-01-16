@@ -46,6 +46,7 @@ dependencies:
   package_info_plus: ^8.0.0
   shared_preferences: ^2.2.3
   url_launcher: ^6.3.2
+  connectivity_plus: ^6.0.3
 
 dev_dependencies:
   flutter_test:

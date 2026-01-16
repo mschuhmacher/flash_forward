@@ -177,4 +177,17 @@ class SessionLogProvider extends ChangeNotifier {
     calendarFormat = CalendarFormat.week;
     notifyListeners();
   }
+
+  /// Check if there are pending sync operations
+  bool get hasPendingSync => _syncService?.hasPendingSync ?? false;
+
+  /// Get count of pending sync operations
+  int get pendingSyncCount => _syncService?.pendingSyncCount ?? 0;
+
+  /// Process any pending sync operations
+  /// Call this when connectivity is restored
+  Future<int> processPendingSync() async {
+    if (_syncService == null) return 0;
+    return await _syncService!.processPendingSync();
+  }
 }

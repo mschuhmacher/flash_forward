@@ -57,14 +57,21 @@ class _LoadingScreenState extends State<LoadingScreen> {
       final userId = authProvider.userId;
 
       // Pass userId to both providers
-      await Provider.of<SessionLogProvider>(
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
         context,
         listen: false,
-      ).init(userId: userId);
-      await Provider.of<PresetProvider>(
+      );
+      final presetProvider = Provider.of<PresetProvider>(
         context,
         listen: false,
-      ).init(userId: userId);
+      );
+
+      await sessionLogProvider.init(userId: userId);
+      await presetProvider.init(userId: userId);
+
+      // Process any pending sync operations from previous offline sessions
+      await sessionLogProvider.processPendingSync();
+      await presetProvider.processPendingSync();
     }
   }
 
