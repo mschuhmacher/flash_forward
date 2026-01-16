@@ -1,4 +1,5 @@
 import 'package:flash_forward/services/supabase_config.dart';
+import 'package:flash_forward/services/sync_queue_service.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/models/exercise.dart';
@@ -7,25 +8,50 @@ import 'package:flash_forward/models/exercise.dart';
 /// This allows migration from local-only to cloud-backed storage
 class SupabaseSyncService {
   final String userId;
+  final SyncQueueService _syncQueue = SyncQueueService();
 
-  SupabaseSyncService({required this.userId});
+  SupabaseSyncService({required this.userId}) {
+    _syncQueue.loadQueue();
+  }
+
+  /// Get the sync queue for external access
+  SyncQueueService get syncQueue => _syncQueue;
+
+  /// Check if there are pending operations
+  bool get hasPendingSync => _syncQueue.hasPendingOperations;
+
+  /// Get count of pending operations
+  int get pendingSyncCount => _syncQueue.pendingCount;
 
   // ========== Session Sync ==========
 
   /// Upload a session to the cloud
   /// Sessions contain complete nested workout/exercise data as JSON
-  Future<void> uploadSession(Session session) async {
-    await supabase.from('user_sessions').upsert({
-      'id': session.id,
-      'user_id': userId,
-      'title': session.title,
-      'label': session.label,
-      'subtitle': session.subtitle,
-      'description': session.description,
-      'date': session.date?.toIso8601String(),
-      'workouts': session.list.map((w) => w.toJson()).toList(),
-      'updated_at': DateTime.now().toIso8601String(),
-    });
+  /// If upload fails, queues the operation for retry
+  Future<void> uploadSession(Session session, {bool isRetry = false}) async {
+    try {
+      await supabase.from('user_sessions').upsert({
+        'id': session.id,
+        'user_id': userId,
+        'title': session.title,
+        'label': session.label,
+        'subtitle': session.subtitle,
+        'description': session.description,
+        'date': session.date?.toIso8601String(),
+        'workouts': session.list.map((w) => w.toJson()).toList(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: session.id,
+          type: 'uploadSession',
+          data: session.toJson(),
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
   }
 
   /// Fetch all user's sessions from the cloud
@@ -55,25 +81,55 @@ class SupabaseSyncService {
   }
 
   /// Delete a session from the cloud
-  Future<void> deleteSession(String sessionId) async {
-    await supabase
-        .from('user_sessions')
-        .delete()
-        .eq('id', sessionId)
-        .eq('user_id', userId);
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteSession(String sessionId, {bool isRetry = false}) async {
+    try {
+      await supabase
+          .from('user_sessions')
+          .delete()
+          .eq('id', sessionId)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: sessionId,
+          type: 'deleteSession',
+          data: {'sessionId': sessionId},
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
   }
 
   // ========== Logged Sessions Sync (Workout History) ==========
 
   /// Log a completed session to workout history
   /// This creates a permanent record separate from the session itself
-  Future<void> logCompletedSession(Session session) async {
-    await supabase.from('session_logs').insert({
-      'user_id': userId,
-      'session_id': session.id,
-      'completed_at': DateTime.now().toIso8601String(),
-      'session_data': session.toJson(),
-    });
+  /// If log fails, queues the operation for retry
+  Future<void> logCompletedSession(Session session, {bool isRetry = false}) async {
+    final completedAt = DateTime.now().toIso8601String();
+    try {
+      await supabase.from('session_logs').insert({
+        'user_id': userId,
+        'session_id': session.id,
+        'completed_at': completedAt,
+        'session_data': session.toJson(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: '${session.id}_$completedAt',
+          type: 'logSession',
+          data: {
+            'session': session.toJson(),
+            'completedAt': completedAt,
+          },
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
   }
 
   /// Fetch workout history (logged sessions) from the cloud
@@ -133,20 +189,33 @@ class SupabaseSyncService {
 
   /// Upload a custom workout to user's workout library
   /// Workouts contain complete nested exercise data as JSON
-  Future<void> uploadWorkout(Workout workout) async {
-    await supabase.from('user_workouts').upsert({
-      'id': workout.id,
-      'user_id': userId,
-      'title': workout.title,
-      'label': workout.label,
-      'subtitle': workout.subtitle,
-      'description': workout.description,
-      'difficulty': workout.difficulty,
-      'equipment': workout.equipment,
-      'time_between_exercises': workout.timeBetweenExercises,
-      'exercises': workout.list.map((e) => e.toJson()).toList(),
-      'updated_at': DateTime.now().toIso8601String(),
-    });
+  /// If upload fails, queues the operation for retry
+  Future<void> uploadWorkout(Workout workout, {bool isRetry = false}) async {
+    try {
+      await supabase.from('user_workouts').upsert({
+        'id': workout.id,
+        'user_id': userId,
+        'title': workout.title,
+        'label': workout.label,
+        'subtitle': workout.subtitle,
+        'description': workout.description,
+        'difficulty': workout.difficulty,
+        'equipment': workout.equipment,
+        'time_between_exercises': workout.timeBetweenExercises,
+        'exercises': workout.list.map((e) => e.toJson()).toList(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: workout.id,
+          type: 'uploadWorkout',
+          data: workout.toJson(),
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
   }
 
   /// Fetch all user's custom workouts from the cloud
@@ -191,25 +260,38 @@ class SupabaseSyncService {
   // ========== Exercise Presets Sync ==========
 
   /// Upload a custom exercise to user's exercise library
-  Future<void> uploadExercise(Exercise exercise) async {
-    await supabase.from('user_exercises').upsert({
-      'id': exercise.id,
-      'user_id': userId,
-      'title': exercise.title,
-      'label': exercise.label,
-      'description': exercise.description,
-      'sets': exercise.sets,
-      'reps': exercise.reps,
-      'time_between_sets': exercise.timeBetweenSets,
-      'time_per_rep': exercise.timePerRep,
-      'time_between_reps': exercise.timeBetweenReps,
-      'load': exercise.load,
-      'rpe': exercise.rpe,
-      'equipment': exercise.equipment,
-      'muscle_groups': exercise.muscleGroups,
-      'difficulty': exercise.difficulty,
-      'updated_at': DateTime.now().toIso8601String(),
-    });
+  /// If upload fails, queues the operation for retry
+  Future<void> uploadExercise(Exercise exercise, {bool isRetry = false}) async {
+    try {
+      await supabase.from('user_exercises').upsert({
+        'id': exercise.id,
+        'user_id': userId,
+        'title': exercise.title,
+        'label': exercise.label,
+        'description': exercise.description,
+        'sets': exercise.sets,
+        'reps': exercise.reps,
+        'time_between_sets': exercise.timeBetweenSets,
+        'time_per_rep': exercise.timePerRep,
+        'time_between_reps': exercise.timeBetweenReps,
+        'load': exercise.load,
+        'rpe': exercise.rpe,
+        'equipment': exercise.equipment,
+        'muscle_groups': exercise.muscleGroups,
+        'difficulty': exercise.difficulty,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: exercise.id,
+          type: 'uploadExercise',
+          data: exercise.toJson(),
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
   }
 
   /// Fetch all user's custom exercises from the cloud
@@ -248,5 +330,50 @@ class SupabaseSyncService {
         .delete()
         .eq('id', exerciseId)
         .eq('user_id', userId);
+  }
+
+  // ========== Queue Processing ==========
+
+  /// Process all queued operations
+  /// Call this when connectivity is restored
+  Future<int> processPendingSync() async {
+    return await _syncQueue.processQueue((operation) async {
+      try {
+        switch (operation.type) {
+          case 'uploadSession':
+            final session = Session.fromJson(operation.data);
+            await uploadSession(session, isRetry: true);
+            break;
+          case 'deleteSession':
+            await deleteSession(operation.data['sessionId'], isRetry: true);
+            break;
+          case 'logSession':
+            final session = Session.fromJson(operation.data['session']);
+            // Use the original completedAt time
+            await supabase.from('session_logs').insert({
+              'user_id': userId,
+              'session_id': session.id,
+              'completed_at': operation.data['completedAt'],
+              'session_data': session.toJson(),
+            });
+            break;
+          case 'uploadWorkout':
+            final workout = Workout.fromJson(operation.data);
+            await uploadWorkout(workout, isRetry: true);
+            break;
+          case 'uploadExercise':
+            final exercise = Exercise.fromJson(operation.data);
+            await uploadExercise(exercise, isRetry: true);
+            break;
+          default:
+            print('Unknown sync operation type: ${operation.type}');
+            return false;
+        }
+        return true;
+      } catch (e) {
+        print('Failed to process sync operation ${operation.id}: $e');
+        return false;
+      }
+    });
   }
 }
