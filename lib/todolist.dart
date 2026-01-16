@@ -13,13 +13,10 @@
 // 
 // UI:
 // - add supersets functionality
-// - add app icon
-// - change app name
 
 
 
 // IDEAS:
-// - user profiles
 // - user can start only a workout or exercise
 //     -toggle for starting a session or only a workout or exercise
 //
