@@ -87,7 +87,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
         final List<dynamic> allPresetItems =
             widget.itemName == 'session'
                 ? presetData.presetWorkouts
-                : presetData.presetExercises;
+                : presetData.presetExerciseTemplates;
 
         final String labelFilter = _filterLabelController.text.trim();
 
