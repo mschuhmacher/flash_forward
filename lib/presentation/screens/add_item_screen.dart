@@ -1,7 +1,8 @@
+import 'package:flash_forward/models/exercise_instance.dart';
+import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/add_exercise_modal_sheet.dart';
@@ -128,7 +129,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
-                  // mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildFormFields(), // TODO: fix spacing issues
@@ -162,7 +162,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                   description: description,
                                   list:
                                       selectedPresetItems
-                                          .cast<Workout>()
+                                          .whereType<Workout>()
                                           .toList(),
                                 );
                                 presetData.addPresetSession(newSession);
@@ -176,7 +176,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                   ),
                                   list:
                                       selectedPresetItems
-                                          .cast<Exercise>()
+                                          .whereType<ExerciseTemplate>() //should be all, but safer than .cast()
+                                          .map(
+                                            (template) =>
+                                                ExerciseInstance.fromTemplate(
+                                                  template,
+                                                ),
+                                          )
                                           .toList(),
                                 );
                                 presetData.addPresetWorkout(newWorkout);
@@ -492,7 +498,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     for (final exercise in filteredPresetItems[index].list)
                       Text(exercise.title),
                   ] else if (_isListTileExpanded &&
-                      filteredPresetItems[index] is Exercise) ...<Widget>[
+                      filteredPresetItems[index]
+                          is ExerciseTemplate) ...<Widget>[
                     SizedBox(height: 2),
                     Text(
                       'Load:',
