@@ -1,3 +1,5 @@
+import 'package:flash_forward/models/exercise_instance.dart';
+import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flash_forward/services/supabase_config.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
 import 'package:flash_forward/models/session.dart';
@@ -132,7 +134,7 @@ class SupabaseSyncService {
     }
   }
 
-  /// Fetch workout history (logged sessions) from the cloud
+  /// Fetch session history (logged sessions) from the cloud
   /// Can filter by date range for calendar views
   Future<List<Session>> fetchLoggedSessions({
     DateTime? startDate,
@@ -230,7 +232,7 @@ class SupabaseSyncService {
       // Convert exercises JSONB back to Exercise objects
       final exercisesList =
           (json['exercises'] as List)
-              .map((e) => Exercise.fromJson(e as Map<String, dynamic>))
+              .map((e) => ExerciseInstance.fromJson(e as Map<String, dynamic>))
               .toList();
 
       return Workout(
@@ -261,32 +263,32 @@ class SupabaseSyncService {
 
   /// Upload a custom exercise to user's exercise library
   /// If upload fails, queues the operation for retry
-  Future<void> uploadExercise(Exercise exercise, {bool isRetry = false}) async {
+  Future<void> uploadExercise(ExerciseTemplate exerciseTemplate, {bool isRetry = false}) async {
     try {
       await supabase.from('user_exercises').upsert({
-        'id': exercise.id,
+        'id': exerciseTemplate.id,
         'user_id': userId,
-        'title': exercise.title,
-        'label': exercise.label,
-        'description': exercise.description,
-        'sets': exercise.sets,
-        'reps': exercise.reps,
-        'time_between_sets': exercise.timeBetweenSets,
-        'time_per_rep': exercise.timePerRep,
-        'time_between_reps': exercise.timeBetweenReps,
-        'load': exercise.load,
-        'rpe': exercise.rpe,
-        'equipment': exercise.equipment,
-        'muscle_groups': exercise.muscleGroups,
-        'difficulty': exercise.difficulty,
+        'title': exerciseTemplate.title,
+        'label': exerciseTemplate.label,
+        'description': exerciseTemplate.description,
+        'sets': exerciseTemplate.defaultSets,
+        'reps': exerciseTemplate.defaultReps,
+        'time_between_sets': exerciseTemplate.defaultTimeBetweenSets,
+        'time_per_rep': exerciseTemplate.defaultTimePerRep,
+        'time_between_reps': exerciseTemplate.defaultTimeBetweenReps,
+        'load': exerciseTemplate.defaultLoad,
+        'rpe': exerciseTemplate.defaultRpe,
+        'equipment': exerciseTemplate.equipment,
+        'muscle_groups': exerciseTemplate.muscleGroups,
+        'difficulty': exerciseTemplate.difficulty,
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
       if (!isRetry) {
         await _syncQueue.enqueue(SyncOperation(
-          id: exercise.id,
+          id: exerciseTemplate.id,
           type: 'uploadExercise',
-          data: exercise.toJson(),
+          data: exerciseTemplate.toJson(),
           createdAt: DateTime.now(),
         ));
       }
@@ -295,7 +297,7 @@ class SupabaseSyncService {
   }
 
   /// Fetch all user's custom exercises from the cloud
-  Future<List<Exercise>> fetchUserExercises() async {
+  Future<List<ExerciseTemplate>> fetchUserExercises() async {
     final response = await supabase
         .from('user_exercises')
         .select()
@@ -303,18 +305,18 @@ class SupabaseSyncService {
         .order('created_at', ascending: false);
 
     return (response as List).map((json) {
-      return Exercise(
+      return ExerciseTemplate(
         id: json['id'] as String,
         title: json['title'] as String,
         label: json['label'] as String,
-        description: json['description'] as String?,
-        sets: json['sets'] as int,
-        reps: json['reps'] as int,
-        timeBetweenSets: json['time_between_sets'] as int,
-        timePerRep: json['time_per_rep'] as int,
-        timeBetweenReps: json['time_between_reps'] as int,
-        load: json['load'] as String,
-        rpe: json['rpe'] as int?,
+        description: json['description'] as String,
+        defaultSets: json['sets'] as int,
+        defaultReps: json['reps'] as int,
+        defaultTimeBetweenSets: json['time_between_sets'] as int,
+        defaultTimePerRep: json['time_per_rep'] as int,
+        defaultTimeBetweenReps: json['time_between_reps'] as int,
+        defaultLoad: json['load'] as String,
+        defaultRpe: json['rpe'] as int?,
         equipment: json['equipment'] as String?,
         muscleGroups: json['muscle_groups'] as String?,
         difficulty: json['difficulty'] as String?,
@@ -362,8 +364,8 @@ class SupabaseSyncService {
             await uploadWorkout(workout, isRetry: true);
             break;
           case 'uploadExercise':
-            final exercise = Exercise.fromJson(operation.data);
-            await uploadExercise(exercise, isRetry: true);
+            final exerciseTemplate = ExerciseTemplate.fromJson(operation.data);
+            await uploadExercise(exerciseTemplate, isRetry: true);
             break;
           default:
             print('Unknown sync operation type: ${operation.type}');
