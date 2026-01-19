@@ -1,4 +1,3 @@
-import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:uuid/uuid.dart';
 
