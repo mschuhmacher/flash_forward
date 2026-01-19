@@ -5,15 +5,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 
-/// Responsibilities:
-/// - Seeds default preset data (sessions, blocks, exercises) to local JSON
-///   on first app installation.
-/// - Ensures default JSON files exist for the app to read from.
-///
-/// Why:
-/// This class handles the initial setup of immutable default presets,
-/// so the app has a consistent source of truth without overwriting user data.
-
 class PresetLogger {
   /// 🔹 Read all preset sessions from file
   static Future<Iterable<Session>> readUserPresetSessions() async {
