@@ -1,3 +1,4 @@
+import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -291,22 +292,22 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          final newExercise = Exercise(
+                          final newExercise = ExerciseTemplate(
                             title: _titleController.text.trim(),
                             label: _labelController.text.trim(),
                             description: _descriptionController.text.trim(),
-                            reps: _numberOfReps,
-                            sets: _numberOfSets,
-                            timeBetweenSets: int.parse(
+                            defaultReps: _numberOfReps,
+                            defaultSets: _numberOfSets,
+                            defaultTimeBetweenSets: int.parse(
                               _timeBetweenSetsController.text.trim(),
                             ),
-                            timePerRep: int.parse(
+                            defaultTimePerRep: int.parse(
                               _timePerRepController.text.trim(),
                             ),
-                            timeBetweenReps: int.parse(
+                            defaultTimeBetweenReps: int.parse(
                               _timeBetweenRepsController.text.trim(),
                             ),
-                            load: _loadController.text.trim(),
+                            defaultLoad: _loadController.text.trim(),
                           );
                           presetData.addPresetExercise(newExercise);
                         }
