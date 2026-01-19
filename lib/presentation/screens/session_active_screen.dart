@@ -1,6 +1,6 @@
+import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/widgets/session_active_bottom_bar.dart';
@@ -44,8 +44,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         final progress = sessionStateData.progress;
 
         Workout activeWorkout = activeSession.list[progress.workoutIndex];
-        Exercise activeExercise = activeWorkout.list[progress.exerciseIndex];
+        ExerciseInstance activeExercise =
+            activeWorkout.list[progress.exerciseIndex];
 
+        //TODO: remove exerciseWidgets if not used
         List<Widget> exerciseWidgets =
             activeWorkout.list
                 .map(
@@ -250,14 +252,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 ),
                               ),
                               SizedBox(height: 4),
-                              if (activeExercise.description != null)
-                                Text(
-                                  activeExercise.description!,
-                                  style: context.bodyMedium.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
+                              Text(
+                                activeExercise.description!,
+                                style: context.bodyMedium.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
                                 ),
+                              ),
 
                               SizedBox(height: 200),
                             ],
