@@ -4,7 +4,6 @@ import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/models/exercise.dart';
 
 /// Describes which part of the timer is active. Kept minimal so UI can branch
 /// on a single enum instead of separate booleans.

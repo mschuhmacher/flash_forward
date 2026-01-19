@@ -2,7 +2,6 @@ import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/my_arrow_button.dart';
 import 'package:flash_forward/providers/preset_provider.dart';

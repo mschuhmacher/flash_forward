@@ -50,6 +50,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                       : SizedBox.shrink(),
 
                   if (progress.exerciseIndex + 1 < activeWorkout.list.length)
+                  //TODO: fix overflow for long text
                     Text(
                       'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}',
                       style: context.bodyLarge.copyWith(

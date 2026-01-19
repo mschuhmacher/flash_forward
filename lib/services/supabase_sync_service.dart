@@ -4,7 +4,6 @@ import 'package:flash_forward/services/supabase_config.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/models/exercise.dart';
 
 /// Handles syncing local data with Supabase cloud storage
 /// This allows migration from local-only to cloud-backed storage
