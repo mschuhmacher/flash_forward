@@ -1,10 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flash_forward/models/exercise_template.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flash_forward/_obsolete/obsolete_default_exercise_data.dart';
-import 'package:flash_forward/data/default_session_data.dart';
-import 'package:flash_forward/_obsolete/obsolete_default_workout_data.dart';
-import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 
@@ -18,38 +15,6 @@ import 'package:flash_forward/models/workout.dart';
 /// so the app has a consistent source of truth without overwriting user data.
 
 class PresetLogger {
-  /// Seed the default data locally upon installation
-  /// Finds or creates the local JSON file for the default sessions, workouts, and exercises
-  /// WHY DO I SEED THE DATA LOCALLY?
-  ///
-  static Future<void> seedDefaultData() async {
-    final directory = await getApplicationDocumentsDirectory();
-
-    final defaultSessionFile = File('${directory.path}/default_sessions.json');
-    final defaultWorkoutFile = File('${directory.path}/default_workouts.json');
-    final defaultExerciseFile = File(
-      '${directory.path}/default_exercises.json',
-    );
-
-    if (!await defaultSessionFile.exists()) {
-      await defaultSessionFile.writeAsString(
-        jsonEncode(kDefaultSessions.map((e) => e.toJson()).toList()),
-      );
-    }
-
-    if (!await defaultWorkoutFile.exists()) {
-      await defaultWorkoutFile.writeAsString(
-        jsonEncode(defaultWorkouts.map((e) => e.toJson()).toList()),
-      );
-    }
-
-    if (!await defaultExerciseFile.exists()) {
-      await defaultExerciseFile.writeAsString(
-        jsonEncode(defaultExercises.map((e) => e.toJson()).toList()),
-      );
-    }
-  }
-
   /// 🔹 Read all preset sessions from file
   static Future<Iterable<Session>> readUserPresetSessions() async {
     try {
@@ -89,7 +54,7 @@ class PresetLogger {
     }
   }
 
-  static Future<Iterable<Exercise>> readUserPresetExercises() async {
+  static Future<Iterable<ExerciseTemplate>> readUserPresetExercises() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
 
@@ -101,7 +66,7 @@ class PresetLogger {
       final content = await userPresetExercisesFile.readAsString();
       if (content.isEmpty) return [];
       final data = json.decode(content) as List;
-      return data.map((e) => Exercise.fromJson(e));
+      return data.map((e) => ExerciseTemplate.fromJson(e));
     } catch (e) {
       print('Error reading user preset exercises: $e');
       return [];

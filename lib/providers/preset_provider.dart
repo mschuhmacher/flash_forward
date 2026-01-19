@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flash_forward/data/default_exercise_templates.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
-import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/exercise_instance.dart';
+import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/services/preset_logger.dart';
 import 'package:flash_forward/services/supabase_sync_service.dart';
@@ -22,19 +23,19 @@ import '../data/default_session_data.dart';
 class PresetProvider extends ChangeNotifier {
   List<Session> _defaultSessions = [];
   List<Workout> _defaultWorkouts = [];
-  List<Exercise> _defaultExercises = [];
+  List<ExerciseTemplate> _defaultExerciseTemplates = [];
 
   List<Session> _userSessions = [];
   List<Workout> _userWorkouts = [];
-  List<Exercise> _userExercises = [];
+  List<ExerciseTemplate> _userExerciseTemplates = [];
 
   SupabaseSyncService? _syncService;
 
   List<Session> get presetSessions => [..._defaultSessions, ..._userSessions];
   List<Workout> get presetWorkouts => [..._defaultWorkouts, ..._userWorkouts];
-  List<Exercise> get presetExercises => [
-    ..._defaultExercises,
-    ..._userExercises,
+  List<ExerciseTemplate> get presetExerciseTemplates => [
+    ..._defaultExerciseTemplates,
+    ..._userExerciseTemplates,
   ];
   List<Session> get presetDefaultSessions => _defaultSessions;
   List<Session> get presetUserSessions => _userSessions;
@@ -51,14 +52,10 @@ class PresetProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // Seed the default data on first app installation
-    await PresetLogger.seedDefaultData();
-
-    // TODO: change to read the JSONs instead of Dart defined Lists
     // Load defaults
     _defaultSessions = List.from(kDefaultSessions);
     _defaultWorkouts = List.from(kDefaultWorkouts);
-    _defaultExercises = List.from(kDefaultExerciseTemplates);
+    _defaultExerciseTemplates = List.from(kDefaultExerciseTemplates);
 
     // If user is logged in, load their cloud data
     if (userId != null) {
@@ -80,7 +77,7 @@ class PresetProvider extends ChangeNotifier {
     try {
       _userSessions = await _syncService!.fetchUserSessions();
       _userWorkouts = await _syncService!.fetchUserWorkouts();
-      _userExercises = await _syncService!.fetchUserExercises();
+      _userExerciseTemplates = await _syncService!.fetchUserExercises();
     } catch (e) {
       print('Error loading from cloud, falling back to local: $e');
       await _loadUserPresetDataFromLocal();
@@ -91,13 +88,14 @@ class PresetProvider extends ChangeNotifier {
   Future<void> _loadUserPresetDataFromLocal() async {
     _userSessions = (await PresetLogger.readUserPresetSessions()).toList();
     _userWorkouts = (await PresetLogger.readUserPresetWorkouts()).toList();
-    _userExercises = (await PresetLogger.readUserPresetExercises()).toList();
+    _userExerciseTemplates =
+        (await PresetLogger.readUserPresetExercises()).toList();
   }
 
   Future<void> deleteAllUserPresets() async {
     _userSessions = [];
     _userWorkouts = [];
-    _userExercises = [];
+    _userExerciseTemplates = [];
 
     await PresetLogger.deleteAllUserPresetFiles();
 
@@ -176,17 +174,17 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addPresetExercise(Exercise exercise) async {
-    _userExercises.add(exercise);
+  Future<void> addPresetExercise(ExerciseTemplate exerciseTemplate) async {
+    _userExerciseTemplates.add(exerciseTemplate);
     await PresetLogger.savePresetToFile(
       'user_preset_exercises.json',
-      _userExercises,
+      _userExerciseTemplates,
     );
 
     // Save to cloud if available
     if (_syncService != null) {
       try {
-        await _syncService!.uploadExercise(exercise);
+        await _syncService!.uploadExercise(exerciseTemplate);
       } catch (e) {
         print('Error uploading exercise to cloud: $e');
       }
@@ -203,10 +201,10 @@ class PresetProvider extends ChangeNotifier {
     _syncService = null;
     _defaultSessions = [];
     _defaultWorkouts = [];
-    _defaultExercises = [];
+    _defaultExerciseTemplates = [];
     _userSessions = [];
     _userWorkouts = [];
-    _userExercises = [];
+    _userExerciseTemplates = [];
     notifyListeners();
   }
 
@@ -221,5 +219,31 @@ class PresetProvider extends ChangeNotifier {
   Future<int> processPendingSync() async {
     if (_syncService == null) return 0;
     return await _syncService!.processPendingSync();
+  }
+
+  /// Create an ExerciseInstance from a template
+  ExerciseInstance createExerciseInstanceFromTemplate(
+    String templateId, {
+    int? sets,
+    int? reps,
+    int? timeBetweenSets,
+    int? timePerRep,
+    int? timeBetweenReps,
+    String? load,
+    int? rpe,
+  }) {
+    final template = presetExerciseTemplates.firstWhere(
+      (template) => template.id == templateId,
+    );
+    return ExerciseInstance.fromTemplate(
+      template,
+      sets: sets,
+      reps: reps,
+      timeBetweenSets: timeBetweenSets,
+      timePerRep: timePerRep,
+      timeBetweenReps: timeBetweenReps,
+      load: load,
+      rpe: rpe,
+    );
   }
 }
