@@ -132,7 +132,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   ),
                 ),
                 Expanded(
-                  // flex: 12,
+                  flex: 2,
                   child: Stack(
                     children: [
                       Container(
@@ -158,7 +158,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           children: [
                             Text(
                               activeExercise.title,
-                              style: context.h2.copyWith(
+                              style: context.h1.copyWith(
                                 color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
@@ -169,81 +169,118 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
-                            SizedBox(height: 40),
-
-                            Center(
-                              child: switch (sessionStateData.phase) {
-                                TimerPhase.setRest => Text(
-                                  'Rest between sets',
-                                  style: context.h3.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                                TimerPhase.rep => Text(
-                                  'Rep',
-                                  style: context.h3.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                                TimerPhase.repRest => Text(
-                                  'Rest between reps',
-                                  style: context.h3.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                                TimerPhase.exerciseRest => Text(
-                                  'Rest between exercises',
-                                  style: context.h3.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                                TimerPhase.workoutComplete => Text(
-                                  'Workout complete',
-                                  style: context.h3.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                              },
-                            ),
-                            Center(
-                              child: Text(
-                                _formatDuration(sessionStateData.remaining),
-                                style: context.h1.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                ),
-                                textScaler: TextScaler.linear(1.75),
-                              ),
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Text(
-                                  '${progress.currentSet}/${activeExercise.sets} \nSets',
-                                  style: context.titleLarge.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-
-                                Text(
-                                  '${progress.currentRep}/${activeExercise.reps} \nReps',
-                                  style: context.titleLarge.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ],
                         ),
                       ),
                     ],
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    color: Theme.of(context).colorScheme.primary,
+                    child: Column(
+                      children: [
+                        Center(
+                          child: switch (sessionStateData.phase) {
+                            TimerPhase.setRest => Text(
+                              'Rest between sets',
+                              style: context.h3.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                            TimerPhase.rep => Text(
+                              'Rep',
+                              style: context.h3.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                            TimerPhase.repRest => Text(
+                              'Rest between reps',
+                              style: context.h3.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                            TimerPhase.exerciseRest => Text(
+                              'Rest between exercises',
+                              style: context.h3.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                            TimerPhase.workoutComplete => Text(
+                              'Workout complete',
+                              style: context.h3.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                          },
+                        ),
+                        Center(
+                          child: Text(
+                            _formatDuration(sessionStateData.remaining),
+                            style: context.h1.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                            textScaler: TextScaler.linear(2.5),
+                          ),
+                        ),
+                        SizedBox(height: 32),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 150,
+                              height: 50,
+                              child: Center(
+                                child: Text(
+                                  '${progress.currentSet} / ${activeExercise.sets}   sets',
+                                  style: context.titleLarge.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 150,
+                              height: 50,
+                              child: Center(
+                                child: Text(
+                                  '${progress.currentRep} / ${activeExercise.reps}   reps',
+                                  style: context.titleLarge.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
