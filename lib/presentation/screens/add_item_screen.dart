@@ -504,7 +504,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     Text(
                       'Load:',
                     ), //TODO: edit to display more useful information
-                    Text(filteredPresetItems[index].load),
+                    Text(filteredPresetItems[index].load), //TODO: change to defaultLoad for exerciseTemplate
                   ],
                   Align(
                     alignment: Alignment.centerRight,

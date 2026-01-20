@@ -1,5 +1,5 @@
 // Default workouts
-import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/_obsolete/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/data/default_exercise_templates.dart';
 
