@@ -48,7 +48,7 @@ class SessionSelectRow extends StatelessWidget {
                   decrement();
                 }
               },
-              child: MyArrowButton(icon: Icons.arrow_back),
+              child: MyIconButton(icon: Icons.arrow_back),
             ),
             GestureDetector(
               onTap: () {
@@ -93,7 +93,7 @@ class SessionSelectRow extends StatelessWidget {
                   increment();
                 }
               },
-              child: MyArrowButton(icon: Icons.arrow_forward),
+              child: MyIconButton(icon: Icons.arrow_forward),
             ),
             SizedBox(width: 10),
           ],

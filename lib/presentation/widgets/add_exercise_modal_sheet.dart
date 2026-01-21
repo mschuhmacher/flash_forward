@@ -101,7 +101,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                                 });
                               }
                             },
-                            child: MyArrowButton(icon: Icons.remove),
+                            child: MyIconButton(icon: Icons.remove),
                           ),
                           SizedBox(width: 8),
                           SizedBox(
@@ -120,7 +120,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                                 _numberOfSets++;
                               });
                             },
-                            child: MyArrowButton(icon: Icons.add),
+                            child: MyIconButton(icon: Icons.add),
                           ),
                         ],
                       ),
@@ -143,7 +143,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                                 });
                               }
                             },
-                            child: MyArrowButton(icon: Icons.remove),
+                            child: MyIconButton(icon: Icons.remove),
                           ),
                           SizedBox(width: 8),
                           SizedBox(
@@ -162,7 +162,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                                 _numberOfReps++;
                               });
                             },
-                            child: MyArrowButton(icon: Icons.add),
+                            child: MyIconButton(icon: Icons.add),
                           ),
                         ],
                       ),
