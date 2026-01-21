@@ -29,61 +29,71 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         Workout activeWorkout = activeSession.list[progress.workoutIndex];
 
         return SizedBox(
-          height: 110,
+          height: 80,
           child: BottomAppBar(
             color: Theme.of(context).colorScheme.primary,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 24.0, right: 24.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  sessionStateData.workoutIndex > 0
-                      ? GestureDetector(
-                        onTap: () {
-                          sessionStateData.jumpToWorkout(
-                            sessionStateData.workoutIndex - 1,
-                            activeSession,
-                          );
-                        },
-                        child: MyArrowButton(icon: Icons.arrow_back, size: 40),
-                      )
-                      : SizedBox.shrink(),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 24.0, right: 24.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    sessionStateData.workoutIndex > 0
+                        ? GestureDetector(
+                          onTap: () {
+                            sessionStateData.jumpToWorkout(
+                              sessionStateData.workoutIndex - 1,
+                              activeSession,
+                            );
+                          },
+                          child: MyArrowButton(
+                            icon: Icons.arrow_back,
+                            size: 40,
+                          ),
+                        )
+                        : SizedBox.shrink(),
 
-                  if (progress.exerciseIndex + 1 < activeWorkout.list.length)
-                  //TODO: fix overflow for long text
-                    Text(
-                      'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}',
-                      style: context.bodyLarge.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
-                    ),
-
-                  (sessionStateData.workoutIndex >= 0 &&
-                          sessionStateData.workoutIndex <
-                              activeSession.list.length - 1)
-                      ? GestureDetector(
-                        onTap: () {
-                          sessionStateData.jumpToWorkout(
-                            sessionStateData.workoutIndex + 1,
-                            activeSession,
-                          );
-                        },
-                        child: MyArrowButton(
-                          icon: Icons.arrow_forward,
-                          size: 40,
+                    if (progress.exerciseIndex + 1 < activeWorkout.list.length)
+                      //TODO: fix overflow for long text
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}',
+                            style: context.bodyMedium.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                            overflow: TextOverflow.fade,
+                          ),
                         ),
-                      )
-                      : GestureDetector(
-                        onTap: () {
-                          _showFinishSessionDialog(
-                            context,
-                            activeSession,
-                            sessionLogData,
-                          );
-                        },
-                        child: MyArrowButton(icon: Icons.check, size: 40),
                       ),
-                ],
+
+                    (sessionStateData.workoutIndex >= 0 &&
+                            sessionStateData.workoutIndex <
+                                activeSession.list.length - 1)
+                        ? GestureDetector(
+                          onTap: () {
+                            sessionStateData.jumpToWorkout(
+                              sessionStateData.workoutIndex + 1,
+                              activeSession,
+                            );
+                          },
+                          child: MyArrowButton(
+                            icon: Icons.arrow_forward,
+                            size: 40,
+                          ),
+                        )
+                        : GestureDetector(
+                          onTap: () {
+                            _showFinishSessionDialog(
+                              context,
+                              activeSession,
+                              sessionLogData,
+                            );
+                          },
+                          child: MyArrowButton(icon: Icons.check, size: 40),
+                        ),
+                  ],
+                ),
               ),
             ),
           ),
