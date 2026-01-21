@@ -29,7 +29,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         Workout activeWorkout = activeSession.list[progress.workoutIndex];
 
         return SizedBox(
-          height: 80,
+          height: 100,
           child: BottomAppBar(
             color: Theme.of(context).colorScheme.primary,
             child: SafeArea(
@@ -41,14 +41,21 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                     sessionStateData.workoutIndex > 0
                         ? GestureDetector(
                           onTap: () {
-                            sessionStateData.jumpToWorkout(
-                              sessionStateData.workoutIndex - 1,
-                              activeSession,
-                            );
+                            setState(() {
+                              progress.exerciseIndex - 1;
+                            });
                           },
-                          child: MyArrowButton(
+                          // onTap: () {
+                          //   sessionStateData.jumpToWorkout(
+                          //     sessionStateData.workoutIndex - 1,
+                          //     activeSession,
+                          //   );
+                          // },
+                          child: MyIconButton(
                             icon: Icons.arrow_back,
                             size: 40,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.primary,
                           ),
                         )
                         : SizedBox.shrink(),
@@ -77,9 +84,11 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                               activeSession,
                             );
                           },
-                          child: MyArrowButton(
+                          child: MyIconButton(
                             icon: Icons.arrow_forward,
                             size: 40,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.primary,
                           ),
                         )
                         : GestureDetector(
@@ -90,7 +99,12 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                               sessionLogData,
                             );
                           },
-                          child: MyArrowButton(icon: Icons.check, size: 40),
+                          child: MyIconButton(
+                            icon: Icons.check,
+                            size: 40,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                   ],
                 ),
