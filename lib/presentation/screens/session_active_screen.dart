@@ -91,7 +91,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           if (i == progress.workoutIndex) {
             workoutNames[i] = Text(
               activeSession.list[i].title,
-              style: context.h3,
+              style: context.bodyLarge.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
               softWrap: true,
               maxLines: 2,
               textAlign: TextAlign.end,
@@ -117,13 +120,12 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                SizedBox(height: 24),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12.0, 12.0, 36.0, 12.0),
+                  padding: const EdgeInsets.fromLTRB(12.0, 12.0, 24.0, 12.0),
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: FractionallySizedBox(
-                      widthFactor: 0.95,
+                      widthFactor: 0.97,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [...workoutNames, SizedBox(height: 8)],
@@ -132,7 +134,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   ),
                 ),
                 Expanded(
-                  flex: 2,
                   child: Stack(
                     children: [
                       Container(
@@ -148,8 +149,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
                           60.0,
-                          72.0,
-                          40.0,
+                          60.0,
+                          20.0,
                           12.0,
                         ),
                         child: Column(
@@ -175,58 +176,58 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                     ],
                   ),
                 ),
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    color: Theme.of(context).colorScheme.primary,
-                    child: Column(
-                      children: [
-                        Center(
-                          child: switch (sessionStateData.phase) {
-                            TimerPhase.setRest => Text(
-                              'Rest between sets',
-                              style: context.h3.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
-                            TimerPhase.rep => Text(
-                              'Rep',
-                              style: context.h3.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
-                            TimerPhase.repRest => Text(
-                              'Rest between reps',
-                              style: context.h3.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
-                            TimerPhase.exerciseRest => Text(
-                              'Rest between exercises',
-                              style: context.h3.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
-                            TimerPhase.workoutComplete => Text(
-                              'Workout complete',
-                              style: context.h3.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
-                          },
-                        ),
-                        Center(
-                          child: Text(
-                            _formatDuration(sessionStateData.remaining),
-                            style: context.h1.copyWith(
+                Container(
+                  color: Theme.of(context).colorScheme.primary,
+                  child: Column(
+                    children: [
+                      Center(
+                        child: switch (sessionStateData.phase) {
+                          TimerPhase.setRest => Text(
+                            'Rest between sets',
+                            style: context.h3.copyWith(
                               color: Theme.of(context).colorScheme.onPrimary,
                             ),
-                            textScaler: TextScaler.linear(2.5),
                           ),
+                          TimerPhase.rep => Text(
+                            'Rep',
+                            style: context.h3.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                          TimerPhase.repRest => Text(
+                            'Rest between reps',
+                            style: context.h3.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                          TimerPhase.exerciseRest => Text(
+                            'Rest between exercises',
+                            style: context.h3.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                          TimerPhase.workoutComplete => Text(
+                            'Workout complete',
+                            style: context.h3.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                        },
+                      ),
+                      Center(
+                        child: Text(
+                          _formatDuration(sessionStateData.remaining),
+                          style: context.h1.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                          textScaler: TextScaler.linear(2.5),
                         ),
-                        SizedBox(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      ),
+                      SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
                               decoration: BoxDecoration(
@@ -238,7 +239,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   width: 2,
                                 ),
                               ),
-                              width: 150,
+                              width: 160,
                               height: 50,
                               child: Center(
                                 child: Text(
@@ -263,7 +264,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   width: 2,
                                 ),
                               ),
-                              width: 150,
+                              width: 160,
                               height: 50,
                               child: Center(
                                 child: Text(
@@ -279,8 +280,65 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 220,
+                              height: 50,
+                              child: Center(
+                                child: Text(
+                                  'Load: ${activeExercise.load}',
+                                  style: context.titleLarge.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 50,
+                              height: 50,
+                              child: Center(
+                                child: IconButton(
+                                  onPressed: () {},
+                                  icon: Icon(
+                                    Icons.edit,
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                    ],
                   ),
                 ),
               ],
