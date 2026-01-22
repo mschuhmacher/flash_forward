@@ -52,6 +52,7 @@ class SessionStateProvider extends ChangeNotifier {
   int _weekIndex = 0;
   int _sessionIndex = 0;
   int _workoutIndex = 0;
+  int _exerciseIndex = 0;
 
   // Timer-related state. These fields are read by the UI and manipulated via
   // the start/pause/resume/reset methods below. The actual session/workout/
@@ -73,6 +74,7 @@ class SessionStateProvider extends ChangeNotifier {
   int get weekIndex => _weekIndex;
   int get sessionIndex => _sessionIndex;
   int get workoutIndex => _workoutIndex;
+  int get exerciseIndex => _exerciseIndex;
   SessionProgress get progress => _progress;
   Duration get remaining => _remaining;
   TimerPhase get phase => _progress.phase;
@@ -126,6 +128,22 @@ class SessionStateProvider extends ChangeNotifier {
     _progress = SessionProgress(
       workoutIndex: index,
       exerciseIndex: 0,
+      currentSet: 1,
+      currentRep: 1,
+      phase: TimerPhase.rep,
+    );
+    _remaining = _getDurationForPhase(session, _progress);
+    notifyListeners();
+  }
+
+  /// Jump to a specific exercise and reset set/rep to the first items.
+  /// Keeps the timer in sync with navigation actions in the UI.
+  void jumpToExercise(int index, Session session) {
+    if (index < 0 || index >= session.list.length) return;
+    _exerciseIndex = index;
+    _progress = SessionProgress(
+      workoutIndex: _workoutIndex,
+      exerciseIndex: index,
       currentSet: 1,
       currentRep: 1,
       phase: TimerPhase.rep,
@@ -210,7 +228,9 @@ class SessionStateProvider extends ChangeNotifier {
   /// exercise data, so mid-session edits are respected automatically.
   SessionProgress? _calculateNextState(Session session, SessionProgress p) {
     final Workout workout = session.list[p.workoutIndex];
-    final ExerciseInstance exercise = workout.list[p.exerciseIndex]; //TODO: check whether exerciseInstance or exerciseTemplate
+    final ExerciseInstance exercise =
+        workout.list[p
+            .exerciseIndex]; //TODO: check whether exerciseInstance or exerciseTemplate
 
     switch (p.phase) {
       case TimerPhase.rep:

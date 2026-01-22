@@ -334,6 +334,29 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 ),
                               ),
                             ),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 50,
+                              height: 50,
+                              child: Center(
+                                child: IconButton(
+                                  onPressed: () {},
+                                  icon: Icon(
+                                    Icons.info_outline_rounded,
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -372,6 +395,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
+                    SessionStateProvider().reset();
                     Navigator.of(context).pop(); // Close the dialog
                     Navigator.of(context).pop(); // Close the session screen
                   },
