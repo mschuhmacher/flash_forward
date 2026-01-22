@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/my_arrow_button.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
 
 class AddExerciseModalSheet extends StatefulWidget {
   const AddExerciseModalSheet({super.key});

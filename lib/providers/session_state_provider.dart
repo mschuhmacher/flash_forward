@@ -139,17 +139,52 @@ class SessionStateProvider extends ChangeNotifier {
   /// Jump to a specific exercise and reset set/rep to the first items.
   /// Keeps the timer in sync with navigation actions in the UI.
   void jumpToExercise(int index, Session session) {
-    if (index < 0 || index >= session.list.length) return;
-    _exerciseIndex = index;
-    _progress = SessionProgress(
-      workoutIndex: _workoutIndex,
-      exerciseIndex: index,
-      currentSet: 1,
-      currentRep: 1,
-      phase: TimerPhase.rep,
-    );
-    _remaining = _getDurationForPhase(session, _progress);
-    notifyListeners();
+    // Return statement (is this needed?)
+    if (index < -1) {
+      return;
+    }
+    // When at first exercise of second+ workout, go back to last exercise of previous workout
+    else if (index == -1 && _workoutIndex > 0) {
+      _workoutIndex--;
+      _exerciseIndex = session.list[_workoutIndex].list.length - 1;
+      _progress = SessionProgress(
+        workoutIndex: _workoutIndex,
+        exerciseIndex: _exerciseIndex,
+        currentSet: 1,
+        currentRep: 1,
+        phase: TimerPhase.rep,
+      );
+      _remaining = _getDurationForPhase(session, _progress);
+      notifyListeners();
+    }
+    // When within range of list of exercises of workout, go to previous or next
+    else if (index >= 0 && index < session.list[_workoutIndex].list.length) {
+      _exerciseIndex = index;
+      _progress = SessionProgress(
+        workoutIndex: _workoutIndex,
+        exerciseIndex: _exerciseIndex,
+        currentSet: 1,
+        currentRep: 1,
+        phase: TimerPhase.rep,
+      );
+      _remaining = _getDurationForPhase(session, _progress);
+      notifyListeners();
+    }
+    // When at the last exercise of a workout and not the final exercise of session, go to first exercise of next workout
+    else if (index == session.list[_workoutIndex].list.length &&
+        _workoutIndex + 1 < session.list.length) {
+      _workoutIndex++;
+      _exerciseIndex = 0;
+      _progress = SessionProgress(
+        workoutIndex: _workoutIndex,
+        exerciseIndex: _exerciseIndex,
+        currentSet: 1,
+        currentRep: 1,
+        phase: TimerPhase.rep,
+      );
+      _remaining = _getDurationForPhase(session, _progress);
+      notifyListeners();
+    }
   }
 
   // -------- Timer controls (first pass) --------

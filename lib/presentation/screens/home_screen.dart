@@ -111,11 +111,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Profile/Sign Out button
                       PopupMenuButton<String>(
                         icon: CircleAvatar(
-                          backgroundColor:
-                              context.colorScheme.primary,
+                          backgroundColor: context.colorScheme.primary,
                           child: Text(
                             authProvider.userProfile?.firstName
-                                    ?.substring(0, 1)
+                                    .substring(0, 1)
                                     .toUpperCase() ??
                                 'U',
                             style: context.titleMedium.copyWith(
@@ -183,10 +182,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Spacer(),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              context.colorScheme.secondary,
-                          foregroundColor:
-                              context.colorScheme.onSecondary,
+                          backgroundColor: context.colorScheme.secondary,
+                          foregroundColor: context.colorScheme.onSecondary,
                         ),
                         onPressed: () {
                           sessionLogData.clearAllLoggedSessions();
@@ -245,8 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: context.bodyMedium,
             ),
             trailing:
-                (session.label != null &&
-                        kDefaultLabels.containsKey(session.label))
+                (kDefaultLabels.containsKey(session.label))
                     ? IconButton(
                       key: iconButtonKey,
                       icon: Icon(
@@ -255,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         size: 20,
                       ),
                       onPressed: () {
-                        _showLabelPopup(context, session.label!, iconButtonKey);
+                        _showLabelPopup(context, session.label, iconButtonKey);
                       },
                       tooltip: session.label,
                     )
