@@ -10,7 +10,7 @@ HomeScreen shows a start session button, a calendar, and a list of historical se
 ### INTERACTION:
 - edit preset sessions
 - edit sets or reps during workout
- - onboarding screens
+- onboarding screens
 ### UI:
 - add supersets functionality
 
@@ -19,6 +19,7 @@ HomeScreen shows a start session button, a calendar, and a list of historical se
 - conflict resolution between local and cloud data
 - in session_select_screen.dart, when no sessions exist, loading indicator shows forever?
 - remove print statements
+- force max character length in exercise / workout names
 
 ## IDEAS:
 - user can start only a workout or exercise
@@ -40,15 +41,12 @@ HomeScreen shows a start session button, a calendar, and a list of historical se
 
 
 ## LATER STAGE
-- timers / progressions
 - timers without adding sessions/exercises first
-- user profiles
-- online mode (cloud storage)?
 - split add_item_screen into add_session_screen and add_workout_screen (code duplication, but also easier code)
 - convert addExerciseModalSheet to a screen
 
 ### LATER IDEAS
-- user profiles, can search and add friends
+- user profiles can search and add friends
 - user can create public and private sessions
 - user can add sessions from others (great for teams and coaches)
 
