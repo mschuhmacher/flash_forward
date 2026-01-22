@@ -4,7 +4,8 @@ import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/presentation/screens/home_screen.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
 
@@ -125,8 +126,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (success) {
       // Initialize providers with the newly authenticated user
       final userId = authProvider.userId;
-      final sessionLogProvider = Provider.of<SessionLogProvider>(context, listen: false);
-      final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
 
       await sessionLogProvider.init(userId: userId);
       await presetProvider.init(userId: userId);
@@ -212,7 +219,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         : Text(
                           _currentPage < 2 ? 'Continue' : 'Create Account',
                           style: context.titleLarge.copyWith(
-                            color: Theme.of(context).colorScheme.onPrimary,
+                            color: context.colorScheme.onPrimary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -244,7 +251,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 labelText: 'Email *',
                 labelStyle: context.bodyMedium,
                 prefixIcon: const Icon(Icons.email),
-                fillColor: Theme.of(context).colorScheme.surfaceBright,
+                fillColor: context.colorScheme.surfaceBright,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -264,7 +271,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 labelText: 'Password *',
                 labelStyle: context.bodyMedium,
                 prefixIcon: const Icon(Icons.lock),
-                fillColor: Theme.of(context).colorScheme.surfaceBright,
+                fillColor: context.colorScheme.surfaceBright,
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -292,7 +299,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 labelText: 'Confirm Password *',
                 labelStyle: context.bodyMedium,
                 prefixIcon: const Icon(Icons.lock),
-                fillColor: Theme.of(context).colorScheme.surfaceBright,
+                fillColor: context.colorScheme.surfaceBright,
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscureConfirmPassword
@@ -341,7 +348,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 labelText: 'First Name *',
                 labelStyle: context.bodyMedium,
                 prefixIcon: const Icon(Icons.person),
-                fillColor: Theme.of(context).colorScheme.surfaceBright,
+                fillColor: context.colorScheme.surfaceBright,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -357,7 +364,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 labelText: 'Last Name *',
                 labelStyle: context.bodyMedium,
                 prefixIcon: const Icon(Icons.person_outline),
-                fillColor: Theme.of(context).colorScheme.surfaceBright,
+                fillColor: context.colorScheme.surfaceBright,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -373,7 +380,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 labelText: 'Country *',
                 labelStyle: context.bodyMedium,
                 prefixIcon: const Icon(Icons.public),
-                fillColor: Theme.of(context).colorScheme.surfaceBright,
+                fillColor: context.colorScheme.surfaceBright,
               ),
               items:
                   _countries.map((country) {
@@ -418,7 +425,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 labelText: 'Phone Number',
                 labelStyle: context.bodyMedium,
                 prefixIcon: const Icon(Icons.phone),
-                fillColor: Theme.of(context).colorScheme.surfaceBright,
+                fillColor: context.colorScheme.surfaceBright,
                 helperText: 'For account recovery',
               ),
             ),
@@ -442,20 +449,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
+                color: context.colorScheme.primary,
                 borderRadius: BorderRadius.circular(25),
               ),
               child: RichText(
                 text: TextSpan(
                   style: context.bodyMedium.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: context.colorScheme.onPrimary,
                   ), // Base style
                   children: [
                     TextSpan(text: 'By signing up, you agree to our '),
                     TextSpan(
                       text: 'Terms of Service',
                       style: context.bodyMedium.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: context.colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
                       ),
 
@@ -472,7 +479,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     TextSpan(
                       text: 'Privacy Policy',
                       style: context.bodyMedium.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: context.colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                       recognizer:
@@ -495,14 +502,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
               //       children: [
               //         Icon(
               //           Icons.info_outline,
-              //           color: Theme.of(context).colorScheme.onPrimary,
+              //           color: context.colorScheme.onPrimary,
               //         ),
               //         const SizedBox(width: 8),
               //         Text(
               //           'Privacy Notice',
               //           style: context.titleMedium.copyWith(
               //             color:
-              //                 Theme.of(context).colorScheme.onPrimary,
+              //                 context.colorScheme.onPrimary,
               //           ),
               //         ),
               //       ],

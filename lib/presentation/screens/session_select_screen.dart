@@ -7,7 +7,8 @@ import 'package:flash_forward/presentation/widgets/session_select_row.dart';
 import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class SessionSelectScreen extends StatefulWidget {
   final dynamic index;
@@ -34,9 +35,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
               title: Text('Today\'s session', style: context.h4),
               centerTitle: true,
             ),
-            body: const Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: const Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -109,8 +108,8 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                   ),
                 ),
                 FloatingActionButton(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  foregroundColor: Theme.of(context).colorScheme.onSecondary,
+                  backgroundColor: context.colorScheme.secondary,
+                  foregroundColor: context.colorScheme.onSecondary,
                   onPressed: () {
                     Navigator.push(
                       context,

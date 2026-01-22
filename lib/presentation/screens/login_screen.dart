@@ -5,7 +5,8 @@ import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/presentation/screens/signup_screen.dart';
 import 'package:flash_forward/presentation/screens/home_screen.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,8 +43,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success) {
       // Initialize providers with the newly authenticated user
       final userId = authProvider.userId;
-      final sessionLogProvider = Provider.of<SessionLogProvider>(context, listen: false);
-      final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
 
       await sessionLogProvider.init(userId: userId);
       await presetProvider.init(userId: userId);
@@ -83,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'assets/images/bouldering_logo.png',
                     width: 100,
                     height: 100,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: context.colorScheme.onSurface,
                   ),
                   const SizedBox(height: 24),
 
@@ -109,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Email',
                       labelStyle: context.bodyMedium,
                       prefixIcon: const Icon(Icons.email),
-                      fillColor: Theme.of(context).colorScheme.surfaceBright,
+                      fillColor: context.colorScheme.surfaceBright,
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -131,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Password',
                       labelStyle: context.bodyMedium,
                       prefixIcon: const Icon(Icons.lock),
-                      fillColor: Theme.of(context).colorScheme.surfaceBright,
+                      fillColor: context.colorScheme.surfaceBright,
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -174,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   'Sign In',
                                   style: context.titleLarge.copyWith(
                                     color:
-                                        Theme.of(context).colorScheme.onPrimary,
+                                        context.colorScheme.onPrimary,
                                   ),
                                 ),
                       );
@@ -201,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           'Sign up',
                           style: context.bodyMedium.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
+                            color: context.colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

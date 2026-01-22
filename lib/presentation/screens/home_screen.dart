@@ -13,7 +13,8 @@ import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -111,14 +112,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       PopupMenuButton<String>(
                         icon: CircleAvatar(
                           backgroundColor:
-                              Theme.of(context).colorScheme.primary,
+                              context.colorScheme.primary,
                           child: Text(
                             authProvider.userProfile?.firstName
                                     ?.substring(0, 1)
                                     .toUpperCase() ??
                                 'U',
                             style: context.titleMedium.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: context.colorScheme.onPrimary,
                             ),
                           ),
                         ),
@@ -183,9 +184,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              Theme.of(context).colorScheme.secondary,
+                              context.colorScheme.secondary,
                           foregroundColor:
-                              Theme.of(context).colorScheme.onSecondary,
+                              context.colorScheme.onSecondary,
                         ),
                         onPressed: () {
                           sessionLogData.clearAllLoggedSessions();
@@ -259,11 +260,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       tooltip: session.label,
                     )
                     : null,
-            tileColor: Theme.of(context).colorScheme.surfaceBright,
+            tileColor: context.colorScheme.surfaceBright,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
               side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: context.colorScheme.onSurface,
                 width: 0.5,
               ),
             ),

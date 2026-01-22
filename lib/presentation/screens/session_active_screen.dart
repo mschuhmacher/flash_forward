@@ -5,7 +5,8 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/widgets/session_active_bottom_bar.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class ActiveSessionScreen extends StatefulWidget {
   const ActiveSessionScreen({super.key});
@@ -57,7 +58,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       Text(
                         name.title,
                         style: context.titleMedium.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimary,
+                          color: context.colorScheme.onPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                         softWrap: true,
@@ -67,7 +68,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       Text(
                         '${name.description} \n',
                         style: context.bodyMedium.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimary,
+                          color: context.colorScheme.onPrimary,
                         ),
                       ),
                     ],
@@ -92,7 +93,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             workoutNames[i] = Text(
               activeSession.list[i].title,
               style: context.bodyLarge.copyWith(
-                color: Theme.of(context).colorScheme.primary,
+                color: context.colorScheme.primary,
                 fontWeight: FontWeight.bold,
               ),
               softWrap: true,
@@ -139,7 +140,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
+                          color: context.colorScheme.primary,
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(150), // large curve
                           ),
@@ -160,14 +161,14 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             Text(
                               activeExercise.title,
                               style: context.h1.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
+                                color: context.colorScheme.onPrimary,
                               ),
                             ),
                             SizedBox(height: 8),
                             Text(
                               activeExercise.description,
                               style: context.bodyLarge.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
+                                color: context.colorScheme.onPrimary,
                               ),
                             ),
                           ],
@@ -177,7 +178,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   ),
                 ),
                 Container(
-                  color: Theme.of(context).colorScheme.primary,
+                  color: context.colorScheme.primary,
                   child: Column(
                     children: [
                       Center(
@@ -185,31 +186,31 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           TimerPhase.setRest => Text(
                             'Rest between sets',
                             style: context.h3.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: context.colorScheme.onPrimary,
                             ),
                           ),
                           TimerPhase.rep => Text(
                             'Rep',
                             style: context.h3.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: context.colorScheme.onPrimary,
                             ),
                           ),
                           TimerPhase.repRest => Text(
                             'Rest between reps',
                             style: context.h3.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: context.colorScheme.onPrimary,
                             ),
                           ),
                           TimerPhase.exerciseRest => Text(
                             'Rest between exercises',
                             style: context.h3.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: context.colorScheme.onPrimary,
                             ),
                           ),
                           TimerPhase.workoutComplete => Text(
                             'Workout complete',
                             style: context.h3.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: context.colorScheme.onPrimary,
                             ),
                           ),
                         },
@@ -218,7 +219,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                         child: Text(
                           _formatDuration(sessionStateData.remaining),
                           style: context.h1.copyWith(
-                            color: Theme.of(context).colorScheme.onPrimary,
+                            color: context.colorScheme.onPrimary,
                           ),
                           textScaler: TextScaler.linear(2.5),
                         ),
@@ -231,11 +232,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           children: [
                             Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color:
-                                      Theme.of(context).colorScheme.onPrimary,
+                                      context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -246,7 +247,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   '${progress.currentSet} / ${activeExercise.sets}   sets',
                                   style: context.titleLarge.copyWith(
                                     color:
-                                        Theme.of(context).colorScheme.onPrimary,
+                                        context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontStyle: FontStyle.italic,
                                   ),
@@ -256,11 +257,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
 
                             Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color:
-                                      Theme.of(context).colorScheme.onPrimary,
+                                      context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -271,7 +272,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   '${progress.currentRep} / ${activeExercise.reps}   reps',
                                   style: context.titleLarge.copyWith(
                                     color:
-                                        Theme.of(context).colorScheme.onPrimary,
+                                        context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontStyle: FontStyle.italic,
                                   ),
@@ -289,11 +290,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           children: [
                             Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color:
-                                      Theme.of(context).colorScheme.onPrimary,
+                                      context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -304,7 +305,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   'Load: ${activeExercise.load}',
                                   style: context.titleLarge.copyWith(
                                     color:
-                                        Theme.of(context).colorScheme.onPrimary,
+                                        context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontStyle: FontStyle.italic,
                                   ),
@@ -313,11 +314,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             ),
                             Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color:
-                                      Theme.of(context).colorScheme.onPrimary,
+                                      context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -329,18 +330,18 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   icon: Icon(
                                     Icons.edit,
                                     color:
-                                        Theme.of(context).colorScheme.onPrimary,
+                                        context.colorScheme.onPrimary,
                                   ),
                                 ),
                               ),
                             ),
                             Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color:
-                                      Theme.of(context).colorScheme.onPrimary,
+                                      context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -352,7 +353,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   icon: Icon(
                                     Icons.info_outline_rounded,
                                     color:
-                                        Theme.of(context).colorScheme.onPrimary,
+                                        context.colorScheme.onPrimary,
                                   ),
                                 ),
                               ),

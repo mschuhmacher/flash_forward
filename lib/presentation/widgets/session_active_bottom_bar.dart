@@ -8,7 +8,8 @@ import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/services/session_logger.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class ActiveSessionBottomBar extends StatefulWidget {
   const ActiveSessionBottomBar({super.key});
@@ -31,7 +32,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         return SizedBox(
           height: 100,
           child: BottomAppBar(
-            color: Theme.of(context).colorScheme.primary,
+            color: context.colorScheme.primary,
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.only(left: 24.0, right: 24.0),
@@ -54,8 +55,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           child: MyIconButton(
                             icon: Icons.arrow_back,
                             size: 40,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.primary,
+                            foregroundColor: context.colorScheme.primary,
                           ),
                         )
                         : SizedBox.shrink(),
@@ -66,9 +66,9 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           child: Text(
                             'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}',
                             style: context.bodyMedium.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: context.colorScheme.onPrimary,
                             ),
-                            overflow: TextOverflow.ellipsis,
+                            overflow: TextOverflow.fade,
                           ),
                         ),
                       ),
@@ -86,8 +86,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           child: MyIconButton(
                             icon: Icons.arrow_forward,
                             size: 40,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.primary,
+                            foregroundColor: context.colorScheme.primary,
                           ),
                         )
                         : GestureDetector(
@@ -101,8 +100,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           child: MyIconButton(
                             icon: Icons.check,
                             size: 40,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.primary,
+                            foregroundColor: context.colorScheme.primary,
                           ),
                         ),
                   ],
