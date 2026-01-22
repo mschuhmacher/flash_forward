@@ -38,19 +38,19 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    sessionStateData.workoutIndex > 0
+                    sessionStateData.exerciseIndex > 0
                         ? GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              progress.exerciseIndex - 1;
-                            });
-                          },
                           // onTap: () {
-                          //   sessionStateData.jumpToWorkout(
-                          //     sessionStateData.workoutIndex - 1,
-                          //     activeSession,
-                          //   );
+                          //   setState(() {
+                          //     sessionStateData.exerciseIndex - 1;
+                          //   });
                           // },
+                          onTap: () {
+                            sessionStateData.jumpToExercise(
+                              sessionStateData.exerciseIndex - 1,
+                              activeSession,
+                            );
+                          },
                           child: MyIconButton(
                             icon: Icons.arrow_back,
                             size: 40,
@@ -61,7 +61,6 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                         : SizedBox.shrink(),
 
                     if (progress.exerciseIndex + 1 < activeWorkout.list.length)
-                      //TODO: fix overflow for long text
                       Expanded(
                         child: Center(
                           child: Text(
@@ -69,7 +68,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                             style: context.bodyMedium.copyWith(
                               color: Theme.of(context).colorScheme.onPrimary,
                             ),
-                            overflow: TextOverflow.fade,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
@@ -79,8 +78,8 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                                 activeSession.list.length - 1)
                         ? GestureDetector(
                           onTap: () {
-                            sessionStateData.jumpToWorkout(
-                              sessionStateData.workoutIndex + 1,
+                            sessionStateData.jumpToExercise(
+                              sessionStateData.exerciseIndex + 1,
                               activeSession,
                             );
                           },
@@ -213,6 +212,9 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Session saved to log!')),
                       );
+
+                      // Reset the session state data
+                      SessionStateProvider().reset();
 
                       // Keeps popping routes until the current route is the first route. Not named,so no errors.
                       Navigator.popUntil(context, (route) => route.isFirst);
