@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 
 class MyIconButton extends StatelessWidget {

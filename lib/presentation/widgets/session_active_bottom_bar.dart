@@ -29,6 +29,21 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         final progress = sessionStateData.progress;
         Workout activeWorkout = activeSession.list[progress.workoutIndex];
 
+        String nextExerciseString;
+        if (progress.exerciseIndex + 1 < activeWorkout.list.length) {
+          nextExerciseString =
+              'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}';
+        } else if (progress.exerciseIndex + 1 == activeWorkout.list.length &&
+            progress.workoutIndex + 1 < activeSession.list.length) {
+          nextExerciseString =
+              'Next exercise: \n${activeSession.list[progress.workoutIndex + 1].list[0].title}';
+        } else if (progress.exerciseIndex + 1 == activeWorkout.list.length &&
+            progress.workoutIndex + 1 == activeSession.list.length) {
+          nextExerciseString = 'Next exercise: \nDone';
+        } else {
+          nextExerciseString = '';
+        }
+
         return SizedBox(
           height: 100,
           child: BottomAppBar(
@@ -39,14 +54,12 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    sessionStateData.exerciseIndex > 0
-                        ? GestureDetector(
-                          // onTap: () {
-                          //   setState(() {
-                          //     sessionStateData.exerciseIndex - 1;
-                          //   });
-                          // },
+                    (sessionStateData.progress.exerciseIndex == 0 &&
+                            sessionStateData.progress.workoutIndex == 0)
+                        ? SizedBox.shrink()
+                        : GestureDetector(
                           onTap: () {
+                            //TODO: this cannot regress past the first exercise of a workout. change to go further or add a button for workout skipping
                             sessionStateData.jumpToExercise(
                               sessionStateData.exerciseIndex - 1,
                               activeSession,
@@ -57,21 +70,18 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                             size: 40,
                             foregroundColor: context.colorScheme.primary,
                           ),
-                        )
-                        : SizedBox.shrink(),
-
-                    if (progress.exerciseIndex + 1 < activeWorkout.list.length)
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}',
-                            style: context.bodyMedium.copyWith(
-                              color: context.colorScheme.onPrimary,
-                            ),
-                            overflow: TextOverflow.fade,
+                        ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          nextExerciseString,
+                          style: context.bodyMedium.copyWith(
+                            color: context.colorScheme.onPrimary,
                           ),
+                          overflow: TextOverflow.fade,
                         ),
                       ),
+                    ),
 
                     (sessionStateData.workoutIndex >= 0 &&
                             sessionStateData.workoutIndex <
