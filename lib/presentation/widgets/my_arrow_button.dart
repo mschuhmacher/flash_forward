@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_theme.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class MyIconButton extends StatelessWidget {
   MyIconButton({
@@ -20,8 +21,8 @@ class MyIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconSize = 2 * size / 3;
 
-    foregroundColor ??= Theme.of(context).colorScheme.onSurface;
-    backgroundColor ??= Theme.of(context).colorScheme.surfaceBright;
+    foregroundColor ??= context.colorScheme.onSurface;
+    backgroundColor ??= context.colorScheme.surfaceBright;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),

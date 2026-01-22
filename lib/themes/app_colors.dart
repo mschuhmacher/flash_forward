@@ -233,3 +233,7 @@ class AppColorsDark {
     onError: const Color(0xff601410),
   );
 }
+
+extension AppColors on BuildContext {
+  ColorScheme get colorScheme => Theme.of(this).colorScheme;
+}

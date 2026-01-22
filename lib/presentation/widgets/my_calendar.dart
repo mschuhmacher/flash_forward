@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 /// TODO: add in eventLoader func. to add a marker (e.g. a dot) to each day on which a session was completed
 /// TODO: add in 'today' button in the header
@@ -58,26 +59,26 @@ class _MyCalendarState extends State<MyCalendar> {
 
           calendarStyle: CalendarStyle(
             defaultTextStyle: context.bodyMedium.copyWith(
-              color: Theme.of(context).colorScheme.onSecondary,
+              color: context.colorScheme.onSecondary,
             ),
             todayTextStyle: context.bodyMedium.copyWith(
-              color: Theme.of(context).colorScheme.onSecondary,
+              color: context.colorScheme.onSecondary,
             ),
             weekendTextStyle: context.bodyMedium.copyWith(
-              color: Theme.of(context).colorScheme.onSecondary,
+              color: context.colorScheme.onSecondary,
             ),
 
             todayDecoration: BoxDecoration(
-              // color: Theme.of(context).colorScheme.secondary,
+              // color: context.colorScheme.secondary,
               shape: BoxShape.rectangle,
               border: Border.all(
                 width: 1.5,
-                color: Theme.of(context).colorScheme.secondary,
+                color: context.colorScheme.secondary,
               ),
               borderRadius: BorderRadius.circular(8),
             ),
             markerDecoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              color: context.colorScheme.primary,
               shape: BoxShape.circle,
             ),
             markerSize: 6.0, // Size of the dot
