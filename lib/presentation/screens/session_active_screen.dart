@@ -103,6 +103,20 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           }
         }
 
+        String phaseText;
+        switch (sessionStateData.phase) {
+          case TimerPhase.setRest:
+            phaseText = 'Rest between sets';
+          case TimerPhase.rep:
+            phaseText = 'Rep';
+          case TimerPhase.repRest:
+            phaseText = 'Rest between reps';
+          case TimerPhase.exerciseRest:
+            phaseText = 'Rest between exercises';
+          case TimerPhase.workoutComplete:
+            phaseText = 'Workout complete';
+        }
+
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
@@ -182,44 +196,33 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   child: Column(
                     children: [
                       Center(
-                        child: switch (sessionStateData.phase) {
-                          TimerPhase.setRest => Text(
-                            'Rest between sets',
-                            style: context.h3.copyWith(
-                              color: context.colorScheme.onPrimary,
-                            ),
+                        child: Text(
+                          phaseText,
+                          style: context.h3.copyWith(
+                            color: context.colorScheme.onPrimary,
                           ),
-                          TimerPhase.rep => Text(
-                            'Rep',
-                            style: context.h3.copyWith(
-                              color: context.colorScheme.onPrimary,
-                            ),
-                          ),
-                          TimerPhase.repRest => Text(
-                            'Rest between reps',
-                            style: context.h3.copyWith(
-                              color: context.colorScheme.onPrimary,
-                            ),
-                          ),
-                          TimerPhase.exerciseRest => Text(
-                            'Rest between exercises',
-                            style: context.h3.copyWith(
-                              color: context.colorScheme.onPrimary,
-                            ),
-                          ),
-                          TimerPhase.workoutComplete => Text(
-                            'Workout complete',
-                            style: context.h3.copyWith(
-                              color: context.colorScheme.onPrimary,
-                            ),
-                          ),
-                        },
+                        ),
                       ),
                       Center(
                         child: Text(
                           _formatDuration(sessionStateData.remaining),
                           style: context.h1.copyWith(
-                            color: context.colorScheme.onPrimary,
+                            color: () {
+                              if (sessionStateData.phase == TimerPhase.rep) {
+                                return Color(0xFF10b981);
+                              } else if ((sessionStateData.phase ==
+                                          TimerPhase.repRest ||
+                                      sessionStateData.phase ==
+                                          TimerPhase.setRest ||
+                                      sessionStateData.phase ==
+                                          TimerPhase.exerciseRest) &&
+                                  sessionStateData.remaining <
+                                      Duration(seconds: 10)) {
+                                return context.colorScheme.secondary;
+                              } else {
+                                return context.colorScheme.onPrimary;
+                              }
+                            }(),
                           ),
                           textScaler: TextScaler.linear(2.5),
                         ),
@@ -235,8 +238,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
-                                  color:
-                                      context.colorScheme.onPrimary,
+                                  color: context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -246,8 +248,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 child: Text(
                                   '${progress.currentSet} / ${activeExercise.sets}   sets',
                                   style: context.titleLarge.copyWith(
-                                    color:
-                                        context.colorScheme.onPrimary,
+                                    color: context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontStyle: FontStyle.italic,
                                   ),
@@ -260,8 +261,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
-                                  color:
-                                      context.colorScheme.onPrimary,
+                                  color: context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -271,8 +271,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 child: Text(
                                   '${progress.currentRep} / ${activeExercise.reps}   reps',
                                   style: context.titleLarge.copyWith(
-                                    color:
-                                        context.colorScheme.onPrimary,
+                                    color: context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontStyle: FontStyle.italic,
                                   ),
@@ -293,8 +292,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
-                                  color:
-                                      context.colorScheme.onPrimary,
+                                  color: context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -304,8 +302,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 child: Text(
                                   'Load: ${activeExercise.load}',
                                   style: context.titleLarge.copyWith(
-                                    color:
-                                        context.colorScheme.onPrimary,
+                                    color: context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontStyle: FontStyle.italic,
                                   ),
@@ -317,8 +314,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
-                                  color:
-                                      context.colorScheme.onPrimary,
+                                  color: context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -329,8 +325,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   onPressed: () {},
                                   icon: Icon(
                                     Icons.edit,
-                                    color:
-                                        context.colorScheme.onPrimary,
+                                    color: context.colorScheme.onPrimary,
                                   ),
                                 ),
                               ),
@@ -340,8 +335,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
-                                  color:
-                                      context.colorScheme.onPrimary,
+                                  color: context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
@@ -352,8 +346,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   onPressed: () {},
                                   icon: Icon(
                                     Icons.info_outline_rounded,
-                                    color:
-                                        context.colorScheme.onPrimary,
+                                    color: context.colorScheme.onPrimary,
                                   ),
                                 ),
                               ),
