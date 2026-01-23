@@ -426,7 +426,7 @@ List<ExerciseTemplate> kDefaultExerciseTemplates = [
   ),
   ExerciseTemplate(
     id: 'seated-overhead-dumbbell-press',
-    title: 'Seated overhead dumbbell press',
+    title: 'Seated Shoulder Press',
     description: 'Seated bench at 75 degrees',
     label: 'Strength',
     defaultSets: 3,
@@ -767,7 +767,7 @@ List<ExerciseTemplate> kDefaultExerciseTemplates = [
   ),
   ExerciseTemplate(
     id: 'campus-board-pyramid-catches',
-    title: 'Campus Board Pyramid Catches',
+    title: 'Campus Pyramid Catches',
     description:
         'Catch one rung higher with one hand, move back down, go up two rungs, etc. ',
     label: 'Power',
@@ -1583,7 +1583,7 @@ List<ExerciseTemplate> kDefaultExerciseTemplates = [
   ),
   ExerciseTemplate(
     id: 'standing-forward-fold-wide-legged',
-    title: 'Standing Forward Fold (Wide-legged)',
+    title: 'Wide Standing Forward Fold',
     description:
         'Straight back and bend at the hips with straight legs and legs wide apart',
     label: 'Flexibility',
@@ -1843,6 +1843,41 @@ List<ExerciseTemplate> kDefaultExerciseTemplates = [
     difficulty: 'Beginner',
   ),
 
+  // TEST - UI LIMIT VERIFICATION
+  ExerciseTemplate(
+    id: 'test-max-title-25-chars',
+    title: 'Max Title at 25 Chars!!', // exactly 25 characters
+    description:
+        'Exercise description written to test the maximum allowed field character limit of 100 characters!!', // exactly 100 characters
+    label: 'Test',
+    defaultSets: 3,
+    defaultReps: 10,
+    defaultTimeBetweenSets: 60,
+    defaultTimePerRep: 5,
+    defaultTimeBetweenReps: 5,
+    defaultLoad: 'BW',
+    defaultRpe: 5,
+    equipment: 'None',
+    muscleGroups: 'Test',
+    difficulty: 'Beginner',
+  ),
+  ExerciseTemplate(
+    id: 'test-short-title',
+    title: 'Short',
+    description: 'Short desc',
+    label: 'Test',
+    defaultSets: 2,
+    defaultReps: 5,
+    defaultTimeBetweenSets: 30,
+    defaultTimePerRep: 3,
+    defaultTimeBetweenReps: 0,
+    defaultLoad: 'BW',
+    defaultRpe: 3,
+    equipment: 'None',
+    muscleGroups: 'Test',
+    difficulty: 'Beginner',
+  ),
+
   // LIMIT Bouldering
   ExerciseTemplate(
     id: 'flash',
@@ -1864,7 +1899,7 @@ List<ExerciseTemplate> kDefaultExerciseTemplates = [
     id: 'max-two-attempts',
     title: 'Max two attempts',
     description:
-        'Attempt each boulder max 2 tries, aim for flashing. Flashing the next boulder is more important then sending current one.',
+        'Max 2 attempts per boulder. Prioritize flashing over sending.',
     label: 'Limit',
     defaultSets: 8,
     defaultReps: 2,

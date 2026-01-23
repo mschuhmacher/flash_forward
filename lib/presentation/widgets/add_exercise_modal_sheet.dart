@@ -1,3 +1,4 @@
+import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -52,10 +53,12 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                     TextFormField(
                       controller: _titleController,
                       autofocus: true,
+                      maxLength: FieldLimits.exerciseTitleMaxLength,
                       decoration: const InputDecoration(
                         labelText: 'Title',
                         border: OutlineInputBorder(),
                       ),
+                      validator: FieldValidators.exerciseTitle,
                     ),
                     SizedBox(height: 16),
                     MyLabelDropdownButton(
@@ -78,10 +81,12 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                     TextFormField(
                       controller: _descriptionController,
                       autofocus: true,
+                      maxLength: FieldLimits.exerciseDescriptionMaxLength,
                       decoration: const InputDecoration(
                         labelText: 'Description',
                         border: OutlineInputBorder(),
                       ),
+                      validator: FieldValidators.exerciseDescription,
                     ),
                     SizedBox(height: 16),
                     Padding(

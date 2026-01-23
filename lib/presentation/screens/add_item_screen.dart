@@ -1,3 +1,4 @@
+import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flutter/material.dart';
@@ -232,16 +233,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
               child: TextFormField(
                 controller: _titleController,
                 autofocus: true,
+                maxLength: FieldLimits.workoutTitleMaxLength,
                 decoration: InputDecoration(
                   fillColor: context.colorScheme.surfaceBright,
                   labelText: 'Title',
                   labelStyle: context.bodyMedium,
                 ),
-                validator:
-                    (value) =>
-                        value == null || value.isEmpty
-                            ? 'Please enter a title'
-                            : null,
+                validator: FieldValidators.workoutTitle,
               ),
             ),
             SizedBox(width: 16),
@@ -273,11 +271,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
               child: TextFormField(
                 controller: _descriptionController,
                 autofocus: true,
+                maxLength: FieldLimits.workoutDescriptionMaxLength,
                 decoration: InputDecoration(
                   fillColor: context.colorScheme.surfaceBright,
                   labelText: 'Description',
                   labelStyle: context.bodyMedium,
                 ),
+                validator: FieldValidators.workoutDescription,
               ),
             ),
             if (widget.itemName == 'workout') ...[
