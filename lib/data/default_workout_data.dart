@@ -260,7 +260,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
-    title: 'Weighted pull-ups, pick-ups, hamstring stretch',
+    title: 'Pull-ups & Pick-ups Set',
     label: 'Strength',
     description: 'Superset of 3 exercises',
     difficulty: 'Intermediate',
@@ -654,7 +654,7 @@ List<Workout> kDefaultWorkouts = [
   // DAILY MAINTENANCE
   // ============================================================================
   Workout(
-    title: 'Morning Mobility & Light Hangs',
+    title: 'Morning Mobility Routine',
     label: 'Daily maintenance',
     description: '10-minute morning routine to wake up fingers and joints',
     difficulty: 'Beginner',
@@ -771,5 +771,22 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Climbing wall',
     timeBetweenExercises: 300,
     list: [_findInstance('flash'), _findInstance('limit-bouldering')],
+  ),
+
+  // ============================================================================
+  // TEST - UI LIMIT VERIFICATION
+  // ============================================================================
+  Workout(
+    title: 'Test Workout Maximum Title Lim', // exactly 30 characters
+    label: 'Test',
+    description:
+        'This workout description tests the maximum allowed character limit of exactly one hundred characters', // exactly 100 characters
+    difficulty: 'Beginner',
+    equipment: 'None',
+    timeBetweenExercises: 30,
+    list: [
+      _findInstance('test-max-title-25-chars'),
+      _findInstance('test-short-title'),
+    ],
   ),
 ];

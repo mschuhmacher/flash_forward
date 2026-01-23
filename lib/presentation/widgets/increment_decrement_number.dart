@@ -22,7 +22,7 @@ class IncrementDecrementNumberWidget extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () {
-            if (value > 1 && value > minimum) {
+            if (value > minimum) {
               decrement();
             }
           },

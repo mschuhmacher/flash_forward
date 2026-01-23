@@ -367,6 +367,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                     _showEditExerciseDialog(
                                       context,
                                       activeExercise,
+                                      sessionStateData,
                                     );
                                   },
                                   icon: Icon(
@@ -431,6 +432,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
   void _showEditExerciseDialog(
     BuildContext context,
     ExerciseInstance activeExercise,
+    SessionStateProvider sessionStateData,
   ) {
     showDialog(
       context: context,
@@ -517,7 +519,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       SizedBox(width: 8),
                       IncrementDecrementNumberWidget(
                         value: activeExercise.sets,
-                        minimum: SessionStateProvider().progress.currentSet,
+                        minimum: sessionStateData.progress.currentSet,
                         decrement: () {
                           setDialogState(() {
                             activeExercise.sets--;
@@ -544,7 +546,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       SizedBox(width: 8),
                       IncrementDecrementNumberWidget(
                         value: activeExercise.reps,
-                        minimum: SessionStateProvider().progress.currentRep,
+                        minimum: sessionStateData.progress.currentRep,
                         decrement: () {
                           setDialogState(() {
                             activeExercise.reps--;
