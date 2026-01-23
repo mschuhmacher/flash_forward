@@ -376,11 +376,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 ),
                               ),
                             ),
-                            
                           ],
                         ),
                       ),
-                      SizedBox(height: 12),
+                      SizedBox(height: 24),
                     ],
                   ),
                 ),
