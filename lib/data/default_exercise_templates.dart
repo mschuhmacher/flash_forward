@@ -1588,7 +1588,7 @@ List<ExerciseTemplate> kDefaultExerciseTemplates = [
         'Straight back and bend at the hips with straight legs and legs wide apart',
     label: 'Flexibility',
     defaultSets: 5,
-    defaultReps: 1,
+    defaultReps: 1,ß
     defaultTimeBetweenSets: 30,
     defaultTimePerRep: 60,
     defaultTimeBetweenReps: 0,
@@ -1846,9 +1846,9 @@ List<ExerciseTemplate> kDefaultExerciseTemplates = [
   // TEST - UI LIMIT VERIFICATION
   ExerciseTemplate(
     id: 'test-max-title-25-chars',
-    title: 'Max Title at 25 Chars!!', // exactly 25 characters
+    title: 'Max Title at 25 Chars!!!!', // exactly 25 characters
     description:
-        'Exercise description written to test the maximum allowed field character limit of 100 characters!!', // exactly 100 characters
+        'Exercise description written to test the maximum allowed field character limit of 100 characters!!ww', // exactly 100 characters
     label: 'Test',
     defaultSets: 3,
     defaultReps: 10,
