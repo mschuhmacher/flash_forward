@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/presentation/widgets/my_arrow_button.dart';
+import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
