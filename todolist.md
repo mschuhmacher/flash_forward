@@ -37,6 +37,7 @@ HomeScreen shows a start session button, a calendar, and a list of historical se
         - Click on grid item to go to all workouts of that type
         - Can only add new workouts within this screen
         - scrollable list with horizontal scroll per section (label)??
+- long press the pause button during an exercise to keep the timer running and going over the normal time. Loop icon
 
 
 
