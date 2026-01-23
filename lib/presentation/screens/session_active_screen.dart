@@ -517,6 +517,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       SizedBox(width: 8),
                       IncrementDecrementNumberWidget(
                         value: activeExercise.sets,
+                        minimum: SessionStateProvider().progress.currentSet,
                         decrement: () {
                           setDialogState(() {
                             activeExercise.sets--;
@@ -543,6 +544,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       SizedBox(width: 8),
                       IncrementDecrementNumberWidget(
                         value: activeExercise.reps,
+                        minimum: SessionStateProvider().progress.currentRep,
                         decrement: () {
                           setDialogState(() {
                             activeExercise.reps--;

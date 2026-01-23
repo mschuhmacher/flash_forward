@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 
 class IncrementDecrementNumberWidget extends StatelessWidget {
   final int value;
+  final int minimum;
   final VoidCallback decrement;
   final VoidCallback increment;
 
   const IncrementDecrementNumberWidget({
     required this.value,
+    required this.minimum,
     required this.decrement,
     required this.increment,
     super.key,
@@ -20,8 +22,7 @@ class IncrementDecrementNumberWidget extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () {
-            // TODO: add in safeguard that user cannot decrement beyond current set/rep
-            if (value > 1) {
+            if (value > 1 && value > minimum) {
               decrement();
             }
           },
