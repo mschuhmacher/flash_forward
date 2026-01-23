@@ -9,7 +9,6 @@ HomeScreen shows a start session button, a calendar, and a list of historical se
 
 ### INTERACTION:
 - edit preset sessions
-- edit sets or reps during workout
 - onboarding screens
 ### UI:
 - add supersets functionality
@@ -19,7 +18,7 @@ HomeScreen shows a start session button, a calendar, and a list of historical se
 - conflict resolution between local and cloud data
 - in session_select_screen.dart, when no sessions exist, loading indicator shows forever?
 - remove print statements
-- force max character length in exercise / workout names
+- force max number of workouts per session for UI constraints
 
 ## IDEAS:
 - user can start only a workout or exercise
