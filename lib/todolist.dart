@@ -13,13 +13,10 @@
 // 
 // UI:
 // - add supersets functionality
-// - add app icon
-// - change app name
 
 
 
 // IDEAS:
-// - user profiles
 // - user can start only a workout or exercise
 //     -toggle for starting a session or only a workout or exercise
 //
@@ -39,6 +36,9 @@
 // 
 // 
 // BUGS:
+// create tests for offline mode
+// conflict resolution between local and cloud data
+// in session_select_screen.dart, when no sessions exist, loading indicator shows forever?
 
 
 
