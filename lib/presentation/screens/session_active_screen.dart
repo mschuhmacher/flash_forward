@@ -74,6 +74,26 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           textAlign: TextAlign.end,
         );
 
+        // Limit displayed workout names to max 4 with sliding window
+        final totalWorkouts = workoutNames.length;
+        final currentIndex = progress.workoutIndex;
+        List<Widget> displayedWorkoutNames;
+
+        if (totalWorkouts <= 4) {
+          // Show all items
+          displayedWorkoutNames = workoutNames;
+        } else if (currentIndex >= totalWorkouts - 3) {
+          // Near the end: show last 4 without ellipsis
+          displayedWorkoutNames = workoutNames.sublist(totalWorkouts - 4);
+        } else {
+          // In the middle: show 3 items + ellipsis
+          final startIndex = (currentIndex - 1).clamp(0, totalWorkouts - 4);
+          displayedWorkoutNames = [
+            ...workoutNames.sublist(startIndex, startIndex + 3),
+            Text('...', style: context.bodyMedium, textAlign: TextAlign.end),
+          ];
+        }
+
         String phaseText;
         TextStyle phaseTextStyle = context.h2.copyWith(
           color: context.colorScheme.onPrimary,
@@ -127,7 +147,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       widthFactor: 0.97,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [...workoutNames, SizedBox(height: 8)],
+                        children: [
+                          ...displayedWorkoutNames,
+                          SizedBox(height: 8),
+                        ],
                       ),
                     ),
                   ),
