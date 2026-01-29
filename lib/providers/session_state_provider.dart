@@ -281,7 +281,7 @@ class SessionStateProvider extends ChangeNotifier {
     switch (p.phase) {
       case TimerPhase.rep:
         // After a rep, either go to repRest or straight into the next rep flow
-        if (exercise.timeBetweenReps > 0) {
+        if (exercise.timeBetweenReps > 0 && p.currentRep < exercise.reps) {
           return p.copyWith(phase: TimerPhase.repRest);
         }
         // fallthrough handled by repRest case

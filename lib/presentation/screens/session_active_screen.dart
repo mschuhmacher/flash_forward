@@ -49,33 +49,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         ExerciseInstance activeExercise =
             activeWorkout.list[progress.exerciseIndex];
 
-        //TODO: remove exerciseWidgets if not used
-        List<Widget> exerciseWidgets =
-            activeWorkout.list
-                .map(
-                  (name) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name.title,
-                        style: context.titleMedium.copyWith(
-                          color: context.colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        softWrap: true,
-                        maxLines: 2,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '${name.description} \n',
-                        style: context.bodyMedium.copyWith(
-                          color: context.colorScheme.onPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-                .toList();
         List<Widget> workoutNames =
             activeSession.list
                 .map(
@@ -114,7 +87,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           case TimerPhase.rep:
             phaseText = 'rep';
           case TimerPhase.repRest:
-            phaseText = 'rest between reps';
+            phaseText = 'rest';
           case TimerPhase.exerciseRest:
             phaseText = 'rest between exercises';
           case TimerPhase.workoutComplete:
