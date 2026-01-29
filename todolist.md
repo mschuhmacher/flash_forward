@@ -7,6 +7,7 @@ fl
 ### INTERACTION:
 - edit preset sessions
 - onboarding screens
+- edit button --> edit load for exercise
 ### UI:
 - add supersets functionality
 
@@ -38,6 +39,8 @@ fl
   - between timerphase text
   - between exercises / workouts
   - between workoutNames list
+- edit load and reps for each set
+- add logger package for loca debugging during dev
 
 
 
