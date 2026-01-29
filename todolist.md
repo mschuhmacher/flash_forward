@@ -9,6 +9,7 @@ fl
 - onboarding screens
 ### UI:
 - add supersets functionality
+- add get ready timer at start of workout
 
 ## BUGS:
 - create tests for offline mode
