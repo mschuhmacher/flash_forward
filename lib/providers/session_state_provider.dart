@@ -7,7 +7,7 @@ import 'package:flash_forward/models/workout.dart';
 
 /// Describes which part of the timer is active. Kept minimal so UI can branch
 /// on a single enum instead of separate booleans.
-enum TimerPhase { rep, repRest, setRest, exerciseRest, workoutComplete }
+enum TimerPhase { rep, repRest, setRest, exerciseRest, workoutComplete, paused }
 
 /// Immutable snapshot of where the user currently is inside the session tree
 /// (workout -> exercise -> set -> rep) plus the phase of the timer.
@@ -70,6 +70,8 @@ class SessionStateProvider extends ChangeNotifier {
   bool _isPaused = true;
   // Periodic timer that ticks once per second and advances phases.
   Timer? _ticker;
+
+  TimerPhase _rememberCurrentPhaseForPausing = TimerPhase.workoutComplete;
 
   int get weekIndex => _weekIndex;
   int get sessionIndex => _sessionIndex;
@@ -198,7 +200,7 @@ class SessionStateProvider extends ChangeNotifier {
       exerciseIndex: 0,
       currentSet: 1,
       currentRep: 1,
-      phase: TimerPhase.rep,
+      phase: TimerPhase.rep, //TODO: add getReady phase here
     );
     _remaining = _getDurationForPhase(session, _progress);
     _isPaused = false;
@@ -208,12 +210,15 @@ class SessionStateProvider extends ChangeNotifier {
 
   void pause() {
     _isPaused = true;
+    _rememberCurrentPhaseForPausing = _progress.phase;
+    _progress = _progress.copyWith(phase: TimerPhase.paused);
     notifyListeners();
   }
 
   void resume(Session session) {
     if (!_isPaused) return;
     _isPaused = false;
+    _progress = _progress.copyWith(phase: _rememberCurrentPhaseForPausing);
     _startTicker(session);
     notifyListeners();
   }
@@ -263,9 +268,7 @@ class SessionStateProvider extends ChangeNotifier {
   /// exercise data, so mid-session edits are respected automatically.
   SessionProgress? _calculateNextState(Session session, SessionProgress p) {
     final Workout workout = session.list[p.workoutIndex];
-    final ExerciseInstance exercise =
-        workout.list[p
-            .exerciseIndex]; //TODO: check whether exerciseInstance or exerciseTemplate
+    final ExerciseInstance exercise = workout.list[p.exerciseIndex];
 
     switch (p.phase) {
       case TimerPhase.rep:
@@ -323,6 +326,8 @@ class SessionStateProvider extends ChangeNotifier {
 
       case TimerPhase.workoutComplete:
         return null;
+      case TimerPhase.paused:
+        return null;
     }
   }
 
@@ -344,6 +349,9 @@ class SessionStateProvider extends ChangeNotifier {
         return Duration(seconds: workout.timeBetweenExercises);
       case TimerPhase.workoutComplete:
         return Duration.zero;
+      case TimerPhase.paused:
+        return Duration
+            .zero; //TODO: double check if .zero is correct usage here
     }
   }
 }

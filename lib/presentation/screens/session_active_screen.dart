@@ -105,6 +105,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         }
 
         String phaseText;
+        TextStyle phaseTextStyle = context.h2.copyWith(
+          color: context.colorScheme.onPrimary,
+          fontWeight: FontWeight.bold,
+        );
         switch (sessionStateData.phase) {
           case TimerPhase.setRest:
             phaseText = 'Rest between sets';
@@ -116,6 +120,12 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             phaseText = 'Rest between exercises';
           case TimerPhase.workoutComplete:
             phaseText = 'Workout complete';
+          case TimerPhase.paused:
+            phaseText = 'PAUSED';
+            phaseTextStyle = context.h2.copyWith(
+              color: context.colorScheme.tertiary,
+              fontWeight: FontWeight.bold,
+            );
         }
 
         return Scaffold(
@@ -196,14 +206,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   color: context.colorScheme.primary,
                   child: Column(
                     children: [
-                      Center(
-                        child: Text(
-                          phaseText,
-                          style: context.h2.copyWith(
-                            color: context.colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
+                      Center(child: Text(phaseText, style: phaseTextStyle)),
                       Stack(
                         alignment: Alignment.center,
                         children: [
@@ -213,7 +216,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                               style: context.h1.copyWith(
                                 color: () {
                                   if (sessionStateData.isPaused) {
-                                    return context.colorScheme.error;
+                                    return context.colorScheme.tertiary;
                                   } else if (sessionStateData.phase ==
                                       TimerPhase.rep) {
                                     return Color(0xFF10b981);
@@ -503,7 +506,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       Text('Load:', style: context.titleMedium),
                       SizedBox(width: 8),
                       // TODO: change to edit field
-                      Text(activeExercise.load.toString(), style: context.bodyMedium),
+                      Text(
+                        activeExercise.load.toString(),
+                        style: context.bodyMedium,
+                      ),
                     ],
                   ),
                   SizedBox(height: 8),
