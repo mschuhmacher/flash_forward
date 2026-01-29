@@ -1,9 +1,9 @@
 import 'dart:async';
 
+import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/models/exercise.dart';
 
 /// Describes which part of the timer is active. Kept minimal so UI can branch
 /// on a single enum instead of separate booleans.
@@ -210,7 +210,7 @@ class SessionStateProvider extends ChangeNotifier {
   /// exercise data, so mid-session edits are respected automatically.
   SessionProgress? _calculateNextState(Session session, SessionProgress p) {
     final Workout workout = session.list[p.workoutIndex];
-    final Exercise exercise = workout.list[p.exerciseIndex];
+    final ExerciseInstance exercise = workout.list[p.exerciseIndex]; //TODO: check whether exerciseInstance or exerciseTemplate
 
     switch (p.phase) {
       case TimerPhase.rep:

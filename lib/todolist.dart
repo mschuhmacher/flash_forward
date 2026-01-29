@@ -39,6 +39,7 @@
 // create tests for offline mode
 // conflict resolution between local and cloud data
 // in session_select_screen.dart, when no sessions exist, loading indicator shows forever?
+// remove print statements
 
 
 
@@ -51,6 +52,8 @@
 // - timers without adding sessions/exercises first
 // - user profiles
 // - online mode (cloud storage)?
+// - split add_item_screen into add_session_screen and add_workout_screen (code duplication, but also easier code)
+// - convert addExerciseModalSheet to a screen
 
 // IDEAS
 // user profiles, can search and add friends

@@ -1,11 +1,12 @@
 // Default workouts
-import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/data/default_exercise_data.dart';
+import 'package:flash_forward/data/default_exercise_templates.dart';
 
-// Helper function to find exercises by title
-Exercise _findExercise(String title) {
-  return kDefaultExercises.firstWhere((e) => e.title == title);
+// Helper function to create ExerciseInstance from template by ID
+ExerciseInstance _findInstance(String id) {
+  final template = kDefaultExerciseTemplates.firstWhere((t) => t.id == id);
+  return ExerciseInstance.fromTemplate(template);
 }
 
 List<Workout> kDefaultWorkouts = [
@@ -20,11 +21,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 15,
     list: [
-      _findExercise('Repeaters'),
-      _findExercise('Band-assisted pull-ups'),
-      _findExercise('Push-ups'),
-      _findExercise('No Monies'),
-      _findExercise('External Rotations'),
+      _findInstance('repeaters'),
+      _findInstance('band-assisted-pull-ups'),
+      _findInstance('push-ups'),
+      _findInstance('no-monies'),
+      _findInstance('external-rotations'),
     ],
   ),
 
@@ -36,11 +37,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 15,
     list: [
-      _findExercise('Jumping Jacks'),
-      _findExercise('Arm Circles'),
-      _findExercise('Leg Swings'),
-      _findExercise('Shoulder Rolls'),
-      _findExercise('Wrist Circles'),
+      _findInstance('jumping-jacks'),
+      _findInstance('arm-circles'),
+      _findInstance('leg-swings'),
+      _findInstance('shoulder-rolls'),
+      _findInstance('wrist-circles'),
     ],
   ),
 
@@ -52,12 +53,12 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Resistance band',
     timeBetweenExercises: 20,
     list: [
-      _findExercise('Arm Circles'),
-      _findExercise('Shoulder Rolls'),
-      _findExercise('Wrist Circles'),
-      _findExercise('Finger Flexor Stretch'),
-      _findExercise('Shoulder Dislocates'),
-      _findExercise('Cat-Cow Stretch'),
+      _findInstance('arm-circles'),
+      _findInstance('shoulder-rolls'),
+      _findInstance('wrist-circles'),
+      _findInstance('finger-flexor-stretch'),
+      _findInstance('shoulder-dislocates'),
+      _findInstance('cat-cow-stretch'),
     ],
   ),
 
@@ -69,11 +70,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Low bar',
     timeBetweenExercises: 20,
     list: [
-      _findExercise('Jumping Jacks'),
-      _findExercise('High Knees'),
-      _findExercise('Arm Circles'),
-      _findExercise('Shoulder Dislocates'),
-      _findExercise('Australian Pull-ups'),
+      _findInstance('jumping-jacks'),
+      _findInstance('high-knees'),
+      _findInstance('arm-circles'),
+      _findInstance('shoulder-dislocates'),
+      _findInstance('australian-pull-ups'),
     ],
   ),
 
@@ -88,9 +89,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Climbing wall',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Silent Feet Drill'),
-      _findExercise('Down Climbing'),
-      _findExercise('One foot'),
+      _findInstance('silent-feet-drill'),
+      _findInstance('down-climbing'),
+      _findInstance('one-foot'),
     ],
   ),
 
@@ -102,10 +103,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Climbing wall',
     timeBetweenExercises: 90,
     list: [
-      _findExercise('Straight Arm Climbing'),
-      _findExercise('Flag Practice'),
-      _findExercise('Twist Locks'),
-      _findExercise('Drop Knee Practice'),
+      _findInstance('straight-arm-climbing'),
+      _findInstance('flag-practice'),
+      _findInstance('twist-locks'),
+      _findInstance('drop-knee-practice'),
     ],
   ),
 
@@ -116,7 +117,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Climbing wall',
     timeBetweenExercises: 120,
-    list: [_findExercise('Hover Hands'), _findExercise('Dyno Practice')],
+    list: [_findInstance('hover-hands'), _findInstance('dyno-practice')],
   ),
 
   Workout(
@@ -127,9 +128,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Climbing wall',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('One foot'),
-      _findExercise('Hover Hands'),
-      _findExercise('Straight Arm Climbing'),
+      _findInstance('one-foot'),
+      _findInstance('hover-hands'),
+      _findInstance('straight-arm-climbing'),
     ],
   ),
 
@@ -144,10 +145,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar',
     timeBetweenExercises: 90,
     list: [
-      _findExercise('Pull-ups'),
-      _findExercise('Lock-offs'),
-      _findExercise('Hanging Leg Raises'),
-      _findExercise('Frenchies'),
+      _findInstance('pull-ups'),
+      _findInstance('lock-offs'),
+      _findInstance('hanging-leg-raises'),
+      _findInstance('frenchies'),
     ],
   ),
 
@@ -159,10 +160,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar, Weight belt',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Weighted Pull-ups'),
-      _findExercise('One Arm Pull-up Negatives'),
-      _findExercise('Typewriter Pull-ups'),
-      _findExercise('Toes to Bar'),
+      _findInstance('weighted-pull-ups'),
+      _findInstance('one-arm-pull-up-negatives'),
+      _findInstance('typewriter-pull-ups'),
+      _findInstance('toes-to-bar'),
     ],
   ),
 
@@ -174,11 +175,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Resistance band, Dumbbell',
     timeBetweenExercises: 60,
     list: [
-      _findExercise('Push-ups'),
-      _findExercise('Diamond Push-ups'),
-      _findExercise('No Monies'),
-      _findExercise('Face Pulls'),
-      _findExercise('External Rotations'),
+      _findInstance('push-ups'),
+      _findInstance('diamond-push-ups'),
+      _findInstance('no-monies'),
+      _findInstance('face-pulls'),
+      _findInstance('external-rotations'),
     ],
   ),
 
@@ -190,11 +191,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar',
     timeBetweenExercises: 60,
     list: [
-      _findExercise('Hanging Knee Raises'),
-      _findExercise('Hanging Leg Raises'),
-      _findExercise('Plank'),
-      _findExercise('Side Plank'),
-      _findExercise('Hollow Body Hold'),
+      _findInstance('hanging-knee-raises'),
+      _findInstance('hanging-leg-raises'),
+      _findInstance('plank'),
+      _findInstance('side-plank'),
+      _findInstance('hollow-body-hold'),
     ],
   ),
 
@@ -206,10 +207,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar, Bench',
     timeBetweenExercises: 90,
     list: [
-      _findExercise('Toes to Bar'),
-      _findExercise('Windshield Wipers'),
-      _findExercise('Front Lever Progressions'),
-      _findExercise('Copenhagen Plank'),
+      _findInstance('toes-to-bar'),
+      _findInstance('windshield-wipers'),
+      _findInstance('front-lever-progressions'),
+      _findInstance('copenhagen-plank'),
     ],
   ),
 
@@ -221,11 +222,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar, Resistance band',
     timeBetweenExercises: 90,
     list: [
-      _findExercise('Pull-ups'),
-      _findExercise('Push-ups'),
-      _findExercise('Toes to Bar'),
-      _findExercise('Pike Push-ups'),
-      _findExercise('No Monies'),
+      _findInstance('pull-ups'),
+      _findInstance('push-ups'),
+      _findInstance('toes-to-bar'),
+      _findInstance('pike-push-ups'),
+      _findInstance('no-monies'),
     ],
   ),
 
@@ -237,10 +238,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Low bar, Resistance band',
     timeBetweenExercises: 90,
     list: [
-      _findExercise('Band-assisted pull-ups'),
-      _findExercise('Push-ups'),
-      _findExercise('Hanging Knee Raises'),
-      _findExercise('Plank'),
+      _findInstance('band-assisted-pull-ups'),
+      _findInstance('push-ups'),
+      _findInstance('hanging-knee-raises'),
+      _findInstance('plank'),
     ],
   ),
 
@@ -252,9 +253,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Barbell, Bench',
     timeBetweenExercises: 180,
     list: [
-      _findExercise('Bench press'),
-      _findExercise('Romanian deadlift'),
-      _findExercise('Seated overhead dumbbell press'),
+      _findInstance('bench-press'),
+      _findInstance('romanian-deadlift'),
+      _findInstance('seated-overhead-dumbbell-press'),
     ],
   ),
 
@@ -266,9 +267,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Weight belt, pull-up bar, loading pin',
     timeBetweenExercises: 0,
     list: [
-      _findExercise('Weighted Pull-ups'),
-      _findExercise('Pick-ups'),
-      _findExercise('Standing Forward Fold (Wide-legged)'),
+      _findInstance('weighted-pull-ups'),
+      _findInstance('pick-ups'),
+      _findInstance('standing-forward-fold-wide-legged'),
     ],
   ),
 
@@ -279,7 +280,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Parallel bars, pull-up bar',
     timeBetweenExercises: 180,
-    list: [_findExercise('Dips'), _findExercise('Front Lever Progressions')],
+    list: [_findInstance('dips'), _findInstance('front-lever-progressions')],
   ),
 
   // ============================================================================
@@ -293,9 +294,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Campus board',
     timeBetweenExercises: 180,
     list: [
-      _findExercise('Campus Board Bumps'),
-      _findExercise('Campus Board 1-4-7'),
-      _findExercise('Campus Board Max Catch'),
+      _findInstance('campus-board-bumps'),
+      _findInstance('campus-board-1-4-7'),
+      _findInstance('campus-board-max-catch'),
     ],
   ),
 
@@ -307,9 +308,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Climbing wall',
     timeBetweenExercises: 150,
     list: [
-      _findExercise('Dyno Practice'),
-      _findExercise('One Arm Dynos'),
-      _findExercise('Lock-off Dynos'),
+      _findInstance('dyno-practice'),
+      _findInstance('one-arm-dynos'),
+      _findInstance('lock-off-dynos'),
     ],
   ),
 
@@ -321,9 +322,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Explosive Pull-ups'),
-      _findExercise('Chest-to-Bar Pull-ups'),
-      _findExercise('Plyometric Push-ups'),
+      _findInstance('explosive-pull-ups'),
+      _findInstance('chest-to-bar-pull-ups'),
+      _findInstance('plyometric-push-ups'),
     ],
   ),
 
@@ -334,7 +335,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Box/Platform',
     timeBetweenExercises: 90,
-    list: [_findExercise('Box Jumps'), _findExercise('Tuck Jumps')],
+    list: [_findInstance('box-jumps'), _findInstance('tuck-jumps')],
   ),
 
   Workout(
@@ -345,9 +346,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Campus board, Pull-up bar',
     timeBetweenExercises: 150,
     list: [
-      _findExercise('Campus Board Pyramid Catches'),
-      _findExercise('Explosive Pull-ups'),
-      _findExercise('Campus Board 1-3-5-7'),
+      _findInstance('campus-board-pyramid-catches'),
+      _findInstance('explosive-pull-ups'),
+      _findInstance('campus-board-1-3-5-7'),
     ],
   ),
 
@@ -361,7 +362,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Advanced',
     equipment: 'Campus board',
     timeBetweenExercises: 180,
-    list: [_findExercise('Campus Board Ladders')],
+    list: [_findInstance('campus-board-ladders')],
   ),
 
   Workout(
@@ -371,7 +372,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Climbing wall',
     timeBetweenExercises: 240,
-    list: [_findExercise('4x4s')],
+    list: [_findInstance('4x4s')],
   ),
 
   Workout(
@@ -381,7 +382,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Climbing wall',
     timeBetweenExercises: 240,
-    list: [_findExercise('Linked Boulder Problems')],
+    list: [_findInstance('linked-boulder-problems')],
   ),
 
   Workout(
@@ -391,7 +392,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Climbing board',
     timeBetweenExercises: 120,
-    list: [_findExercise('Pyramids')],
+    list: [_findInstance('pyramids')],
   ),
 
   Workout(
@@ -401,7 +402,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Climbing wall',
     timeBetweenExercises: 360,
-    list: [_findExercise('6 in 6')],
+    list: [_findInstance('6-in-6')],
   ),
 
   // ============================================================================
@@ -414,7 +415,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Advanced',
     equipment: 'Hangboard',
     timeBetweenExercises: 180,
-    list: [_findExercise('Max Hangs'), _findExercise('Minimum Edge Hangs')],
+    list: [_findInstance('max-hangs'), _findInstance('minimum-edge-hangs')],
   ),
 
   Workout(
@@ -425,9 +426,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Hangboard',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Half Crimp Hangs'),
-      _findExercise('Three Finger Drag Hangs'),
-      _findExercise('Repeaters'),
+      _findInstance('half-crimp-hangs'),
+      _findInstance('three-finger-drag-hangs'),
+      _findInstance('repeaters'),
     ],
   ),
 
@@ -439,8 +440,8 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Hangboard',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Recruitment pulls'),
-      _findExercise('Open Hand Hangs'),
+      _findInstance('recruitment-pulls'),
+      _findInstance('open-hand-hangs'),
     ],
   ),
 
@@ -453,9 +454,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Hangboard, Pull-up bar',
     timeBetweenExercises: 180,
     list: [
-      _findExercise('Max Hangs'),
-      _findExercise('Weighted Pull-ups'),
-      _findExercise('Minimum Edge Hangs'),
+      _findInstance('max-hangs'),
+      _findInstance('weighted-pull-ups'),
+      _findInstance('minimum-edge-hangs'),
     ],
   ),
 
@@ -469,7 +470,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Beginner',
     equipment: 'Climbing wall',
     timeBetweenExercises: 300,
-    list: [_findExercise('ARC Training')],
+    list: [_findInstance('arc-training')],
   ),
 
   Workout(
@@ -479,7 +480,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Climbing wall',
     timeBetweenExercises: 180,
-    list: [_findExercise('Laps on Route')],
+    list: [_findInstance('laps-on-route')],
   ),
 
   // ============================================================================
@@ -493,11 +494,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 15,
     list: [
-      _findExercise('Cat-Cow Stretch'),
-      _findExercise('Hip Flexor Stretch'),
-      _findExercise('Pigeon Pose'),
-      _findExercise('Seated Forward Fold'),
-      _findExercise('Shoulder Dislocates'),
+      _findInstance('cat-cow-stretch'),
+      _findInstance('hip-flexor-stretch'),
+      _findInstance('pigeon-pose'),
+      _findInstance('seated-forward-fold'),
+      _findInstance('shoulder-dislocates'),
     ],
   ),
 
@@ -509,12 +510,12 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Resistance band',
     timeBetweenExercises: 30,
     list: [
-      _findExercise('Shoulder Dislocates'),
-      _findExercise('Cat-Cow Stretch'),
-      _findExercise('Hip Flexor Stretch'),
-      _findExercise('Pigeon Pose'),
-      _findExercise('Pancake Stretch'),
-      _findExercise('Thoracic Bridge'),
+      _findInstance('shoulder-dislocates'),
+      _findInstance('cat-cow-stretch'),
+      _findInstance('hip-flexor-stretch'),
+      _findInstance('pigeon-pose'),
+      _findInstance('pancake-stretch'),
+      _findInstance('thoracic-bridge'),
     ],
   ),
 
@@ -526,11 +527,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 30,
     list: [
-      _findExercise('Standing Forward Fold'),
-      _findExercise('Standing Forward Fold (Wide-legged)'),
-      _findExercise('Seated Forward Fold'),
-      _findExercise('Pigeon Pose'),
-      _findExercise('Middle Splits Progression'),
+      _findInstance('standing-forward-fold'),
+      _findInstance('standing-forward-fold-wide-legged'),
+      _findInstance('seated-forward-fold'),
+      _findInstance('pigeon-pose'),
+      _findInstance('middle-splits-progression'),
     ],
   ),
 
@@ -545,10 +546,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Wall',
     timeBetweenExercises: 90,
     list: [
-      _findExercise('Freestanding Handstand'),
-      _findExercise('Handstand Hold (Wall)'),
-      _findExercise('Handstand Taps (Wall)'),
-      _findExercise('Crow Pose'),
+      _findInstance('freestanding-handstand'),
+      _findInstance('handstand-hold-wall'),
+      _findInstance('handstand-taps-wall'),
+      _findInstance('crow-pose'),
     ],
   ),
 
@@ -560,10 +561,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Wall',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Handstand Push-ups'),
-      _findExercise('Freestanding Handstand'),
-      _findExercise('Handstand Walk'),
-      _findExercise('Crane Pose'),
+      _findInstance('handstand-push-ups'),
+      _findInstance('freestanding-handstand'),
+      _findInstance('handstand-walk'),
+      _findInstance('crane-pose'),
     ],
   ),
 
@@ -575,10 +576,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Tuck Planche'),
-      _findExercise('Advanced Tuck Planche'),
-      _findExercise('L-Sit Hold'),
-      _findExercise('Crow Pose'),
+      _findInstance('tuck-planche'),
+      _findInstance('advanced-tuck-planche'),
+      _findInstance('l-sit-hold'),
+      _findInstance('crow-pose'),
     ],
   ),
 
@@ -590,9 +591,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 150,
     list: [
-      _findExercise('Advanced Tuck Planche'),
-      _findExercise('Straddle Planche'),
-      _findExercise('Full Planche'),
+      _findInstance('advanced-tuck-planche'),
+      _findInstance('straddle-planche'),
+      _findInstance('full-planche'),
     ],
   ),
 
@@ -604,9 +605,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Front Lever Progressions'),
-      _findExercise('Back Lever Progressions'),
-      _findExercise('Skin the Cat'),
+      _findInstance('front-lever-progressions'),
+      _findInstance('back-lever-progressions'),
+      _findInstance('skin-the-cat'),
     ],
   ),
 
@@ -618,10 +619,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar, Rings',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Pull-ups'),
-      _findExercise('Dips'),
-      _findExercise('Muscle-up'),
-      _findExercise('Ring Muscle-up'),
+      _findInstance('pull-ups'),
+      _findInstance('dips'),
+      _findInstance('muscle-up'),
+      _findInstance('ring-muscle-up'),
     ],
   ),
 
@@ -632,7 +633,7 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Advanced',
     equipment: 'None',
     timeBetweenExercises: 90,
-    list: [_findExercise('Pistol Squat'), _findExercise('Shrimp Squat')],
+    list: [_findInstance('pistol-squat'), _findInstance('shrimp-squat')],
   ),
 
   Workout(
@@ -643,9 +644,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Pull-up bar, Pole',
     timeBetweenExercises: 120,
     list: [
-      _findExercise('Muscle-up'),
-      _findExercise('Human Flag Progressions'),
-      _findExercise('Skin the Cat'),
+      _findInstance('muscle-up'),
+      _findInstance('human-flag-progressions'),
+      _findInstance('skin-the-cat'),
     ],
   ),
 
@@ -660,10 +661,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Hangboard',
     timeBetweenExercises: 30,
     list: [
-      _findExercise('Wrist Circles'),
-      _findExercise('Finger Flexor Stretch'),
-      _findExercise('Arm Circles'),
-      _findExercise('Open Hand Hangs'),
+      _findInstance('wrist-circles'),
+      _findInstance('finger-flexor-stretch'),
+      _findInstance('arm-circles'),
+      _findInstance('open-hand-hangs'),
     ],
   ),
 
@@ -675,10 +676,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Hangboard',
     timeBetweenExercises: 30,
     list: [
-      _findExercise('Recruitment pulls'),
-      _findExercise('Standing Forward Fold (Wide-legged)'),
-      _findExercise('Recruitment pulls'),
-      _findExercise('Shoulder Dislocates'),
+      _findInstance('recruitment-pulls'),
+      _findInstance('standing-forward-fold-wide-legged'),
+      _findInstance('recruitment-pulls'),
+      _findInstance('shoulder-dislocates'),
     ],
   ),
 
@@ -690,11 +691,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 20,
     list: [
-      _findExercise('Cat-Cow Stretch'),
-      _findExercise('Pigeon Pose'),
-      _findExercise('Shoulder Dislocates'),
-      _findExercise('Standing Forward Fold (Wide-legged)'),
-      _findExercise('Seated Forward Fold (Single leg)'),
+      _findInstance('cat-cow-stretch'),
+      _findInstance('pigeon-pose'),
+      _findInstance('shoulder-dislocates'),
+      _findInstance('standing-forward-fold-wide-legged'),
+      _findInstance('seated-forward-fold-single-leg'),
     ],
   ),
 
@@ -706,10 +707,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Resistance band, Dumbbell',
     timeBetweenExercises: 30,
     list: [
-      _findExercise('No Monies'),
-      _findExercise('Face Pulls'),
-      _findExercise('External Rotations'),
-      _findExercise('Reverse Wrist Curls'),
+      _findInstance('no-monies'),
+      _findInstance('face-pulls'),
+      _findInstance('external-rotations'),
+      _findInstance('reverse-wrist-curls'),
     ],
   ),
 
@@ -721,10 +722,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Hangboard',
     timeBetweenExercises: 30,
     list: [
-      _findExercise('Wrist Circles'),
-      _findExercise('Finger Flexor Stretch'),
-      _findExercise('Repeaters'),
-      _findExercise('Reverse Wrist Curls'),
+      _findInstance('wrist-circles'),
+      _findInstance('finger-flexor-stretch'),
+      _findInstance('repeaters'),
+      _findInstance('reverse-wrist-curls'),
     ],
   ),
 
@@ -736,10 +737,10 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 20,
     list: [
-      _findExercise('Plank'),
-      _findExercise('Side Plank'),
-      _findExercise('Dead Bug'),
-      _findExercise('Hollow Body Hold'),
+      _findInstance('plank'),
+      _findInstance('side-plank'),
+      _findInstance('dead-bug'),
+      _findInstance('hollow-body-hold'),
     ],
   ),
 
@@ -751,11 +752,11 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Resistance band',
     timeBetweenExercises: 25,
     list: [
-      _findExercise('Arm Circles'),
-      _findExercise('Shoulder Rolls'),
-      _findExercise('Shoulder Dislocates'),
-      _findExercise('External Rotations'),
-      _findExercise('Face Pulls'),
+      _findInstance('arm-circles'),
+      _findInstance('shoulder-rolls'),
+      _findInstance('shoulder-dislocates'),
+      _findInstance('external-rotations'),
+      _findInstance('face-pulls'),
     ],
   ),
 
@@ -769,6 +770,6 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Climbing wall',
     timeBetweenExercises: 300,
-    list: [_findExercise('Flash'), _findExercise('Limit bouldering')],
+    list: [_findInstance('flash'), _findInstance('limit-bouldering')],
   ),
 ];
