@@ -28,14 +28,26 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
       builder: (context, presetData, sessionStateData, child) {
         final currentSessionList = presetData.presetSessions;
 
-        // Guard clause: show loading indicator if sessions are loading or not yet loaded
-        if (presetData.isLoading || currentSessionList.isEmpty) {
+        // Guard clause: show loading indicator if sessions are loading
+        if (presetData.isLoading) {
           return Scaffold(
             appBar: AppBar(
               title: Text('Today\'s session', style: context.h4),
               centerTitle: true,
             ),
             body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+// If done loading but sessionList remains empty due to error
+        if (presetData.isLoading == false && currentSessionList.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Today\'s session', style: context.h4),
+              centerTitle: true,
+            ),
+            body: Center(
+              child: Text('No sessions found...', style: context.h2),
+            ),
           );
         }
 
