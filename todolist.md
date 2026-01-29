@@ -15,7 +15,7 @@ fl
 ## BUGS:
 - create tests for offline mode
 - conflict resolution between local and cloud data
-- remove print statements
+- lower Sentry sample rates to traces: 0.2 and profiles: 0.1
 
 ## IDEAS:
 - user can start only a workout or exercise
@@ -49,6 +49,7 @@ fl
 - timers without adding sessions/exercises first
 - split add_item_screen into add_session_screen and add_workout_screen (code duplication, but also easier code)
 - convert addExerciseModalSheet to a screen
+- add Apple / Google auth
 
 ### LATER IDEAS
 - user profiles can search and add friends
