@@ -77,11 +77,6 @@ class _HomeScreenState extends State<HomeScreen> {
         authProvider,
         Widget? child,
       ) {
-        // DEBUG: Add these lines temporarily
-        print('Auth is authenticated: ${authProvider.isAuthenticated}');
-        print('User profile: ${authProvider.userProfile}');
-        print('First name: ${authProvider.userProfile?.firstName}');
-
         // Reverse the list to show the latest sessions first
         List<Session> selectedSessions =
             sessionLogData.selectedSessions.reversed.toList();

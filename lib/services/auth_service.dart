@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/services/supabase_config.dart';
 import '../models/user_profile.dart';
 
@@ -18,11 +19,6 @@ class AuthService {
       final packageInfo = await PackageInfo.fromPlatform();
       final appVersion = packageInfo.version;
 
-      print('=== SIGNUP START ===');
-      print('Email: $email');
-      print('First Name: $firstName');
-      print('Last Name: $lastName');
-
       // Step 1: Create the auth user
       // Trigger will create empty profile automatically
       final response = await supabase.auth.signUp(
@@ -30,16 +26,12 @@ class AuthService {
         password: password,
       );
 
-      print('Auth user created: ${response.user?.id}');
-      print('Session exists: ${response.session != null}');
-
       if (response.user != null) {
         // Step 2: Wait briefly for trigger to create the profile row
         await Future.delayed(const Duration(milliseconds: 500));
 
         // Step 3: Now UPDATE the profile with user data (not INSERT)
         // User is authenticated, so RLS allows this UPDATE
-        print('Updating profile with user data...');
 
         try {
           await supabase
@@ -55,17 +47,15 @@ class AuthService {
               })
               .eq('id', response.user!.id);
 
-          print('Profile updated successfully');
-        } catch (updateError) {
-          print('!!! Error updating profile: $updateError');
+        } catch (updateError, stackTrace) {
+          Sentry.captureException(updateError, stackTrace: stackTrace);
           // Don't fail the entire signup
         }
       }
 
-      print('=== SIGNUP COMPLETE ===');
       return response;
-    } catch (e) {
-      print('!!! SIGNUP ERROR: $e');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       rethrow;
     }
   }

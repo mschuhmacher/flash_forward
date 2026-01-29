@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/data/default_exercise_templates.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
 import 'package:flash_forward/models/exercise_instance.dart';
@@ -78,8 +79,8 @@ class PresetProvider extends ChangeNotifier {
       _userSessions = await _syncService!.fetchUserSessions();
       _userWorkouts = await _syncService!.fetchUserWorkouts();
       _userExerciseTemplates = await _syncService!.fetchUserExercises();
-    } catch (e) {
-      print('Error loading from cloud, falling back to local: $e');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       await _loadUserPresetDataFromLocal();
     }
   }
@@ -126,8 +127,8 @@ class PresetProvider extends ChangeNotifier {
     if (_syncService != null) {
       try {
         await _syncService!.uploadSession(session);
-      } catch (e) {
-        print('Error uploading session to cloud: $e');
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
       }
     }
 
@@ -148,8 +149,8 @@ class PresetProvider extends ChangeNotifier {
     if (_syncService != null) {
       try {
         await _syncService!.deleteSession(sessionToDelete.id);
-      } catch (e) {
-        print('Error deleting session from cloud: $e');
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
       }
     }
 
@@ -166,8 +167,8 @@ class PresetProvider extends ChangeNotifier {
     if (_syncService != null) {
       try {
         await _syncService!.uploadWorkout(workout);
-      } catch (e) {
-        print('Error uploading workout to cloud: $e');
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
       }
     }
 
@@ -185,8 +186,8 @@ class PresetProvider extends ChangeNotifier {
     if (_syncService != null) {
       try {
         await _syncService!.uploadExercise(exerciseTemplate);
-      } catch (e) {
-        print('Error uploading exercise to cloud: $e');
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
       }
     }
 
