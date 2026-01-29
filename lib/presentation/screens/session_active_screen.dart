@@ -61,21 +61,18 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   ),
                 )
                 .toList();
+
         // Highlight the title of the current block in a list of block titles
-        for (int i = 0; i < workoutNames.length; i++) {
-          if (i == progress.workoutIndex) {
-            workoutNames[i] = Text(
-              activeSession.list[i].title,
-              style: context.bodyLarge.copyWith(
-                color: context.colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-              softWrap: true,
-              maxLines: 2,
-              textAlign: TextAlign.end,
-            );
-          }
-        }
+        workoutNames[progress.workoutIndex] = Text(
+          activeSession.list[progress.workoutIndex].title,
+          style: context.bodyLarge.copyWith(
+            color: context.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+          softWrap: true,
+          maxLines: 2,
+          textAlign: TextAlign.end,
+        );
 
         String phaseText;
         TextStyle phaseTextStyle = context.h2.copyWith(

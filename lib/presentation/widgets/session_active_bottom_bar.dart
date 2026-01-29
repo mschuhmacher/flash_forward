@@ -54,8 +54,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    (sessionStateData.progress.exerciseIndex == 0 &&
-                            sessionStateData.progress.workoutIndex == 0)
+                    (progress.exerciseIndex == 0 && progress.workoutIndex == 0)
                         ? SizedBox.shrink()
                         : GestureDetector(
                           onTap: () {
@@ -83,9 +82,11 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                       ),
                     ),
 
-                    (sessionStateData.workoutIndex >= 0 &&
-                            sessionStateData.workoutIndex <
-                                activeSession.list.length - 1)
+                    (progress.workoutIndex >= 0 &&
+                            (progress.workoutIndex + 1 <
+                                    activeSession.list.length ||
+                                progress.exerciseIndex + 1 <
+                                    activeWorkout.list.length))
                         ? GestureDetector(
                           onTap: () {
                             sessionStateData.jumpToExercise(
