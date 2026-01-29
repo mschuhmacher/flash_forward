@@ -1,11 +1,12 @@
+import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
-import 'package:flash_forward/presentation/widgets/my_arrow_button.dart';
+import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
 
 class AddExerciseModalSheet extends StatefulWidget {
   const AddExerciseModalSheet({super.key});
@@ -52,10 +53,12 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                     TextFormField(
                       controller: _titleController,
                       autofocus: true,
+                      maxLength: FieldLimits.exerciseTitleMaxLength,
                       decoration: const InputDecoration(
                         labelText: 'Title',
                         border: OutlineInputBorder(),
                       ),
+                      validator: FieldValidators.exerciseTitle,
                     ),
                     SizedBox(height: 16),
                     MyLabelDropdownButton(
@@ -78,10 +81,12 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                     TextFormField(
                       controller: _descriptionController,
                       autofocus: true,
+                      maxLength: FieldLimits.exerciseDescriptionMaxLength,
                       decoration: const InputDecoration(
                         labelText: 'Description',
                         border: OutlineInputBorder(),
                       ),
+                      validator: FieldValidators.exerciseDescription,
                     ),
                     SizedBox(height: 16),
                     Padding(
@@ -101,7 +106,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                                 });
                               }
                             },
-                            child: MyArrowButton(icon: Icons.remove),
+                            child: MyIconButton(icon: Icons.remove),
                           ),
                           SizedBox(width: 8),
                           SizedBox(
@@ -120,7 +125,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                                 _numberOfSets++;
                               });
                             },
-                            child: MyArrowButton(icon: Icons.add),
+                            child: MyIconButton(icon: Icons.add),
                           ),
                         ],
                       ),
@@ -143,7 +148,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                                 });
                               }
                             },
-                            child: MyArrowButton(icon: Icons.remove),
+                            child: MyIconButton(icon: Icons.remove),
                           ),
                           SizedBox(width: 8),
                           SizedBox(
@@ -162,7 +167,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                                 _numberOfReps++;
                               });
                             },
-                            child: MyArrowButton(icon: Icons.add),
+                            child: MyIconButton(icon: Icons.add),
                           ),
                         ],
                       ),
@@ -306,7 +311,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                             defaultTimeBetweenReps: int.parse(
                               _timeBetweenRepsController.text.trim(),
                             ),
-                            defaultLoad: _loadController.text.trim(),
+                            defaultLoad: double.parse(_loadController.text.trim()),
                           );
                           presetData.addPresetExercise(newExercise);
                         }

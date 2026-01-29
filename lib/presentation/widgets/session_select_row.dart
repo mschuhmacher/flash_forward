@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/presentation/widgets/my_arrow_button.dart';
+import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class SessionSelectRow extends StatelessWidget {
   const SessionSelectRow({required this.caseStatement, super.key});
@@ -48,7 +49,7 @@ class SessionSelectRow extends StatelessWidget {
                   decrement();
                 }
               },
-              child: MyArrowButton(icon: Icons.arrow_back),
+              child: MyIconButton(icon: Icons.arrow_back),
             ),
             GestureDetector(
               onTap: () {
@@ -93,7 +94,7 @@ class SessionSelectRow extends StatelessWidget {
                   increment();
                 }
               },
-              child: MyArrowButton(icon: Icons.arrow_forward),
+              child: MyIconButton(icon: Icons.arrow_forward),
             ),
             SizedBox(width: 10),
           ],
@@ -117,9 +118,9 @@ class MyRowCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             width: 0.25,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: context.colorScheme.onSurface,
           ),
-          color: Theme.of(context).colorScheme.surfaceBright,
+          color: context.colorScheme.surfaceBright,
           boxShadow: context.shadowLarge,
         ),
         child: Center(

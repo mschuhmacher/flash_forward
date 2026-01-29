@@ -15,7 +15,7 @@ class ExerciseTemplate {
   final int defaultTimeBetweenSets;
   final int defaultTimePerRep;
   final int defaultTimeBetweenReps;
-  final String defaultLoad;
+  final double defaultLoad;
   final int? defaultRpe;
 
   ExerciseTemplate({
@@ -32,7 +32,7 @@ class ExerciseTemplate {
     this.defaultTimeBetweenSets = 60,
     this.defaultTimePerRep = 3,
     this.defaultTimeBetweenReps = 0,
-    this.defaultLoad = 'Bodyweight',
+    this.defaultLoad = 0.0,
     this.defaultRpe,
   }) : id = id ?? const Uuid().v4();
 
@@ -69,7 +69,7 @@ class ExerciseTemplate {
         defaultTimeBetweenSets: json['defaultTimeBetweenSets'] ?? 60,
         defaultTimePerRep: json['defaultTimePerRep'] ?? 3,
         defaultTimeBetweenReps: json['defaultTimeBetweenReps'] ?? 0,
-        defaultLoad: json['defaultLoad'] ?? 'Bodyweight',
+        defaultLoad: (json['defaultLoad'] as num).toDouble(),
         defaultRpe: json['defaultRpe'],
       );
 
@@ -87,7 +87,7 @@ class ExerciseTemplate {
     int? defaultTimeBetweenSets,
     int? defaultTimePerRep,
     int? defaultTimeBetweenReps,
-    String? defaultLoad,
+    double? defaultLoad,
     int? defaultRpe,
   }) {
     return ExerciseTemplate(

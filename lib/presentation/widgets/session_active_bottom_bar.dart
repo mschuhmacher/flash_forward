@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/presentation/widgets/my_arrow_button.dart';
+import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/services/session_logger.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class ActiveSessionBottomBar extends StatefulWidget {
   const ActiveSessionBottomBar({super.key});
@@ -28,62 +29,94 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         final progress = sessionStateData.progress;
         Workout activeWorkout = activeSession.list[progress.workoutIndex];
 
-        return SizedBox(
-          height: 110,
-          child: BottomAppBar(
-            color: Theme.of(context).colorScheme.primary,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 24.0, right: 24.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  sessionStateData.workoutIndex > 0
-                      ? GestureDetector(
-                        onTap: () {
-                          sessionStateData.jumpToWorkout(
-                            sessionStateData.workoutIndex - 1,
-                            activeSession,
-                          );
-                        },
-                        child: MyArrowButton(icon: Icons.arrow_back, size: 40),
-                      )
-                      : SizedBox.shrink(),
+        String nextExerciseString;
+        if (progress.exerciseIndex + 1 < activeWorkout.list.length) {
+          nextExerciseString =
+              'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}';
+        } else if (progress.exerciseIndex + 1 == activeWorkout.list.length &&
+            progress.workoutIndex + 1 < activeSession.list.length) {
+          nextExerciseString =
+              'Next exercise: \n${activeSession.list[progress.workoutIndex + 1].list[0].title}';
+        } else if (progress.exerciseIndex + 1 == activeWorkout.list.length &&
+            progress.workoutIndex + 1 == activeSession.list.length) {
+          nextExerciseString = 'Next exercise: \nDone';
+        } else {
+          nextExerciseString = '';
+        }
 
-                  if (progress.exerciseIndex + 1 < activeWorkout.list.length)
-                  //TODO: fix overflow for long text
-                    Text(
-                      'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}',
-                      style: context.bodyLarge.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
+        return SizedBox(
+          height: 100,
+          child: BottomAppBar(
+            color: context.colorScheme.primary,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 24.0, right: 24.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    (progress.exerciseIndex == 0 && progress.workoutIndex == 0)
+                        ? SizedBox.shrink()
+                        : GestureDetector(
+                          onTap: () {
+                            //TODO: this cannot regress past the first exercise of a workout. change to go further or add a button for workout skipping
+                            sessionStateData.jumpToExercise(
+                              sessionStateData.exerciseIndex - 1,
+                              activeSession,
+                            );
+                          },
+                          child: MyIconButton(
+                            icon: Icons.arrow_back,
+                            size: 40,
+                            foregroundColor: context.colorScheme.primary,
+                          ),
+                        ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          nextExerciseString,
+                          style: context.bodyMedium.copyWith(
+                            color: context.colorScheme.onPrimary,
+                          ),
+                          overflow: TextOverflow.fade,
+                        ),
                       ),
                     ),
 
-                  (sessionStateData.workoutIndex >= 0 &&
-                          sessionStateData.workoutIndex <
-                              activeSession.list.length - 1)
-                      ? GestureDetector(
-                        onTap: () {
-                          sessionStateData.jumpToWorkout(
-                            sessionStateData.workoutIndex + 1,
-                            activeSession,
-                          );
-                        },
-                        child: MyArrowButton(
-                          icon: Icons.arrow_forward,
-                          size: 40,
+                    // Return true as long as there are more workouts or exercises to be completed. When last exercise of last workout, show complete button
+                    (progress.workoutIndex >= 0 &&
+                            (progress.workoutIndex + 1 <
+                                    activeSession.list.length ||
+                                progress.exerciseIndex + 1 <
+                                    activeWorkout.list.length))
+                        ? GestureDetector(
+                          onTap: () {
+                            sessionStateData.jumpToExercise(
+                              sessionStateData.exerciseIndex + 1,
+                              activeSession,
+                            );
+                          },
+                          child: MyIconButton(
+                            icon: Icons.arrow_forward,
+                            size: 40,
+                            foregroundColor: context.colorScheme.primary,
+                          ),
+                        )
+                        : GestureDetector(
+                          onTap: () {
+                            _showFinishSessionDialog(
+                              context,
+                              activeSession,
+                              sessionLogData,
+                            );
+                          },
+                          child: MyIconButton(
+                            icon: Icons.check,
+                            size: 40,
+                            foregroundColor: context.colorScheme.primary,
+                          ),
                         ),
-                      )
-                      : GestureDetector(
-                        onTap: () {
-                          _showFinishSessionDialog(
-                            context,
-                            activeSession,
-                            sessionLogData,
-                          );
-                        },
-                        child: MyArrowButton(icon: Icons.check, size: 40),
-                      ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -189,6 +222,9 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Session saved to log!')),
                       );
+
+                      // Reset the session state data
+                      SessionStateProvider().reset();
 
                       // Keeps popping routes until the current route is the first route. Not named,so no errors.
                       Navigator.popUntil(context, (route) => route.isFirst);

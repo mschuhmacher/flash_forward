@@ -13,7 +13,8 @@ import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -110,15 +111,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Profile/Sign Out button
                       PopupMenuButton<String>(
                         icon: CircleAvatar(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
+                          backgroundColor: context.colorScheme.primary,
                           child: Text(
                             authProvider.userProfile?.firstName
-                                    ?.substring(0, 1)
+                                    .substring(0, 1)
                                     .toUpperCase() ??
                                 'U',
                             style: context.titleMedium.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: context.colorScheme.onPrimary,
                             ),
                           ),
                         ),
@@ -182,10 +182,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Spacer(),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.secondary,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onSecondary,
+                          backgroundColor: context.colorScheme.secondary,
+                          foregroundColor: context.colorScheme.onSecondary,
                         ),
                         onPressed: () {
                           sessionLogData.clearAllLoggedSessions();
@@ -244,8 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: context.bodyMedium,
             ),
             trailing:
-                (session.label != null &&
-                        kDefaultLabels.containsKey(session.label))
+                (kDefaultLabels.containsKey(session.label))
                     ? IconButton(
                       key: iconButtonKey,
                       icon: Icon(
@@ -254,16 +251,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         size: 20,
                       ),
                       onPressed: () {
-                        _showLabelPopup(context, session.label!, iconButtonKey);
+                        _showLabelPopup(context, session.label, iconButtonKey);
                       },
                       tooltip: session.label,
                     )
                     : null,
-            tileColor: Theme.of(context).colorScheme.surfaceBright,
+            tileColor: context.colorScheme.surfaceBright,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
               side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: context.colorScheme.onSurface,
                 width: 0.5,
               ),
             ),

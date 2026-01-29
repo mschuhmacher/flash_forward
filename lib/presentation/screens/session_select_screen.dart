@@ -7,7 +7,8 @@ import 'package:flash_forward/presentation/widgets/session_select_row.dart';
 import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class SessionSelectScreen extends StatefulWidget {
   final dynamic index;
@@ -27,15 +28,25 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
       builder: (context, presetData, sessionStateData, child) {
         final currentSessionList = presetData.presetSessions;
 
-        // Guard clause: show loading indicator if sessions are loading or not yet loaded
-        if (presetData.isLoading || currentSessionList.isEmpty) {
+        // Guard clause: show loading indicator if sessions are loading
+        if (presetData.isLoading) {
           return Scaffold(
             appBar: AppBar(
               title: Text('Today\'s session', style: context.h4),
               centerTitle: true,
             ),
-            body: const Center(
-              child: CircularProgressIndicator(),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+// If done loading but sessionList remains empty due to error
+        if (presetData.isLoading == false && currentSessionList.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Today\'s session', style: context.h4),
+              centerTitle: true,
+            ),
+            body: Center(
+              child: Text('No sessions found...', style: context.h2),
             ),
           );
         }
@@ -109,8 +120,8 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                   ),
                 ),
                 FloatingActionButton(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  foregroundColor: Theme.of(context).colorScheme.onSecondary,
+                  backgroundColor: context.colorScheme.secondary,
+                  foregroundColor: context.colorScheme.onSecondary,
                   onPressed: () {
                     Navigator.push(
                       context,

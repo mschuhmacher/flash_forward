@@ -51,7 +51,7 @@ final List<Session> kDefaultSessions = [
     label: 'Strength',
     list: [
       _findWorkout('General Warm-up'),
-      _findWorkout('Weighted pull-ups, pick-ups, hamstring stretch'),
+      _findWorkout('Pull-ups & Pick-ups Set'),
       _findWorkout('Handstand Progression Training'),
       _findWorkout('Dips and front lever'),
       _findWorkout('Barbell Strength Training'),
@@ -70,5 +70,13 @@ final List<Session> kDefaultSessions = [
     date: DateTime.now(),
     label: 'Daily maintenance',
     list: [_findWorkout('Evening Stretch & Recovery')],
+  ),
+  // TEST - UI LIMIT VERIFICATION SESSION
+  Session(
+    title: 'UI Test Session - Max Limits',
+    description: 'Test session with exercises at character limits for UI verification and finetuning purposes',
+    date: DateTime.now(),
+    label: 'Test',
+    list: [_findWorkout('Test Workout Maximum Title Lim')],
   ),
 ];

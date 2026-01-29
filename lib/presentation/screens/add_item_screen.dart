@@ -1,3 +1,4 @@
+import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,8 @@ import 'package:flash_forward/presentation/widgets/add_exercise_modal_sheet.dart
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class AddItemScreen extends StatefulWidget {
   final String itemName;
@@ -176,7 +178,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                   ),
                                   list:
                                       selectedPresetItems
-                                          .whereType<ExerciseTemplate>() //should be all, but safer than .cast()
+                                          .whereType<
+                                            ExerciseTemplate
+                                          >() //should be all, but safer than .cast()
                                           .map(
                                             (template) =>
                                                 ExerciseInstance.fromTemplate(
@@ -229,16 +233,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
               child: TextFormField(
                 controller: _titleController,
                 autofocus: true,
+                maxLength: FieldLimits.workoutTitleMaxLength,
                 decoration: InputDecoration(
-                  fillColor: Theme.of(context).colorScheme.surfaceBright,
+                  fillColor: context.colorScheme.surfaceBright,
                   labelText: 'Title',
                   labelStyle: context.bodyMedium,
                 ),
-                validator:
-                    (value) =>
-                        value == null || value.isEmpty
-                            ? 'Please enter a title'
-                            : null,
+                validator: FieldValidators.workoutTitle,
               ),
             ),
             SizedBox(width: 16),
@@ -270,11 +271,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
               child: TextFormField(
                 controller: _descriptionController,
                 autofocus: true,
+                maxLength: FieldLimits.workoutDescriptionMaxLength,
                 decoration: InputDecoration(
-                  fillColor: Theme.of(context).colorScheme.surfaceBright,
+                  fillColor: context.colorScheme.surfaceBright,
                   labelText: 'Description',
                   labelStyle: context.bodyMedium,
                 ),
+                validator: FieldValidators.workoutDescription,
               ),
             ),
             if (widget.itemName == 'workout') ...[
@@ -286,7 +289,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
-                    fillColor: Theme.of(context).colorScheme.surfaceBright,
+                    fillColor: context.colorScheme.surfaceBright,
                     labelText:
                         'Time between exercises', //TODO: too long, fix this
                     labelStyle: context.bodyMedium,
@@ -309,7 +312,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
           child: Text(
             'All $listItemName',
             style: context.h4.copyWith(
-              color: Theme.of(context).colorScheme.secondary,
+              color: context.colorScheme.secondary,
             ),
           ),
         ),
@@ -328,7 +331,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     decoration: InputDecoration(
                       hintText: 'Search...',
                       hintStyle: context.bodyMedium,
-                      fillColor: Theme.of(context).colorScheme.surfaceBright,
+                      fillColor: context.colorScheme.surfaceBright,
                       isDense: true,
                     ),
                     onChanged: (value) {
@@ -356,10 +359,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
           OutlinedButton(
             key: const ValueKey('searchButton'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSecondary,
-              backgroundColor: Theme.of(context).colorScheme.surfaceBright,
+              foregroundColor: context.colorScheme.onSecondary,
+              backgroundColor: context.colorScheme.surfaceBright,
               side: BorderSide(
-                color: Theme.of(context).colorScheme.secondary,
+                color: context.colorScheme.secondary,
                 width: 1.5,
               ),
             ),
@@ -414,10 +417,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
           OutlinedButton(
             key: const ValueKey('filterButton'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSecondary,
-              backgroundColor: Theme.of(context).colorScheme.surfaceBright,
+              foregroundColor: context.colorScheme.onSecondary,
+              backgroundColor: context.colorScheme.surfaceBright,
               side: BorderSide(
-                color: Theme.of(context).colorScheme.secondary,
+                color: context.colorScheme.secondary,
                 width: 1.5,
               ),
             ),
@@ -432,10 +435,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
             ? SizedBox.shrink()
             : OutlinedButton(
               style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.onSecondary,
-                backgroundColor: Theme.of(context).colorScheme.surfaceBright,
+                foregroundColor: context.colorScheme.onSecondary,
+                backgroundColor: context.colorScheme.surfaceBright,
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.secondary,
+                  color: context.colorScheme.secondary,
                   width: 1.5,
                 ),
               ),
@@ -458,9 +461,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
                 width: 0.5,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: context.colorScheme.onSurface,
               ),
-              color: Theme.of(context).colorScheme.surfaceBright,
+              color: context.colorScheme.surfaceBright,
               boxShadow: context.shadowSmall,
             ),
             child: ListTile(
@@ -504,7 +507,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     Text(
                       'Load:',
                     ), //TODO: edit to display more useful information
-                    Text(filteredPresetItems[index].load), //TODO: change to defaultLoad for exerciseTemplate
+                    Text(
+                      '${filteredPresetItems[index].defaultLoad.toString()} kg',
+                    ),
                   ],
                   Align(
                     alignment: Alignment.centerRight,

@@ -1,23 +1,19 @@
 # TO DO List
-
-## GENERAL APPROACH
-HomeScreen shows a start session button, a calendar, and a list of historical sessions
-
+fl
 ## FEATURES TO BUILD
  ### DATA:
  - 
 
 ### INTERACTION:
 - edit preset sessions
-- edit sets or reps during workout
- - onboarding screens
+- onboarding screens
+- edit button --> edit load for exercise
 ### UI:
 - add supersets functionality
 
 ## BUGS:
 - create tests for offline mode
 - conflict resolution between local and cloud data
-- in session_select_screen.dart, when no sessions exist, loading indicator shows forever?
 - remove print statements
 
 ## IDEAS:
@@ -36,19 +32,25 @@ HomeScreen shows a start session button, a calendar, and a list of historical se
         - Click on grid item to go to all workouts of that type
         - Can only add new workouts within this screen
         - scrollable list with horizontal scroll per section (label)??
+- long press the pause button during an exercise to keep the timer running and going over the normal time. Loop icon
+- lbs vs kg setting
+- support band resistance in exercises
+- add animations
+  - between timerphase text
+  - between exercises / workouts
+  - between workoutNames list
+- edit load and reps for each set
+- add logger package for loca debugging during dev
 
 
 
 ## LATER STAGE
-- timers / progressions
 - timers without adding sessions/exercises first
-- user profiles
-- online mode (cloud storage)?
 - split add_item_screen into add_session_screen and add_workout_screen (code duplication, but also easier code)
 - convert addExerciseModalSheet to a screen
 
 ### LATER IDEAS
-- user profiles, can search and add friends
+- user profiles can search and add friends
 - user can create public and private sessions
 - user can add sessions from others (great for teams and coaches)
 

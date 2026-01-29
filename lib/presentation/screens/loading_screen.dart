@@ -5,7 +5,8 @@ import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/presentation/screens/home_screen.dart';
 import 'package:flash_forward/presentation/screens/login_screen.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -78,7 +79,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: context.colorScheme.surface,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -87,13 +88,13 @@ class _LoadingScreenState extends State<LoadingScreen> {
               'assets/images/bouldering_logo.png',
               width: 120,
               height: 120,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: context.colorScheme.onSurface,
             ),
             const SizedBox(height: 24),
             Text('Flash Forward', style: context.h1),
             const SizedBox(height: 40),
             CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
+              color: context.colorScheme.primary,
             ),
           ],
         ),
