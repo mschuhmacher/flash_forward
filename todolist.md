@@ -9,14 +9,12 @@ fl
 - onboarding screens
 ### UI:
 - add supersets functionality
-- add get ready timer at start of workout
 
 ## BUGS:
 - create tests for offline mode
 - conflict resolution between local and cloud data
 - in session_select_screen.dart, when no sessions exist, loading indicator shows forever?
 - remove print statements
-- force max number of workouts per session for UI constraints display 4 list item max (-1,current,+1,+2) and display... beyond
 
 ## IDEAS:
 - user can start only a workout or exercise
@@ -40,6 +38,7 @@ fl
 - add animations
   - between timerphase text
   - between exercises / workouts
+  - between workoutNames list
 
 
 

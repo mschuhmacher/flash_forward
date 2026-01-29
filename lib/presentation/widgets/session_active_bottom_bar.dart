@@ -82,6 +82,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                       ),
                     ),
 
+                    // Return true as long as there are more workouts or exercises to be completed. When last exercise of last workout, show complete button
                     (progress.workoutIndex >= 0 &&
                             (progress.workoutIndex + 1 <
                                     activeSession.list.length ||
