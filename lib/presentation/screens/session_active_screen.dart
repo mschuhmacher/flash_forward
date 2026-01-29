@@ -107,24 +107,27 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         String phaseText;
         TextStyle phaseTextStyle = context.h2.copyWith(
           color: context.colorScheme.onPrimary,
-          fontWeight: FontWeight.bold,
         );
         switch (sessionStateData.phase) {
           case TimerPhase.setRest:
-            phaseText = 'Rest between sets';
+            phaseText = 'rest between sets';
           case TimerPhase.rep:
-            phaseText = 'Rep';
+            phaseText = 'rep';
           case TimerPhase.repRest:
-            phaseText = 'Rest between reps';
+            phaseText = 'rest between reps';
           case TimerPhase.exerciseRest:
-            phaseText = 'Rest between exercises';
+            phaseText = 'rest between exercises';
           case TimerPhase.workoutComplete:
-            phaseText = 'Workout complete';
+            phaseText = 'workout complete';
           case TimerPhase.paused:
-            phaseText = 'PAUSED';
+            phaseText = 'paused';
             phaseTextStyle = context.h2.copyWith(
               color: context.colorScheme.tertiary,
-              fontWeight: FontWeight.bold,
+            );
+          case TimerPhase.getReady:
+            phaseText = 'get ready';
+            phaseTextStyle = context.h2.copyWith(
+              color: context.colorScheme.secondary,
             );
         }
 
@@ -218,8 +221,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   if (sessionStateData.isPaused) {
                                     return context.colorScheme.tertiary;
                                   } else if (sessionStateData.phase ==
+                                      TimerPhase.getReady) {
+                                    return context.colorScheme.secondary;
+                                  } else if (sessionStateData.phase ==
                                       TimerPhase.rep) {
-                                    return Color(0xFF10b981);
+                                    return context.colorScheme.onPrimary;
                                   } else if ((sessionStateData.phase ==
                                               TimerPhase.repRest ||
                                           sessionStateData.phase ==
