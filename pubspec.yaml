@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  sentry_flutter: ^9.10.0
   flutter:
     sdk: flutter
 
@@ -49,6 +50,7 @@ dependencies:
   connectivity_plus: ^6.0.3
 
 dev_dependencies:
+  sentry_dart_plugin: ^3.2.1
   flutter_test:
     sdk: flutter
 
@@ -108,3 +110,9 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/logo_padded.png"
   remove_alpha_ios: true
+
+sentry:
+  upload_debug_symbols: true
+  upload_source_maps: true
+  project: flutter
+  org: studio-foam
