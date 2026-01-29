@@ -16,7 +16,7 @@ fl
 - conflict resolution between local and cloud data
 - in session_select_screen.dart, when no sessions exist, loading indicator shows forever?
 - remove print statements
-- force max number of workouts per session for UI constraints
+- force max number of workouts per session for UI constraints display 4 list item max (-1,current,+1,+2) and display... beyond
 
 ## IDEAS:
 - user can start only a workout or exercise
@@ -37,6 +37,9 @@ fl
 - long press the pause button during an exercise to keep the timer running and going over the normal time. Loop icon
 - lbs vs kg setting
 - support band resistance in exercises
+- add animations
+  - between timerphase text
+  - between exercises / workouts
 
 
 

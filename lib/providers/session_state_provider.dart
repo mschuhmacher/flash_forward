@@ -7,7 +7,15 @@ import 'package:flash_forward/models/workout.dart';
 
 /// Describes which part of the timer is active. Kept minimal so UI can branch
 /// on a single enum instead of separate booleans.
-enum TimerPhase { rep, repRest, setRest, exerciseRest, workoutComplete, paused }
+enum TimerPhase {
+  rep,
+  repRest,
+  setRest,
+  exerciseRest,
+  workoutComplete,
+  paused,
+  getReady,
+}
 
 /// Immutable snapshot of where the user currently is inside the session tree
 /// (workout -> exercise -> set -> rep) plus the phase of the timer.
@@ -62,7 +70,7 @@ class SessionStateProvider extends ChangeNotifier {
     exerciseIndex: 0,
     currentSet: 1,
     currentRep: 1,
-    phase: TimerPhase.workoutComplete,
+    phase: TimerPhase.getReady,
   );
   // Countdown remaining for the current phase.
   Duration _remaining = Duration.zero;
@@ -71,7 +79,7 @@ class SessionStateProvider extends ChangeNotifier {
   // Periodic timer that ticks once per second and advances phases.
   Timer? _ticker;
 
-  TimerPhase _rememberCurrentPhaseForPausing = TimerPhase.workoutComplete;
+  TimerPhase _rememberCurrentPhaseForPausing = TimerPhase.getReady;
 
   int get weekIndex => _weekIndex;
   int get sessionIndex => _sessionIndex;
@@ -200,7 +208,7 @@ class SessionStateProvider extends ChangeNotifier {
       exerciseIndex: 0,
       currentSet: 1,
       currentRep: 1,
-      phase: TimerPhase.rep, //TODO: add getReady phase here
+      phase: TimerPhase.getReady,
     );
     _remaining = _getDurationForPhase(session, _progress);
     _isPaused = false;
@@ -319,11 +327,13 @@ class SessionStateProvider extends ChangeNotifier {
             exerciseIndex: 0,
             currentSet: 1,
             currentRep: 1,
-            phase: TimerPhase.rep,
+            phase: TimerPhase.getReady,
           );
         }
         return null;
-
+      case TimerPhase.getReady:
+        // Transition from GET READY to first rep of current exercise
+        return p.copyWith(phase: TimerPhase.rep);
       case TimerPhase.workoutComplete:
         return null;
       case TimerPhase.paused:
@@ -334,7 +344,9 @@ class SessionStateProvider extends ChangeNotifier {
   /// Returns the duration for the current phase, derived from the active
   /// exercise/workout. Values are stored as seconds in the models.
   Duration _getDurationForPhase(Session session, SessionProgress p) {
-    if (p.phase == TimerPhase.workoutComplete) return Duration.zero;
+    if (p.phase == TimerPhase.workoutComplete)
+      return Duration
+          .zero; //TODO: is this redundant or just to handle as the first thing?
     final workout = session.list[p.workoutIndex];
     final exercise = workout.list[p.exerciseIndex];
 
@@ -352,6 +364,8 @@ class SessionStateProvider extends ChangeNotifier {
       case TimerPhase.paused:
         return Duration
             .zero; //TODO: double check if .zero is correct usage here
+      case TimerPhase.getReady:
+        return Duration(seconds: 10);
     }
   }
 }
