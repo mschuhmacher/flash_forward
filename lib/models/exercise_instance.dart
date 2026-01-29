@@ -18,7 +18,7 @@ class ExerciseInstance {
   int timeBetweenSets;
   int timePerRep;
   int timeBetweenReps;
-  String load;
+  double load;
   int? rpe;
 
   ExerciseInstance({
@@ -75,7 +75,7 @@ class ExerciseInstance {
         timeBetweenSets: json['timeBetweenSets'],
         timePerRep: json['timePerRep'],
         timeBetweenReps: json['timeBetweenReps'],
-        load: json['load'],
+        load: (json['load'] as num).toDouble(),
         rpe: json['rpe'],
       );
 
@@ -94,7 +94,7 @@ class ExerciseInstance {
     int? timeBetweenSets,
     int? timePerRep,
     int? timeBetweenReps,
-    String? load,
+    double? load,
     int? rpe,
   }) {
     return ExerciseInstance(
@@ -124,7 +124,7 @@ class ExerciseInstance {
     int? timeBetweenSets,
     int? timePerRep,
     int? timeBetweenReps,
-    String? load,
+    double? load,
     int? rpe,
   }) {
     return ExerciseInstance(

@@ -229,7 +229,7 @@ class PresetProvider extends ChangeNotifier {
     int? timeBetweenSets,
     int? timePerRep,
     int? timeBetweenReps,
-    String? load,
+    double? load,
     int? rpe,
   }) {
     final template = presetExerciseTemplates.firstWhere(
