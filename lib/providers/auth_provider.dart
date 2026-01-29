@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/models/user_profile.dart';
 import 'package:flash_forward/services/auth_service.dart';
 
@@ -30,9 +31,9 @@ class AuthProvider extends ChangeNotifier {
     try {
       _userProfile = await _authService.getCurrentUserProfile();
       _errorMessage = null;
-    } catch (e) {
+    } catch (e, stackTrace) {
       _errorMessage = e.toString();
-      print('Error loading user profile: $e');
+      Sentry.captureException(e, stackTrace: stackTrace);
     }
 
     _isLoading = false;
@@ -54,13 +55,6 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    // DEBUG: Log what we're signing up with
-    print('=== SIGNUP DEBUG ===');
-    print('Email: $email');
-    print('First Name: $firstName');
-    print('Last Name: $lastName');
-    print('Country: $country');
-
     try {
       await _authService.signUp(
         email: email,
@@ -71,14 +65,7 @@ class AuthProvider extends ChangeNotifier {
         country: country,
         marketingConsent: marketingConsent,
       );
-      print('Signup successful, loading profile...');
-
       await loadUserProfile();
-
-      print(
-        'Profile loaded: ${_userProfile?.firstName} ${_userProfile?.lastName}',
-      );
-      print('=== END DEBUG ===');
 
       _isLoading = false;
       notifyListeners();

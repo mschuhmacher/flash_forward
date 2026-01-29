@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flash_forward/models/exercise_template.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 
@@ -20,8 +21,8 @@ class PresetLogger {
       if (content.isEmpty) return [];
       final data = json.decode(content) as List;
       return data.map((e) => Session.fromJson(e));
-    } catch (e) {
-      print('Error reading user preset sessions: $e');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       return [];
     }
   }
@@ -39,8 +40,8 @@ class PresetLogger {
       if (content.isEmpty) return [];
       final data = json.decode(content) as List;
       return data.map((e) => Workout.fromJson(e));
-    } catch (e) {
-      print('Error reading user preset workouts: $e');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       return [];
     }
   }
@@ -58,8 +59,8 @@ class PresetLogger {
       if (content.isEmpty) return [];
       final data = json.decode(content) as List;
       return data.map((e) => ExerciseTemplate.fromJson(e));
-    } catch (e) {
-      print('Error reading user preset exercises: $e');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       return [];
     }
   }

@@ -10,6 +10,7 @@ fl
 - edit button --> edit load for exercise
 ### UI:
 - add supersets functionality
+- background color of container/pop-up/dialog
 
 ## BUGS:
 - create tests for offline mode
