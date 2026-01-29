@@ -1,8 +1,5 @@
 # TO DO List
-
-## GENERAL APPROACH
-HomeScreen shows a start session button, a calendar, and a list of historical sessions
-
+fl
 ## FEATURES TO BUILD
  ### DATA:
  - 
@@ -37,6 +34,8 @@ HomeScreen shows a start session button, a calendar, and a list of historical se
         - Can only add new workouts within this screen
         - scrollable list with horizontal scroll per section (label)??
 - long press the pause button during an exercise to keep the timer running and going over the normal time. Loop icon
+- lbs vs kg setting
+- support band resistance in exercises
 
 
 

@@ -508,8 +508,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       'Load:',
                     ), //TODO: edit to display more useful information
                     Text(
-                      filteredPresetItems[index].load,
-                    ), //TODO: change to defaultLoad for exerciseTemplate
+                      '${filteredPresetItems[index].defaultLoad.toString()} kg',
+                    ),
                   ],
                   Align(
                     alignment: Alignment.centerRight,

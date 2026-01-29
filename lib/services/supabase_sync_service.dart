@@ -314,7 +314,7 @@ class SupabaseSyncService {
         defaultTimeBetweenSets: json['time_between_sets'] as int,
         defaultTimePerRep: json['time_per_rep'] as int,
         defaultTimeBetweenReps: json['time_between_reps'] as int,
-        defaultLoad: json['load'] as String,
+        defaultLoad: (json['load'] as num).toDouble(),
         defaultRpe: json['rpe'] as int?,
         equipment: json['equipment'] as String?,
         muscleGroups: json['muscle_groups'] as String?,

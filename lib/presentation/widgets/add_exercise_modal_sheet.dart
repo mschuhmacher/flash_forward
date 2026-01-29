@@ -311,7 +311,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                             defaultTimeBetweenReps: int.parse(
                               _timeBetweenRepsController.text.trim(),
                             ),
-                            defaultLoad: _loadController.text.trim(),
+                            defaultLoad: double.parse(_loadController.text.trim()),
                           );
                           presetData.addPresetExercise(newExercise);
                         }

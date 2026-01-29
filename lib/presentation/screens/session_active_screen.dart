@@ -341,7 +341,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                               height: 50,
                               child: Center(
                                 child: Text(
-                                  'Load: ${activeExercise.load}',
+                                  'Load: ${activeExercise.load.toString()} kg',
                                   style: context.titleLarge.copyWith(
                                     color: context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
@@ -503,7 +503,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       Text('Load:', style: context.titleMedium),
                       SizedBox(width: 8),
                       // TODO: change to edit field
-                      Text(activeExercise.load, style: context.bodyMedium),
+                      Text(activeExercise.load.toString(), style: context.bodyMedium),
                     ],
                   ),
                   SizedBox(height: 8),
