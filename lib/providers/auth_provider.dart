@@ -40,8 +40,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  //TODO: add email confirmation workflow
-  /// Sign up a new user
+  /// Sign up a new user (requires email confirmation before login)
   Future<bool> signUp({
     required String email,
     required String password,
@@ -65,12 +64,14 @@ class AuthProvider extends ChangeNotifier {
         country: country,
         marketingConsent: marketingConsent,
       );
-      await loadUserProfile();
+      // Note: User must confirm email before they can sign in
+      // Don't load profile here - user isn't authenticated yet
 
       _isLoading = false;
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -90,12 +91,37 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
       return false;
     }
+  }
+
+  Future<bool> trySignInAfterConfirmation({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final signInSuccess = await _authService.trySignIn(
+        email: email,
+        password: password,
+      );
+
+      if (signInSuccess) {
+        await loadUserProfile();
+      }
+      return signInSuccess;
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  Future<void> resendConfirmationEmail(String email) async {
+    await _authService.resendConfirmationEmail(email: email);
   }
 
   /// Sign out the current user

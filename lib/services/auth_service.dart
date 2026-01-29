@@ -46,7 +46,6 @@ class AuthService {
                 'updated_at': DateTime.now().toIso8601String(),
               })
               .eq('id', response.user!.id);
-
         } catch (updateError, stackTrace) {
           Sentry.captureException(updateError, stackTrace: stackTrace);
           // Don't fail the entire signup
@@ -68,6 +67,31 @@ class AuthService {
       email: email,
       password: password,
     );
+  }
+
+  Future<bool> trySignIn({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      return response.session != null; // Checks whether the session was authenticated, if so, the response is not null and thus completes as true
+      
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  Future<void> resendConfirmationEmail({required String email}) async {
+    try {
+      await supabase.auth.resend(type: OtpType.signup, email: email);
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+    }
   }
 
   Future<void> signOut() async {
