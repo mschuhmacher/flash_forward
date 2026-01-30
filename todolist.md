@@ -4,6 +4,7 @@ fl
  ### DATA:
  - ask claude to put const wherever applicable for runtime optimization
  - ask claude to evaluate whether certain UI functions and/or widgets should be moved to separate widget files for readability of the files.
+ - ask claude for looking up flutter framework on code design and evaluate my codebase
 
 ### INTERACTION:
 - edit preset sessions

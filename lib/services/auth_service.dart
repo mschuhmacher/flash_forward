@@ -4,6 +4,8 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/services/supabase_config.dart';
 import '../models/user_profile.dart';
 
+enum EmailStatus { notFound, foundButNotConfirmed, confirmed }
+
 class AuthService {
   // Sign up with email and password
   Future<AuthResponse> signUp({
@@ -30,11 +32,12 @@ class AuthService {
         // Create or update the profile
         try {
           // Check if profile already exists
-          final existing = await supabase
-              .from('profiles')
-              .select()
-              .eq('id', response.user!.id)
-              .maybeSingle();
+          final existing =
+              await supabase
+                  .from('profiles')
+                  .select()
+                  .eq('id', response.user!.id)
+                  .maybeSingle();
 
           final profileData = {
             'first_name': firstName,
@@ -112,7 +115,7 @@ class AuthService {
   /// Check if email is confirmed by attempting sign-in with dummy password.
   /// Returns true if email is confirmed, false if not confirmed yet.
   /// Returns null if unable to determine (e.g., network error).
-  Future<bool?> isEmailConfirmedForEmail(String email) async {
+  Future<EmailStatus> checkEmailStatus(String email) async {
     try {
       // Try to sign in with a dummy password
       await supabase.auth.signInWithPassword(
@@ -120,23 +123,25 @@ class AuthService {
         password: '__dummy_check_confirmation__',
       );
       // If we get here, something unexpected happened (shouldn't succeed)
-      Sentry.captureMessage('Unexpected success in isEmailConfirmedForEmail');
-      return null;
+      Sentry.captureMessage('Unexpected success in checkEmailStatus');
+      return EmailStatus.confirmed;
     } on AuthException catch (e) {
       // "Email not confirmed" means account exists but not confirmed
       if (e.message.toLowerCase().contains('email not confirmed')) {
-        return false;
+        return EmailStatus.foundButNotConfirmed;
       }
       // "Invalid login credentials" means email IS confirmed (wrong password)
       if (e.message.toLowerCase().contains('invalid')) {
-        return true;
+        return EmailStatus.confirmed;
       }
       // Other auth error - log and return null
-      Sentry.captureMessage('Unknown auth error in isEmailConfirmedForEmail: ${e.message}');
-      return null;
+      Sentry.captureMessage(
+        'Unknown auth error in checkEmailStatus: ${e.message}',
+      );
+      return EmailStatus.notFound;
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
-      return null;
+      return EmailStatus.notFound;
     }
   }
 
