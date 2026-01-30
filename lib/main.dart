@@ -9,11 +9,12 @@ import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_theme.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase
+  // Initialize Supabase (this also loads dotenv)
   await SupabaseConfig.initialize();
 
   // Lock app to portrait mode
@@ -21,7 +22,7 @@ void main() async {
 
   await SentryFlutter.init(
     (options) {
-      options.dsn = 'https://5613147e99c121668db3f26240b2766e@o4510793952002048.ingest.de.sentry.io/4510793957310544';
+      options.dsn = dotenv.env['SENTRY_DSN'];
       // Adds request headers and IP for users, for more info visit:
       // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
       options.sendDefaultPii = true;
