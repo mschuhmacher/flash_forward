@@ -1,8 +1,5 @@
-import 'package:flash_forward/presentation/screens/home_screen.dart';
 import 'package:flash_forward/presentation/screens/login_screen.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/utils/timer_utils.dart';
@@ -12,11 +9,9 @@ import 'package:provider/provider.dart';
 
 class EmailConfirmationScreen extends StatefulWidget {
   final String email;
-  final String password;
 
   const EmailConfirmationScreen({
     required this.email,
-    required this.password,
     super.key,
   });
 
@@ -70,36 +65,23 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
   void _startPollingTimer() {
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       if (!mounted) return;
-      final success = await Provider.of<AuthProvider>(
+
+      final isConfirmed = await Provider.of<AuthProvider>(
         context,
         listen: false,
-      ).trySignInAfterConfirmation(
-        email: widget.email,
-        password: widget.password,
-      );
-      if (success && mounted) {
+      ).checkEmailConfirmed(widget.email);
+
+      // If confirmed, navigate to login screen with success message
+      if (isConfirmed == true && mounted) {
         timer.cancel();
         _countdownTimer?.cancel();
 
-        // Get providers before async gap
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final sessionLogProvider = Provider.of<SessionLogProvider>(
-          context,
-          listen: false,
-        );
-        final presetProvider = Provider.of<PresetProvider>(
-          context,
-          listen: false,
-        );
-        final userId = authProvider.userId;
-
-        // Init providers with authenticated user
-        await sessionLogProvider.init(userId: userId);
-        await presetProvider.init(userId: userId);
-
-        if (!mounted) return;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(
+            builder: (context) => const LoginScreen(
+              showEmailConfirmationMessage: true,
+            ),
+          ),
         );
       }
     });

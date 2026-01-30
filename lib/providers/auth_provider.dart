@@ -125,10 +125,21 @@ class AuthProvider extends ChangeNotifier {
     await _authService.resendConfirmationEmail(email: email);
   }
 
+  /// Check if an email address has been confirmed.
+  /// Returns true if confirmed, false if not, null if unable to determine.
+  Future<bool?> checkEmailConfirmed(String email) async {
+    return await _authService.isEmailConfirmedForEmail(email);
+  }
+
   /// Sign out the current user
   Future<void> signOut() async {
     await _authService.signOut();
     _userProfile = null;
+    notifyListeners();
+  }
+
+  Future<void> resetPassword(email) async {
+    await _authService.resetPassword(email);
     notifyListeners();
   }
 
