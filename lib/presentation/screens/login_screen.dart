@@ -11,10 +11,7 @@ import 'package:flash_forward/themes/app_colors.dart';
 class LoginScreen extends StatefulWidget {
   final bool showEmailConfirmationMessage;
 
-  const LoginScreen({
-    super.key,
-    this.showEmailConfirmationMessage = false,
-  });
+  const LoginScreen({super.key, this.showEmailConfirmationMessage = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -31,6 +28,97 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  bool _isValidEmail(String email) {
+    return email.isNotEmpty && email.contains('@') && email.contains('.');
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+
+    if (_isValidEmail(email)) {
+      // Email is valid, send reset email directly
+      await _sendPasswordReset(email);
+    } else {
+      // Show dialog to enter email
+      final enteredEmail = await _showEmailDialog();
+      if (enteredEmail != null && _isValidEmail(enteredEmail)) {
+        await _sendPasswordReset(enteredEmail);
+      }
+    }
+  }
+
+  Future<void> _sendPasswordReset(String email) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+
+    await authProvider.resetPassword(email);
+
+    if (!mounted) return;
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Password reset email sent to $email'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  Future<String?> _showEmailDialog() async {
+    final dialogEmailController = TextEditingController();
+    String? errorText;
+
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Reset Password', style: context.h3),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Enter your email address to receive a password reset link.',
+                    style: context.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: dialogEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: const Icon(Icons.email),
+                      errorText: errorText,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(null),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final email = dialogEmailController.text.trim();
+                    if (!_isValidEmail(email)) {
+                      setDialogState(() {
+                        errorText = 'Please enter a valid email address';
+                      });
+                    } else {
+                      Navigator.of(dialogContext).pop(email);
+                    }
+                  },
+                  child: const Text('Send Reset Email'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _signIn() async {
@@ -82,7 +170,9 @@ class _LoginScreenState extends State<LoginScreen> {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Login failed'), //TODO: show better error message. if possible show whether email was not registered, or password was wrong.
+          content: Text(
+            authProvider.errorMessage ?? 'Login failed',
+          ), //TODO: show better error message. if possible show whether email was not registered, or password was wrong.
           backgroundColor: context.colorScheme.error,
         ),
       );
@@ -232,6 +322,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: _handleForgotPassword,
+                    child: Text('Forgot password?', style: context.bodyLarge),
+                  ),
+                  const SizedBox(height: 16),
 
                   // Sign up link
                   Row(
@@ -259,8 +354,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-
-                  // TODO: Add "Forgot Password?" link here later if needed
                 ],
               ),
             ),

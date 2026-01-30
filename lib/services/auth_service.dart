@@ -109,6 +109,37 @@ class AuthService {
     }
   }
 
+  /// Check if email is confirmed by attempting sign-in with dummy password.
+  /// Returns true if email is confirmed, false if not confirmed yet.
+  /// Returns null if unable to determine (e.g., network error).
+  Future<bool?> isEmailConfirmedForEmail(String email) async {
+    try {
+      // Try to sign in with a dummy password
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: '__dummy_check_confirmation__',
+      );
+      // If we get here, something unexpected happened (shouldn't succeed)
+      Sentry.captureMessage('Unexpected success in isEmailConfirmedForEmail');
+      return null;
+    } on AuthException catch (e) {
+      // "Email not confirmed" means account exists but not confirmed
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        return false;
+      }
+      // "Invalid login credentials" means email IS confirmed (wrong password)
+      if (e.message.toLowerCase().contains('invalid')) {
+        return true;
+      }
+      // Other auth error - log and return null
+      Sentry.captureMessage('Unknown auth error in isEmailConfirmedForEmail: ${e.message}');
+      return null;
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+      return null;
+    }
+  }
+
   Future<void> signOut() async {
     await supabase.auth.signOut();
   }

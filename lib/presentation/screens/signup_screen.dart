@@ -133,11 +133,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       // Navigate to email confirmation screen.
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder:
-              (_) => EmailConfirmationScreen(
-                email: _emailController.text.trim(),
-                password: _passwordController.text,
-              ),
+          builder: (_) => EmailConfirmationScreen(
+            email: _emailController.text.trim(),
+          ),
         ),
         (route) => false,
       );
