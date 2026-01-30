@@ -3,7 +3,7 @@ import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 
 class MyIconButton extends StatelessWidget {
-  MyIconButton({
+  const MyIconButton({
     required this.icon,
     this.size = 30,
     this.foregroundColor,
@@ -13,29 +13,29 @@ class MyIconButton extends StatelessWidget {
 
   final IconData icon;
   final double size;
-  Color? foregroundColor;
-  Color? backgroundColor;
+  final Color? foregroundColor;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
     final iconSize = 2 * size / 3;
 
-    foregroundColor ??= context.colorScheme.onSurface;
-    backgroundColor ??= context.colorScheme.surfaceBright;
+    final fgColor = foregroundColor ?? context.colorScheme.onSurface;
+    final bgColor = backgroundColor ?? context.colorScheme.surfaceBright;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(width: 0.25, color: foregroundColor!),
-          color: backgroundColor!,
+          border: Border.all(width: 0.25, color: fgColor),
+          color: bgColor,
           boxShadow: context.shadowSmall,
         ),
         child: SizedBox(
           width: size,
           height: size,
-          child: Icon(icon, size: iconSize, color: foregroundColor!),
+          child: Icon(icon, size: iconSize, color: fgColor),
         ),
       ),
     );

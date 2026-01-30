@@ -4,8 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:flash_forward/data/labels.dart';
 
 import 'package:flash_forward/models/session.dart';
-import 'package:flash_forward/_UI_design_helper_screens/cheat_sheet_screen.dart';
-import 'package:flash_forward/_UI_design_helper_screens/colorscheme_demo_screen.dart';
 import 'package:flash_forward/presentation/widgets/my_calendar.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
 import 'package:flash_forward/presentation/screens/login_screen.dart';
