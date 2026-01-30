@@ -2,7 +2,8 @@
 fl
 ## FEATURES TO BUILD
  ### DATA:
- - 
+ - ask claude to put const wherever applicable for runtime optimization
+ - ask claude to evaluate whether certain UI functions and/or widgets should be moved to separate widget files for readability of the files.
 
 ### INTERACTION:
 - edit preset sessions

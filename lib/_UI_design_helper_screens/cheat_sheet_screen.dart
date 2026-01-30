@@ -16,14 +16,8 @@ class _Material3ColorCheatSheetState extends State<Material3ColorCheatSheet> {
   Widget build(BuildContext context) {
     final scheme =
         _isDark ? AppColorsDark.colorScheme : AppColorsLight.colorScheme;
-    final surfaceDim =
-        _isDark ? AppColorsDark.surfaceDim : AppColorsLight.surfaceDim;
     final surfaceBright =
         _isDark ? AppColorsDark.surfaceBright : AppColorsLight.surfaceBright;
-    final surfaceContainerLowest =
-        _isDark
-            ? AppColorsDark.surfaceContainerLowest
-            : AppColorsLight.surfaceContainerLowest;
     final surfaceContainerLow =
         _isDark
             ? AppColorsDark.surfaceContainerLow
@@ -32,10 +26,6 @@ class _Material3ColorCheatSheetState extends State<Material3ColorCheatSheet> {
         _isDark
             ? AppColorsDark.surfaceContainer
             : AppColorsLight.surfaceContainer;
-    final surfaceContainerHigh =
-        _isDark
-            ? AppColorsDark.surfaceContainerHigh
-            : AppColorsLight.surfaceContainerHigh;
     final surfaceContainerHighest =
         _isDark
             ? AppColorsDark.surfaceContainerHighest
@@ -210,7 +200,7 @@ class _Material3ColorCheatSheetState extends State<Material3ColorCheatSheet> {
                   value: 0.5,
                   onChanged: (_) {},
                   activeColor: scheme.primary,
-                  inactiveColor: scheme.surfaceVariant,
+                  inactiveColor: scheme.surfaceContainerHighest,
                 ),
               ),
               labeledWidget(
@@ -220,12 +210,12 @@ class _Material3ColorCheatSheetState extends State<Material3ColorCheatSheet> {
                     Checkbox(
                       value: true,
                       onChanged: (_) {},
-                      fillColor: MaterialStateProperty.all(scheme.primary),
+                      fillColor: WidgetStateProperty.all(scheme.primary),
                     ),
                     Switch(
                       value: true,
                       onChanged: (_) {},
-                      activeColor: scheme.primary,
+                      activeTrackColor: scheme.primary,
                     ),
                   ],
                 ),

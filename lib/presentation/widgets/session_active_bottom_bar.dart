@@ -58,7 +58,6 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                         ? SizedBox.shrink()
                         : GestureDetector(
                           onTap: () {
-                            //TODO: this cannot regress past the first exercise of a workout. change to go further or add a button for workout skipping
                             sessionStateData.jumpToExercise(
                               sessionStateData.exerciseIndex - 1,
                               activeSession,
