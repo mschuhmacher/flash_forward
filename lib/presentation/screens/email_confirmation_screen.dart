@@ -1,5 +1,6 @@
 import 'package:flash_forward/presentation/screens/login_screen.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/services/auth_service.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/utils/timer_utils.dart';
@@ -10,10 +11,7 @@ import 'package:provider/provider.dart';
 class EmailConfirmationScreen extends StatefulWidget {
   final String email;
 
-  const EmailConfirmationScreen({
-    required this.email,
-    super.key,
-  });
+  const EmailConfirmationScreen({required this.email, super.key});
 
   @override
   State<EmailConfirmationScreen> createState() =>
@@ -66,21 +64,21 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       if (!mounted) return;
 
-      final isConfirmed = await Provider.of<AuthProvider>(
+      final EmailStatus emailStatus = await Provider.of<AuthProvider>(
         context,
         listen: false,
-      ).checkEmailConfirmed(widget.email);
+      ).checkEmailStatus(widget.email);
 
       // If confirmed, navigate to login screen with success message
-      if (isConfirmed == true && mounted) {
+      if (emailStatus == EmailStatus.confirmed && mounted) {
         timer.cancel();
         _countdownTimer?.cancel();
 
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const LoginScreen(
-              showEmailConfirmationMessage: true,
-            ),
+            builder:
+                (context) =>
+                    const LoginScreen(showEmailConfirmationMessage: true),
           ),
         );
       }
