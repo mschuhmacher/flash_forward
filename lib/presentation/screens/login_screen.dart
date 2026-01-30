@@ -9,7 +9,12 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool showEmailConfirmationMessage;
+
+  const LoginScreen({
+    super.key,
+    this.showEmailConfirmationMessage = false,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -61,12 +66,24 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } else if (authProvider.errorMessage?.contains('email not confirmed') ==
+        true) {
+      // Show email not confirmed error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ??
+                'Your email address was not confirmed, please check your inbox',
+          ), //TODO: show better error message.
+          backgroundColor: context.colorScheme.error,
+        ),
+      );
     } else {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Login failed'),
-          backgroundColor: Colors.red,
+          content: Text(authProvider.errorMessage ?? 'Login failed'), //TODO: show better error message. if possible show whether email was not registered, or password was wrong.
+          backgroundColor: context.colorScheme.error,
         ),
       );
     }
@@ -106,7 +123,35 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: context.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 24),
+
+                  // Email confirmation message
+                  if (widget.showEmailConfirmationMessage)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.mail_outline,
+                            color: context.colorScheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Please check your email to confirm your account before logging in.',
+                              style: context.bodyMedium.copyWith(
+                                color: context.colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 24),
 
                   // Email field
                   TextFormField(
@@ -180,8 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : Text(
                                   'Sign In',
                                   style: context.titleLarge.copyWith(
-                                    color:
-                                        context.colorScheme.onPrimary,
+                                    color: context.colorScheme.onPrimary,
                                   ),
                                 ),
                       );
