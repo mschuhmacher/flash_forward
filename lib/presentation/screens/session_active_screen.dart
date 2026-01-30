@@ -1,5 +1,6 @@
 import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
+import 'package:flash_forward/utils/timer_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/models/workout.dart';
@@ -18,12 +19,7 @@ class ActiveSessionScreen extends StatefulWidget {
 
 class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
   bool _timerInitialized = false;
-
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
+ 
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +204,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                         children: [
                           Center(
                             child: Text(
-                              _formatDuration(sessionStateData.remaining),
+                              formatDuration(sessionStateData.remaining),
                               style: context.h1.copyWith(
                                 color: () {
                                   if (sessionStateData.isPaused) {

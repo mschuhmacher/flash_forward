@@ -14,6 +14,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _authService.isSignedIn();
+  bool get isEmailConfirmed => _authService.isEmailConfirmed();
   String? get userId => _userProfile?.id;
 
   /// Initialize auth state - call this on app startup
@@ -140,8 +141,9 @@ class AuthProvider extends ChangeNotifier {
       await _authService.updateUserProfile(updatedProfile);
       _userProfile = updatedProfile;
       _errorMessage = null;
-    } catch (e) {
+    } catch (e, stackTrace) {
       _errorMessage = e.toString();
+      Sentry.captureException(e, stackTrace: stackTrace);
     }
 
     _isLoading = false;

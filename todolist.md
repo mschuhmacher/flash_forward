@@ -16,6 +16,8 @@ fl
 - create tests for offline mode
 - conflict resolution between local and cloud data
 - lower Sentry sample rates to traces: 0.2 and profiles: 0.1
+- logged in to different user, session logs are now doubled?
+  - also, user name did not display in app
 
 ## IDEAS:
 - user can start only a workout or exercise

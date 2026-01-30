@@ -1,9 +1,7 @@
+import 'package:flash_forward/presentation/screens/email_confirmation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/providers/session_log_provider.dart';
-import 'package:flash_forward/presentation/screens/home_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -124,22 +122,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Initialize providers with the newly authenticated user
-      final userId = authProvider.userId;
-      final sessionLogProvider = Provider.of<SessionLogProvider>(
-        context,
-        listen: false,
-      );
-      final presetProvider = Provider.of<PresetProvider>(
-        context,
-        listen: false,
-      );
-
-      await sessionLogProvider.init(userId: userId);
-      await presetProvider.init(userId: userId);
-
-      if (!mounted) return;
-
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -148,9 +130,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
       );
 
-      // Navigate to home
+      // Navigate to email confirmation screen.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(
+          builder:
+              (_) => EmailConfirmationScreen(
+                email: _emailController.text.trim(),
+                password: _passwordController.text,
+              ),
+        ),
         (route) => false,
       );
     } else {
@@ -158,7 +146,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Sign up failed'),
-          backgroundColor: Colors.red,
+          backgroundColor: context.colorScheme.error,
         ),
       );
     }
@@ -254,6 +242,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 fillColor: context.colorScheme.surfaceBright,
               ),
               validator: (value) {
+                //TODO: check whether email was already registered
                 if (value == null || value.isEmpty) {
                   return 'Please enter your email';
                 }
