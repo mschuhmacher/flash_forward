@@ -1,10 +1,15 @@
 # TO DO List
-fl
+
 ## FEATURES TO BUILD
- ### DATA:
- - ask claude to put const wherever applicable for runtime optimization
- - ask claude to evaluate whether certain UI functions and/or widgets should be moved to separate widget files for readability of the files.
- - ask claude for looking up flutter framework on code design and evaluate my codebase
+
+### PROCES:
+- Apple Store Connect:
+  - add bank account
+  - add tax forms
+  - add business name?
+
+### DATA:
+
 
 ### INTERACTION:
 - edit preset sessions
@@ -46,7 +51,9 @@ fl
   - between workoutNames list
 - edit load and reps for each set
 - add logger package for loca debugging during dev
-
+- ask claude to put const wherever applicable for runtime optimization
+- ask claude to evaluate whether certain UI functions and/or widgets should be moved to separate widget files for readability of the files.
+- ask claude for looking up flutter framework on code design and evaluate my codebase
 
 
 ## LATER STAGE
