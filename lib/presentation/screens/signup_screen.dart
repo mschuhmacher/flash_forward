@@ -1,5 +1,4 @@
 import 'package:flash_forward/presentation/screens/email_confirmation_screen.dart';
-import 'package:flash_forward/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
@@ -37,8 +36,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscureConfirmPassword = true;
   String? _selectedCountry;
   bool _marketingConsent = false;
-  bool _isCheckingEmail = false;
-
   // Country list (simplified - expand as needed)
   final List<String> _countries = [
     'United States',
@@ -69,8 +66,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _nextPage() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
     GlobalKey<FormState> currentFormKey;
     switch (_currentPage) {
       case 0:
@@ -87,39 +82,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     if (currentFormKey.currentState!.validate()) {
-      // Page 0: Check if email already exists before proceeding
-      if (_currentPage == 0) {
-        setState(() {
-          _isCheckingEmail = true;
-        });
-
-        EmailStatus emailStatus = await authProvider.checkEmailStatus(
-          _emailController.text.trim(),
-        );
-
-        if (!mounted) return;
-
-        setState(() {
-          _isCheckingEmail = false;
-        });
-
-        if (emailStatus == EmailStatus.notFound) {
-          _pageController.nextPage(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('This email address is already in use!'),
-              backgroundColor: context.colorScheme.error,
-            ),
-          );
-        }
-        return; // Don't fall through to the navigation below
-      }
-
-      // Pages 1 and 2: Navigate or sign up
+      // Navigate or sign up
       if (_currentPage < 2) {
         _pageController.nextPage(
           duration: const Duration(milliseconds: 300),
@@ -224,7 +187,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
-              final isLoading = authProvider.isLoading || _isCheckingEmail;
+              final isLoading = authProvider.isLoading;
               return ElevatedButton(
                 onPressed: isLoading ? null : _nextPage,
                 style: ElevatedButton.styleFrom(

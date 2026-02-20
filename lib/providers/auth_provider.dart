@@ -56,7 +56,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.signUp(
+      final response = await _authService.signUp(
         email: email,
         password: password,
         firstName: firstName,
@@ -65,9 +65,18 @@ class AuthProvider extends ChangeNotifier {
         country: country,
         marketingConsent: marketingConsent,
       );
+
+      // Empty identities means this email is already registered
+      if (response.user?.identities != null &&
+          response.user!.identities!.isEmpty) {
+        _errorMessage = 'This email address is already in use.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
       // Note: User must confirm email before they can sign in
       // Don't load profile here - user isn't authenticated yet
-
       _isLoading = false;
       notifyListeners();
       return true;
