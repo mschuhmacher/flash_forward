@@ -52,8 +52,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (confirm == true && mounted) {
-      final sessionLogProvider = Provider.of<SessionLogProvider>(context, listen: false);
-      final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
 
       // Reset providers to allow re-initialization with different user
       await sessionLogProvider.reset();
@@ -98,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hey ${authProvider.userProfile?.firstName ?? "Climber"}!',
+                              'Hey ${authProvider.userProfile?.firstName.isNotEmpty == true ? authProvider.userProfile!.firstName : "Climber"}!',
                               style: context.h1,
                             ),
                             Text('Ready to climb?', style: context.bodyMedium),
@@ -110,10 +116,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         icon: CircleAvatar(
                           backgroundColor: context.colorScheme.primary,
                           child: Text(
-                            authProvider.userProfile?.firstName
-                                    .substring(0, 1)
-                                    .toUpperCase() ??
-                                'U',
+                            authProvider.userProfile?.firstName.isNotEmpty ==
+                                    true
+                                ? authProvider.userProfile!.firstName[0]
+                                    .toUpperCase()
+                                : 'U',
                             style: context.titleMedium.copyWith(
                               color: context.colorScheme.onPrimary,
                             ),
