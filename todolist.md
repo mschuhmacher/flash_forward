@@ -18,6 +18,8 @@
 ### UI:
 - add supersets functionality
 - background color of container/pop-up/dialog
+- make the expand arrow in the add_item_screen nicer
+- remove individual logged sessions by swiping them
 
 ## BUGS:
 - create tests for offline mode
@@ -25,6 +27,9 @@
 - lower Sentry sample rates to traces: 0.2 and profiles: 0.1
 - logged in to different user, session logs are now doubled?
   - also, user name did not display in app
+- the Supabase was paused and the app loaded an unknown user?
+
+
 
 ## IDEAS:
 - user can start only a workout or exercise
@@ -54,6 +59,7 @@
 - ask claude to put const wherever applicable for runtime optimization
 - ask claude to evaluate whether certain UI functions and/or widgets should be moved to separate widget files for readability of the files.
 - ask claude for looking up flutter framework on code design and evaluate my codebase
+- health check to my Supabase URL using a cron-job to keep the project from pausing
 
 
 ## LATER STAGE

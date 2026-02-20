@@ -229,10 +229,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
         Row(
           children: [
             Expanded(
-              flex: 1,
               child: TextFormField(
                 controller: _titleController,
-                autofocus: true,
+                // autofocus: true,
                 maxLength: FieldLimits.workoutTitleMaxLength,
                 decoration: InputDecoration(
                   fillColor: context.colorScheme.surfaceBright,
@@ -242,7 +241,30 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 validator: FieldValidators.workoutTitle,
               ),
             ),
-            SizedBox(width: 16),
+          ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _descriptionController,
+                // autofocus: true,
+                maxLength: FieldLimits.workoutDescriptionMaxLength,
+                decoration: InputDecoration(
+                  fillColor: context.colorScheme.surfaceBright,
+                  labelText: 'Description',
+                  labelStyle: context.bodyMedium,
+                ),
+                validator: FieldValidators.workoutDescription,
+              ),
+            ),
+            if (widget.itemName == 'workout') ...[],
+          ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
             Expanded(
               child: MyLabelDropdownButton(
                 value:
@@ -261,42 +283,22 @@ class _AddItemScreenState extends State<AddItemScreen> {
                             : null,
               ),
             ),
-          ],
-        ),
-        SizedBox(height: 16),
-        Row(
-          children: [
+            SizedBox(width: 16),
             Expanded(
-              flex: 3,
               child: TextFormField(
-                controller: _descriptionController,
-                autofocus: true,
-                maxLength: FieldLimits.workoutDescriptionMaxLength,
+                controller: _timeBetweenExercisesController,
+                // autofocus: true,
+                textInputAction: TextInputAction.done,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
                   fillColor: context.colorScheme.surfaceBright,
-                  labelText: 'Description',
+                  labelText:
+                      'Time between exercises', //TODO: too long, fix this
                   labelStyle: context.bodyMedium,
                 ),
-                validator: FieldValidators.workoutDescription,
               ),
             ),
-            if (widget.itemName == 'workout') ...[
-              SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _timeBetweenExercisesController,
-                  autofocus: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    fillColor: context.colorScheme.surfaceBright,
-                    labelText:
-                        'Time between exercises', //TODO: too long, fix this
-                    labelStyle: context.bodyMedium,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
         SizedBox(height: 24),
@@ -311,9 +313,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
           width: MediaQuery.of(context).size.width * 0.35,
           child: Text(
             'All $listItemName',
-            style: context.h4.copyWith(
-              color: context.colorScheme.secondary,
-            ),
+            style: context.h4.copyWith(color: context.colorScheme.secondary),
           ),
         ),
         _isSearching || _isFiltering ? SizedBox.shrink() : Spacer(),
@@ -327,7 +327,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    autofocus: true,
+                    // autofocus: true,
                     decoration: InputDecoration(
                       hintText: 'Search...',
                       hintStyle: context.bodyMedium,

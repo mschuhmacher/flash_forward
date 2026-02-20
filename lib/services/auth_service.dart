@@ -28,6 +28,12 @@ class AuthService {
         password: password,
       );
 
+      // Empty identities means this email is already registered — skip profile creation
+      if (response.user?.identities != null &&
+          response.user!.identities!.isEmpty) {
+        return response;
+      }
+
       if (response.user != null) {
         // Create or update the profile
         try {
@@ -126,17 +132,16 @@ class AuthService {
       Sentry.captureMessage('Unexpected success in checkEmailStatus');
       return EmailStatus.confirmed;
     } on AuthException catch (e) {
-      // "Email not confirmed" means account exists but not confirmed
-      if (e.message.toLowerCase().contains('email not confirmed')) {
+      if (e.code == 'email_not_confirmed') {
         return EmailStatus.foundButNotConfirmed;
       }
-      // "Invalid login credentials" means email IS confirmed (wrong password)
-      if (e.message.toLowerCase().contains('invalid')) {
+      // Wrong dummy password means the email IS confirmed
+      if (e.code == 'invalid_credentials') {
         return EmailStatus.confirmed;
       }
-      // Other auth error - log and return null
+      // Other auth error - log and treat as not found
       Sentry.captureMessage(
-        'Unknown auth error in checkEmailStatus: ${e.message}',
+        'Unknown auth error in checkEmailStatus: ${e.message} (code: ${e.code})',
       );
       return EmailStatus.notFound;
     } catch (e, stackTrace) {
