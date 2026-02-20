@@ -52,13 +52,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (confirm == true && mounted) {
+      final sessionLogProvider = Provider.of<SessionLogProvider>(context, listen: false);
+      final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+
       // Reset providers to allow re-initialization with different user
-      Provider.of<SessionLogProvider>(context, listen: false).reset();
-      Provider.of<PresetProvider>(context, listen: false).reset();
+      await sessionLogProvider.reset();
+      presetProvider.reset();
 
       await authProvider.signOut();
 
       // Navigate to login screen
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
         (route) => false,
