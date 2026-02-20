@@ -9,6 +9,7 @@ class AuthProvider extends ChangeNotifier {
   UserProfile? _userProfile;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _pendingSignupPassword;
 
   UserProfile? get userProfile => _userProfile;
   bool get isLoading => _isLoading;
@@ -79,6 +80,8 @@ class AuthProvider extends ChangeNotifier {
       // Don't load profile here - user isn't authenticated yet
       _isLoading = false;
       notifyListeners();
+      // Temp save password here in AuthProvider for polling the confirmation status
+      _pendingSignupPassword = password;
       return true;
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
@@ -134,9 +137,22 @@ class AuthProvider extends ChangeNotifier {
     await _authService.resendConfirmationEmail(email: email);
   }
 
-  /// Check if an email address has been confirmed.
-  Future<EmailStatus> checkEmailStatus(String email) async {
-    return await _authService.checkEmailStatus(email);
+  /// Silently polls for email confirmation using the password stored during signup.
+  /// Does not modify loading/error state.
+  Future<EmailStatus> pollForEmailConfirmation(String email) async {
+    final password = _pendingSignupPassword;
+    if (password == null) return EmailStatus.foundButNotConfirmed;
+
+    final status = await _authService.checkEmailStatus(email, password);
+    if (status == EmailStatus.confirmed) {
+      _pendingSignupPassword = null;
+    }
+    return status;
+  }
+
+  /// Clears the in-memory signup password. Call from EmailConfirmationScreen.dispose().
+  void clearPendingSignupPassword() {
+    _pendingSignupPassword = null;
   }
 
   /// Sign out the current user

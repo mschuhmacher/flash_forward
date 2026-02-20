@@ -22,14 +22,13 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
   Timer? _countdownTimer;
   Timer? _pollingTimer;
   Duration _remainingToResend = Duration(seconds: 120);
-  bool _canResend = false; // True when resend button should be visible
-  bool _hasResent = false; // True after user has used their one resend
-  bool _resendExhausted =
-      false; // True after second countdown ends (no more resends)
+
+  late final AuthProvider _authProvider;
 
   @override
   void initState() {
     super.initState();
+    _authProvider = Provider.of<AuthProvider>(context, listen: false);
     _startCountdownTimer();
     _startPollingTimer();
   }
@@ -42,20 +41,15 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
         });
         return;
       }
-      // Countdown reached zero
-      if (!_hasResent) {
-        // First timeout - show resend button
-        setState(() {
-          _canResend = true;
-        });
-        timer.cancel();
-      } else {
-        // Second timeout (after resend) - hide resend permanently
-        setState(() {
-          _canResend = false;
-          _resendExhausted = true;
-        });
-        timer.cancel();
+      // Timed out — send the user back to login with the "please confirm" message
+      timer.cancel();
+      _pollingTimer?.cancel();
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const LoginScreen(showEmailConfirmationMessage: true),
+          ),
+        );
       }
     });
   }
@@ -64,21 +58,16 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       if (!mounted) return;
 
-      final EmailStatus emailStatus = await Provider.of<AuthProvider>(
-        context,
-        listen: false,
-      ).checkEmailStatus(widget.email);
+      final EmailStatus emailStatus = await _authProvider.pollForEmailConfirmation(
+        widget.email,
+      );
 
-      // If confirmed, navigate to login screen with success message
       if (emailStatus == EmailStatus.confirmed && mounted) {
         timer.cancel();
         _countdownTimer?.cancel();
-
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder:
-                (context) =>
-                    const LoginScreen(showEmailConfirmationMessage: true),
+            builder: (_) => const LoginScreen(showEmailConfirmedMessage: true),
           ),
         );
       }
@@ -89,6 +78,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
   void dispose() {
     _countdownTimer?.cancel();
     _pollingTimer?.cancel();
+    _authProvider.clearPendingSignupPassword();
     super.dispose();
   }
 
@@ -121,43 +111,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
               child: Text('Go back to login', style: context.h3),
             ),
             SizedBox(height: 16),
-            if (_canResend)
-              OutlinedButton(
-                onPressed: () async {
-                  final authProvider = Provider.of<AuthProvider>(
-                    context,
-                    listen: false,
-                  );
-                  final messenger = ScaffoldMessenger.of(context);
-
-                  await authProvider.resendConfirmationEmail(widget.email);
-
-                  if (!mounted) return;
-
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Confirmation email resent!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-
-                  setState(() {
-                    _hasResent = true;
-                    _canResend = false;
-                    _remainingToResend = Duration(seconds: 120);
-                  });
-                  _startCountdownTimer();
-                },
-                child: Text('Resend email', style: context.titleLarge),
-              )
-            else if (_resendExhausted)
-              Text(
-                'Please check your email and return to login',
-                style: context.bodyMedium,
-                textAlign: TextAlign.center,
-              )
-            else
-              Text('Awaiting confirmation...', style: context.titleLarge),
+            Text('Awaiting confirmation...', style: context.titleLarge),
             SizedBox(height: 16),
             SizedBox(height: 16),
           ],

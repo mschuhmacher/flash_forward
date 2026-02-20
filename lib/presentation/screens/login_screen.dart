@@ -10,8 +10,13 @@ import 'package:flash_forward/themes/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool showEmailConfirmationMessage;
+  final bool showEmailConfirmedMessage;
 
-  const LoginScreen({super.key, this.showEmailConfirmationMessage = false});
+  const LoginScreen({
+    super.key,
+    this.showEmailConfirmationMessage = false,
+    this.showEmailConfirmedMessage = false,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -215,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Email confirmation message
+                  // Email confirmation message (timeout — not yet confirmed)
                   if (widget.showEmailConfirmationMessage)
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -233,6 +238,33 @@ class _LoginScreenState extends State<LoginScreen> {
                           Expanded(
                             child: Text(
                               'Please check your email to confirm your account before logging in.',
+                              style: context.bodyMedium.copyWith(
+                                color: context.colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Email confirmed message (user clicked the confirmation link)
+                  if (widget.showEmailConfirmedMessage)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            color: context.colorScheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Your email has been confirmed. Please sign in.',
                               style: context.bodyMedium.copyWith(
                                 color: context.colorScheme.onPrimaryContainer,
                               ),
