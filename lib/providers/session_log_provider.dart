@@ -163,7 +163,7 @@ class SessionLogProvider extends ChangeNotifier {
 
   /// Reset provider state on logout
   /// This allows re-initialization with a different user
-  void reset() {
+  Future<void> reset() async {
     _isInitialized = false;
     _isLoading = false;
     _syncService = null;
@@ -173,6 +173,7 @@ class SessionLogProvider extends ChangeNotifier {
     startDay = startOfWeek(currentDay);
     endDay = currentDay;
     calendarFormat = CalendarFormat.week;
+    await SessionLogger.clearLoggedSessions();
     notifyListeners();
   }
 
