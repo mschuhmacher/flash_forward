@@ -27,8 +27,8 @@ class UserProfile {
     return UserProfile(
       id: json['id'] as String,
       email: json['email'] as String,
-      firstName: json['first_name'] as String, // No null safety operator
-      lastName: json['last_name'] as String, // No null safety operator
+      firstName: json['first_name'] as String? ?? '',
+      lastName: json['last_name'] as String? ?? '',
       phoneNumber: json['phone_number'] as String?,
       country: json['country'] as String?,
       marketingConsent: json['marketing_consent'] as bool? ?? false,
