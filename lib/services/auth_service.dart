@@ -118,30 +118,23 @@ class AuthService {
     }
   }
 
-  /// Check if email is confirmed by attempting sign-in with dummy password.
-  /// Returns true if email is confirmed, false if not confirmed yet.
-  /// Returns null if unable to determine (e.g., network error).
-  Future<EmailStatus> checkEmailStatus(String email) async {
+  /// Checks whether an email has been confirmed by signing in with real credentials.
+  /// Works regardless of Supabase's "Prevent email enumeration" setting.
+  /// On confirmation, signs out immediately so the user can log in properly.
+  Future<EmailStatus> checkEmailStatus(String email, String password) async {
     try {
-      // Try to sign in with a dummy password
-      await supabase.auth.signInWithPassword(
-        email: email,
-        password: '__dummy_check_confirmation__',
-      );
-      // If we get here, something unexpected happened (shouldn't succeed)
-      Sentry.captureMessage('Unexpected success in checkEmailStatus');
+      await supabase.auth.signInWithPassword(email: email, password: password);
+      // Confirmed — sign out to keep a clean state before the user logs in properly.
+      try {
+        await supabase.auth.signOut();
+      } catch (_) {}
       return EmailStatus.confirmed;
     } on AuthException catch (e) {
       if (e.code == 'email_not_confirmed') {
         return EmailStatus.foundButNotConfirmed;
       }
-      // Wrong dummy password means the email IS confirmed
-      if (e.code == 'invalid_credentials') {
-        return EmailStatus.confirmed;
-      }
-      // Other auth error - log and treat as not found
       Sentry.captureMessage(
-        'Unknown auth error in checkEmailStatus: ${e.message} (code: ${e.code})',
+        'Unexpected error in checkEmailStatus: ${e.message} (code: ${e.code})',
       );
       return EmailStatus.notFound;
     } catch (e, stackTrace) {
