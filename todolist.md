@@ -4,8 +4,6 @@
 
 ### PROCES:
 - Apple Store Connect:
-  - add bank account
-  - add tax forms
   - add business name?
 
 ### DATA:
@@ -19,7 +17,7 @@
 ### UI:
 - add supersets functionality
 - background color of container/pop-up/dialog
-- make the expand arrow in the add_item_screen nicer
+- make the expand arrow in the add_item_screen nicer and only work on 1 item at a time
 - remove individual logged sessions by swiping them
 - when saving session the snackbar shows Form submitted successfully --> customize
 
