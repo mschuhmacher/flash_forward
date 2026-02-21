@@ -15,19 +15,20 @@
 - edit preset sessions
 - onboarding screens
 - edit button --> edit load for exercise
+- active screen: buttons for next/prev set/rep?
 ### UI:
 - add supersets functionality
 - background color of container/pop-up/dialog
 - make the expand arrow in the add_item_screen nicer
 - remove individual logged sessions by swiping them
+- when saving session the snackbar shows Form submitted successfully --> customize
+
 
 ## BUGS:
 - create tests for offline mode
 - conflict resolution between local and cloud data
 - lower Sentry sample rates to traces: 0.2 and profiles: 0.1
-- logged in to different user, session logs are now doubled?
-  - also, user name did not display in app
-- the Supabase was paused and the app loaded an unknown user?
+- save exercise button doesnt work
 
 
 
