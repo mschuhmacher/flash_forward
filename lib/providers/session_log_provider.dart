@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/services/session_logger.dart';
@@ -66,11 +67,8 @@ class SessionLogProvider extends ChangeNotifier {
       // Try loading from cloud first
       try {
         _loggedSessions = await _syncService!.fetchLoggedSessions();
-      } catch (e) {
-        print(
-          'Error loading from cloud, falling back to local: $e',
-        ); //TODO: remove print in prod
-        //TODO: add error handling and logging
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
         _loggedSessions = await SessionLogger.readLoggedSessions();
       }
     } else {
@@ -98,8 +96,8 @@ class SessionLogProvider extends ChangeNotifier {
     if (_syncService != null) {
       try {
         await _syncService!.logCompletedSession(newSession);
-      } catch (e) {
-        print('Error logging session to cloud: $e');
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
         // Continue anyway - at least it's saved locally
       }
     }
@@ -155,8 +153,8 @@ class SessionLogProvider extends ChangeNotifier {
     if (_syncService != null) {
       try {
         await _syncService!.clearLoggedSessions();
-      } catch (e) {
-        print('Error clearing cloud sessions: $e');
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
       }
     }
 
@@ -165,7 +163,7 @@ class SessionLogProvider extends ChangeNotifier {
 
   /// Reset provider state on logout
   /// This allows re-initialization with a different user
-  void reset() {
+  Future<void> reset() async {
     _isInitialized = false;
     _isLoading = false;
     _syncService = null;
@@ -175,6 +173,7 @@ class SessionLogProvider extends ChangeNotifier {
     startDay = startOfWeek(currentDay);
     endDay = currentDay;
     calendarFormat = CalendarFormat.week;
+    await SessionLogger.clearLoggedSessions();
     notifyListeners();
   }
 

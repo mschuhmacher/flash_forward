@@ -4,8 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:flash_forward/data/labels.dart';
 
 import 'package:flash_forward/models/session.dart';
-import 'package:flash_forward/_UI_design_helper_screens/cheat_sheet_screen.dart';
-import 'package:flash_forward/_UI_design_helper_screens/colorscheme_demo_screen.dart';
 import 'package:flash_forward/presentation/widgets/my_calendar.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
 import 'package:flash_forward/presentation/screens/login_screen.dart';
@@ -54,13 +52,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (confirm == true && mounted) {
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
+
       // Reset providers to allow re-initialization with different user
-      Provider.of<SessionLogProvider>(context, listen: false).reset();
-      Provider.of<PresetProvider>(context, listen: false).reset();
+      await sessionLogProvider.reset();
+      presetProvider.reset();
 
       await authProvider.signOut();
 
       // Navigate to login screen
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
         (route) => false,
@@ -77,11 +85,6 @@ class _HomeScreenState extends State<HomeScreen> {
         authProvider,
         Widget? child,
       ) {
-        // DEBUG: Add these lines temporarily
-        print('Auth is authenticated: ${authProvider.isAuthenticated}');
-        print('User profile: ${authProvider.userProfile}');
-        print('First name: ${authProvider.userProfile?.firstName}');
-
         // Reverse the list to show the latest sessions first
         List<Session> selectedSessions =
             sessionLogData.selectedSessions.reversed.toList();
@@ -101,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hey ${authProvider.userProfile?.firstName ?? "Climber"}!',
+                              'Hey ${authProvider.userProfile?.firstName.isNotEmpty == true ? authProvider.userProfile!.firstName : "Climber"}!',
                               style: context.h1,
                             ),
                             Text('Ready to climb?', style: context.bodyMedium),
@@ -113,10 +116,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         icon: CircleAvatar(
                           backgroundColor: context.colorScheme.primary,
                           child: Text(
-                            authProvider.userProfile?.firstName
-                                    .substring(0, 1)
-                                    .toUpperCase() ??
-                                'U',
+                            authProvider.userProfile?.firstName.isNotEmpty ==
+                                    true
+                                ? authProvider.userProfile!.firstName[0]
+                                    .toUpperCase()
+                                : 'U',
                             style: context.titleMedium.copyWith(
                               color: context.colorScheme.onPrimary,
                             ),

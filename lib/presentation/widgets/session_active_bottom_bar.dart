@@ -7,7 +7,6 @@ import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
-import 'package:flash_forward/services/session_logger.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 
@@ -58,7 +57,6 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                         ? SizedBox.shrink()
                         : GestureDetector(
                           onTap: () {
-                            //TODO: this cannot regress past the first exercise of a workout. change to go further or add a button for workout skipping
                             sessionStateData.jumpToExercise(
                               sessionStateData.exerciseIndex - 1,
                               activeSession,
@@ -213,7 +211,6 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
 
                     Navigator.of(dialogContext).pop();
 
-                    await SessionLogger.logSession(finishedSession);
                     sessionLogData.refreshSelectedSessions(finishedSession);
 
                     // Only use the buildContext is it still mounted. Meaning, the widget is still in the Widgettree.

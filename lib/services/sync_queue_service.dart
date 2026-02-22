@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Represents a pending sync operation to be retried when online
 class SyncOperation {
@@ -50,8 +51,8 @@ class SyncQueueService {
         final List<dynamic> jsonList = jsonDecode(contents);
         _queue = jsonList.map((json) => SyncOperation.fromJson(json)).toList();
       }
-    } catch (e) {
-      print('Error loading sync queue: $e');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       _queue = [];
     }
   }
@@ -63,8 +64,8 @@ class SyncQueueService {
       final file = File('${directory.path}/$_queueFileName');
       final jsonList = _queue.map((op) => op.toJson()).toList();
       await file.writeAsString(jsonEncode(jsonList));
-    } catch (e) {
-      print('Error saving sync queue: $e');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
     }
   }
 
@@ -110,7 +111,6 @@ class SyncQueueService {
 
     // Check connectivity first
     if (!await hasConnectivity()) {
-      print('No connectivity, skipping queue processing');
       return 0;
     }
 
@@ -127,8 +127,8 @@ class SyncQueueService {
           await dequeue(operation.id);
           successCount++;
         }
-      } catch (e) {
-        print('Error processing queued operation ${operation.id}: $e');
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
         // Keep in queue for retry
       }
     }

@@ -1,9 +1,7 @@
+import 'package:flash_forward/presentation/screens/email_confirmation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/providers/session_log_provider.dart';
-import 'package:flash_forward/presentation/screens/home_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -38,7 +36,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscureConfirmPassword = true;
   String? _selectedCountry;
   bool _marketingConsent = false;
-
   // Country list (simplified - expand as needed)
   final List<String> _countries = [
     'United States',
@@ -68,7 +65,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _nextPage() {
+  Future<void> _nextPage() async {
     GlobalKey<FormState> currentFormKey;
     switch (_currentPage) {
       case 0:
@@ -85,6 +82,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     if (currentFormKey.currentState!.validate()) {
+      // Navigate or sign up
       if (_currentPage < 2) {
         _pageController.nextPage(
           duration: const Duration(milliseconds: 300),
@@ -124,22 +122,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Initialize providers with the newly authenticated user
-      final userId = authProvider.userId;
-      final sessionLogProvider = Provider.of<SessionLogProvider>(
-        context,
-        listen: false,
-      );
-      final presetProvider = Provider.of<PresetProvider>(
-        context,
-        listen: false,
-      );
-
-      await sessionLogProvider.init(userId: userId);
-      await presetProvider.init(userId: userId);
-
-      if (!mounted) return;
-
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -148,9 +130,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
       );
 
-      // Navigate to home
+      // Navigate to email confirmation screen.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(
+          builder:
+              (_) =>
+                  EmailConfirmationScreen(email: _emailController.text.trim()),
+        ),
         (route) => false,
       );
     } else {
@@ -158,7 +144,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Sign up failed'),
-          backgroundColor: Colors.red,
+          backgroundColor: context.colorScheme.error,
         ),
       );
     }
@@ -201,13 +187,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
+              final isLoading = authProvider.isLoading;
               return ElevatedButton(
-                onPressed: authProvider.isLoading ? null : _nextPage,
+                onPressed: isLoading ? null : _nextPage,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child:
-                    authProvider.isLoading
+                    isLoading
                         ? const SizedBox(
                           height: 20,
                           width: 20,
@@ -375,7 +362,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedCountry,
+              initialValue: _selectedCountry,
               decoration: InputDecoration(
                 labelText: 'Country *',
                 labelStyle: context.bodyMedium,

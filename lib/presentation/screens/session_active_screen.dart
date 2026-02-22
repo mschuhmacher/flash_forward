@@ -1,5 +1,7 @@
 import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
+import 'package:flash_forward/themes/app_shadow.dart';
+import 'package:flash_forward/utils/timer_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/models/workout.dart';
@@ -18,12 +20,6 @@ class ActiveSessionScreen extends StatefulWidget {
 
 class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
   bool _timerInitialized = false;
-
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +158,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color: context.colorScheme.primary,
+                          boxShadow: context.shadowLarge,
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(150), // large curve
                           ),
@@ -208,7 +205,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                         children: [
                           Center(
                             child: Text(
-                              _formatDuration(sessionStateData.remaining),
+                              formatDuration(sessionStateData.remaining),
                               style: context.h1.copyWith(
                                 color: () {
                                   if (sessionStateData.isPaused) {
@@ -279,6 +276,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             Container(
                               decoration: BoxDecoration(
                                 color: context.colorScheme.primary,
+                                boxShadow: context.shadowMedium,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color: context.colorScheme.onPrimary,
@@ -302,6 +300,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             Container(
                               decoration: BoxDecoration(
                                 color: context.colorScheme.primary,
+                                boxShadow: context.shadowMedium,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color: context.colorScheme.onPrimary,
@@ -334,6 +333,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                               decoration: BoxDecoration(
                                 color: context.colorScheme.primary,
                                 borderRadius: BorderRadius.circular(16),
+                                boxShadow: context.shadowMedium,
                                 border: BoxBorder.all(
                                   color: context.colorScheme.onPrimary,
                                   width: 2,
@@ -355,6 +355,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             Container(
                               decoration: BoxDecoration(
                                 color: context.colorScheme.primary,
+                                boxShadow: context.shadowMedium,
                                 borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color: context.colorScheme.onPrimary,

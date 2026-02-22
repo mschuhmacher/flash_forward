@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../models/session.dart';
 
 class SessionLogger {
@@ -32,8 +33,6 @@ class SessionLogger {
     // Append and write back to the file
     existingLogs.add(sessionJson);
     await file.writeAsString(jsonEncode(existingLogs), flush: true);
-
-    print('✅ Session logged successfully to: $path');
   }
 
   /// 🔹 Read all workout logs from file
@@ -49,8 +48,8 @@ class SessionLogger {
 
       final List<dynamic> jsonList = jsonDecode(content);
       return jsonList.map((e) => Session.fromJson(e)).toList();
-    } catch (e) {
-      print('Error reading logged sessions: $e');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       return [];
     }
   }
@@ -61,7 +60,6 @@ class SessionLogger {
     final file = File(path);
     if (await file.exists()) {
       await file.writeAsString(jsonEncode([]));
-      print('🧹 Session log cleared');
     }
   }
 }

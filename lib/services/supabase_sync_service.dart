@@ -1,5 +1,6 @@
 import 'package:flash_forward/models/exercise_instance.dart';
 import 'package:flash_forward/models/exercise_template.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/services/supabase_config.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
 import 'package:flash_forward/models/session.dart';
@@ -367,12 +368,12 @@ class SupabaseSyncService {
             await uploadExercise(exerciseTemplate, isRetry: true);
             break;
           default:
-            print('Unknown sync operation type: ${operation.type}');
+            Sentry.captureMessage('Unknown sync operation type: ${operation.type}');
             return false;
         }
         return true;
-      } catch (e) {
-        print('Failed to process sync operation ${operation.id}: $e');
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
         return false;
       }
     });

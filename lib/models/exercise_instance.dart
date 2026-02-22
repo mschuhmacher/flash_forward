@@ -75,7 +75,7 @@ class ExerciseInstance {
         timeBetweenSets: json['timeBetweenSets'],
         timePerRep: json['timePerRep'],
         timeBetweenReps: json['timeBetweenReps'],
-        load: (json['load'] as num).toDouble(),
+        load: json['load'],
         rpe: json['rpe'],
       );
 

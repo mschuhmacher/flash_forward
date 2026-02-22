@@ -31,296 +31,328 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey, //not sure if this key is okay to use
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-            child: Consumer<PresetProvider>(
-              builder: (context, presetData, child) {
-                return Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Form(
+        key: _formKey, //not sure if this key is okay to use
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16.0,
+              16.0,
+              16.0,
+              16.0 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Consumer<PresetProvider>(
+                builder: (context, presetData, child) {
+                  return Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.close),
+                            onPressed: () {
+                              // FocusScope.unfocus doesn't work since the keyboard is dismissed with a animation. This forces an immediate close
+                              SystemChannels.textInput.invokeMethod(
+                                'TextInput.hide',
+                              );
+                              //  Still unfocus for the screen behind the modal
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ],
+                      ), //Remove close button since it's a bottom modal sheet?
+                      TextFormField(
+                        controller: _titleController,
+                        autofocus: true,
+                        textInputAction: TextInputAction.next,
+                        maxLength: FieldLimits.exerciseTitleMaxLength,
+                        decoration: const InputDecoration(
+                          labelText: 'Title',
+                          border: OutlineInputBorder(),
                         ),
-                      ],
-                    ), //Remove close button since it's a bottom modal sheet?
-                    TextFormField(
-                      controller: _titleController,
-                      autofocus: true,
-                      maxLength: FieldLimits.exerciseTitleMaxLength,
-                      decoration: const InputDecoration(
-                        labelText: 'Title',
-                        border: OutlineInputBorder(),
+                        validator: FieldValidators.exerciseTitle,
                       ),
-                      validator: FieldValidators.exerciseTitle,
-                    ),
-                    SizedBox(height: 16),
-                    MyLabelDropdownButton(
-                      value:
-                          _labelController.text.isNotEmpty
-                              ? _labelController.text
-                              : null,
-                      onChanged: (value) {
-                        setState(() {
-                          _labelController.text = value ?? '';
-                        });
-                      },
-                      validator:
-                          (value) =>
-                              value == null || value.isEmpty
-                                  ? 'Please select a label'
-                                  : null,
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _descriptionController,
-                      autofocus: true,
-                      maxLength: FieldLimits.exerciseDescriptionMaxLength,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        border: OutlineInputBorder(),
+                      SizedBox(height: 16),
+                      MyLabelDropdownButton(
+                        value:
+                            _labelController.text.isNotEmpty
+                                ? _labelController.text
+                                : null,
+                        onChanged: (value) {
+                          setState(() {
+                            _labelController.text = value ?? '';
+                          });
+                        },
+                        validator:
+                            (value) =>
+                                value == null || value.isEmpty
+                                    ? 'Please select a label'
+                                    : null,
                       ),
-                      validator: FieldValidators.exerciseDescription,
-                    ),
-                    SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4.0),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 60,
-                            child: Text('Sets', style: context.titleMedium),
-                          ),
-                          SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              if (_numberOfSets >= 1) {
-                                setState(() {
-                                  _numberOfSets--;
-                                });
-                              }
-                            },
-                            child: MyIconButton(icon: Icons.remove),
-                          ),
-                          SizedBox(width: 8),
-                          SizedBox(
-                            width: 30,
-                            child: Center(
-                              child: Text(
-                                '$_numberOfSets',
-                                style: context.bodyLarge,
+                      SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        autofocus: true,
+                        textInputAction: TextInputAction.next,
+                        maxLength: FieldLimits.exerciseDescriptionMaxLength,
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: FieldValidators.exerciseDescription,
+                      ),
+                      SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4.0),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 60,
+                              child: Text('Sets', style: context.titleMedium),
+                            ),
+                            SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                if (_numberOfSets >= 1) {
+                                  setState(() {
+                                    _numberOfSets--;
+                                  });
+                                }
+                              },
+                              child: MyIconButton(icon: Icons.remove),
+                            ),
+                            SizedBox(width: 8),
+                            SizedBox(
+                              width: 30,
+                              child: Center(
+                                child: Text(
+                                  '$_numberOfSets',
+                                  style: context.bodyLarge,
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _numberOfSets++;
-                              });
-                            },
-                            child: MyIconButton(icon: Icons.add),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4.0),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 60,
-                            child: Text('Reps', style: context.titleMedium),
-                          ),
-                          SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              if (_numberOfReps >= 1) {
+                            SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
                                 setState(() {
-                                  _numberOfReps--;
+                                  _numberOfSets++;
                                 });
-                              }
-                            },
-                            child: MyIconButton(icon: Icons.remove),
-                          ),
-                          SizedBox(width: 8),
-                          SizedBox(
-                            width: 30,
-                            child: Center(
-                              child: Text(
-                                '$_numberOfReps',
-                                style: context.bodyLarge,
+                              },
+                              child: MyIconButton(icon: Icons.add),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4.0),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 60,
+                              child: Text('Reps', style: context.titleMedium),
+                            ),
+                            SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                if (_numberOfReps >= 1) {
+                                  setState(() {
+                                    _numberOfReps--;
+                                  });
+                                }
+                              },
+                              child: MyIconButton(icon: Icons.remove),
+                            ),
+                            SizedBox(width: 8),
+                            SizedBox(
+                              width: 30,
+                              child: Center(
+                                child: Text(
+                                  '$_numberOfReps',
+                                  style: context.bodyLarge,
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _numberOfReps++;
-                              });
-                            },
-                            child: MyIconButton(icon: Icons.add),
+                            SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _numberOfReps++;
+                                });
+                              },
+                              child: MyIconButton(icon: Icons.add),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      TextFormField(
+                        controller: _timeBetweenSetsController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a number';
+                          }
+
+                          final int? number = int.tryParse(value);
+                          if (number == null) {
+                            return 'Please enter a valid integer';
+                          }
+
+                          if (number <= 0) {
+                            return 'Number must be greater than zero';
+                          }
+
+                          return null; // valid input
+                        },
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Time between sets',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      TextFormField(
+                        controller: _timePerRepController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a number';
+                          }
+
+                          final int? number = int.tryParse(value);
+                          if (number == null) {
+                            return 'Please enter a valid integer';
+                          }
+
+                          if (number <= 0) {
+                            return 'Number must be greater than zero';
+                          }
+
+                          return null; // valid input
+                        },
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Time per rep',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      TextFormField(
+                        controller: _timeBetweenRepsController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a number';
+                          }
+
+                          final int? number = int.tryParse(value);
+                          if (number == null) {
+                            return 'Please enter a valid integer';
+                          }
+
+                          return null; // valid input
+                        },
+
+                        // onSaved: (value) {
+                        //   final intValue = int.tryParse(value ?? '');
+                        //   // store or use intValue
+                        // },
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Time between reps',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      TextFormField(
+                        controller: _loadController,
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        textInputAction: TextInputAction.done,
+                        inputFormatters: [
+                          TextInputFormatter.withFunction((oldValue, newValue) {
+                            return newValue.copyWith(
+                              text: newValue.text.replaceAll(',', '.'),
+                            );
+                          }),
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*'),
                           ),
                         ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a number';
+                          }
+
+                          final double? number = double.tryParse(value);
+                          if (number == null) {
+                            return 'Please enter a valid number';
+                          }
+
+                          if (number <= 0) {
+                            return 'Value must be greater than zero';
+                          }
+
+                          return null;
+                        },
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Load',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _timeBetweenSetsController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a number';
-                        }
-
-                        final int? number = int.tryParse(value);
-                        if (number == null) {
-                          return 'Please enter a valid integer';
-                        }
-
-                        if (number <= 0) {
-                          return 'Number must be greater than zero';
-                        }
-
-                        return null; // valid input
-                      },
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Time between sets',
-                        border: OutlineInputBorder(),
+                      SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            final newExercise = ExerciseTemplate(
+                              title: _titleController.text.trim(),
+                              label: _labelController.text.trim(),
+                              description: _descriptionController.text.trim(),
+                              defaultReps: _numberOfReps,
+                              defaultSets: _numberOfSets,
+                              defaultTimeBetweenSets: int.parse(
+                                _timeBetweenSetsController.text.trim(),
+                              ),
+                              defaultTimePerRep: int.parse(
+                                _timePerRepController.text.trim(),
+                              ),
+                              defaultTimeBetweenReps: int.parse(
+                                _timeBetweenRepsController.text.trim(),
+                              ),
+                              defaultLoad: double.parse(
+                                _loadController.text.trim(),
+                              ),
+                            );
+                            presetData.addPresetExercise(newExercise);
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Text('Save'),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _timePerRepController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a number';
-                        }
-
-                        final int? number = int.tryParse(value);
-                        if (number == null) {
-                          return 'Please enter a valid integer';
-                        }
-
-                        if (number <= 0) {
-                          return 'Number must be greater than zero';
-                        }
-
-                        return null; // valid input
-                      },
-
-                      // onSaved: (value) {
-                      //   final intValue = int.tryParse(value ?? '');
-                      //   // store or use intValue
-                      // },
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Time per rep',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _timeBetweenRepsController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a number';
-                        }
-
-                        final int? number = int.tryParse(value);
-                        if (number == null) {
-                          return 'Please enter a valid integer';
-                        }
-
-                        return null; // valid input
-                      },
-
-                      // onSaved: (value) {
-                      //   final intValue = int.tryParse(value ?? '');
-                      //   // store or use intValue
-                      // },
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Time between reps',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _loadController,
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d*'),
-                        ), // allow digits + decimal point
-                      ],
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a number';
-                        }
-
-                        final double? number = double.tryParse(value);
-                        if (number == null) {
-                          return 'Please enter a valid number';
-                        }
-
-                        if (number <= 0) {
-                          return 'Value must be greater than zero';
-                        }
-
-                        return null;
-                      },
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Load',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          final newExercise = ExerciseTemplate(
-                            title: _titleController.text.trim(),
-                            label: _labelController.text.trim(),
-                            description: _descriptionController.text.trim(),
-                            defaultReps: _numberOfReps,
-                            defaultSets: _numberOfSets,
-                            defaultTimeBetweenSets: int.parse(
-                              _timeBetweenSetsController.text.trim(),
-                            ),
-                            defaultTimePerRep: int.parse(
-                              _timePerRepController.text.trim(),
-                            ),
-                            defaultTimeBetweenReps: int.parse(
-                              _timeBetweenRepsController.text.trim(),
-                            ),
-                            defaultLoad: double.parse(_loadController.text.trim()),
-                          );
-                          presetData.addPresetExercise(newExercise);
-                        }
-                      },
-                      child: Text('Save'),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),

@@ -37,6 +37,20 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
     // Navigate based on auth state
     if (authProvider.isAuthenticated) {
+      if (!authProvider.isEmailConfirmed) {
+        // User exists but email not confirmed - sign out and redirect to login
+        await authProvider.signOut();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const LoginScreen(
+              showEmailConfirmationMessage: true,
+            ),
+          ),
+        );
+        return;
+      }
+      // Email confirmed - proceed to home
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
@@ -55,6 +69,8 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
     // If user is authenticated, load their data
     if (authProvider.isAuthenticated) {
+      if (!mounted) return;
+
       final userId = authProvider.userId;
 
       // Pass userId to both providers
@@ -93,9 +109,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
             const SizedBox(height: 24),
             Text('Flash Forward', style: context.h1),
             const SizedBox(height: 40),
-            CircularProgressIndicator(
-              color: context.colorScheme.primary,
-            ),
+            CircularProgressIndicator(color: context.colorScheme.primary),
           ],
         ),
       ),
