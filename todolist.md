@@ -14,6 +14,8 @@
 - onboarding screens
 - edit button --> edit load for exercise
 - active screen: buttons for next/prev set/rep?
+- update list of countries
+- prepopulate phone number prefix based on country selection
 ### UI:
 - add supersets functionality
 - background color of container/pop-up/dialog
