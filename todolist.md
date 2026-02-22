@@ -18,14 +18,12 @@
 - add supersets functionality
 - background color of container/pop-up/dialog
 - remove individual logged sessions by swiping them
-- when saving session the snackbar shows Form submitted successfully --> customize
 
 
 ## BUGS:
 - create tests for offline mode
 - conflict resolution between local and cloud data
 - lower Sentry sample rates to traces: 0.2 and profiles: 0.1
-- delete workouts and exercises
 
 
 ## IDEAS:

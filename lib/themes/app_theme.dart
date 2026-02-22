@@ -61,6 +61,13 @@ final ThemeData lightAppTheme = ThemeData(
       ),
     ),
   ),
+
+  // Dialog theme (for the pop-ups)
+  dialogTheme: DialogThemeData(
+    backgroundColor: AppColorsLight.colorScheme.surface,
+  ),
+  // Popup Menu theme (for the sign out)
+  popupMenuTheme: PopupMenuThemeData(color: AppColorsLight.colorScheme.surface),
 );
 
 final ThemeData darkAppTheme = ThemeData(
@@ -127,4 +134,11 @@ final ThemeData darkAppTheme = ThemeData(
       ),
     ),
   ),
+
+  // Dialog theme (for the pop-ups)
+  dialogTheme: DialogThemeData(
+    backgroundColor: AppColorsDark.colorScheme.surface,
+  ),
+  // Popup Menu theme (for the sign out)
+  popupMenuTheme: PopupMenuThemeData(color: AppColorsDark.colorScheme.surface),
 );
