@@ -26,8 +26,7 @@
 - create tests for offline mode
 - conflict resolution between local and cloud data
 - lower Sentry sample rates to traces: 0.2 and profiles: 0.1
-- save exercise button doesnt work
-
+- delete workouts and exercises
 
 
 ## IDEAS:

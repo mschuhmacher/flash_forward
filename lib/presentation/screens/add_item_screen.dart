@@ -24,6 +24,7 @@ class AddItemScreen extends StatefulWidget {
 
 class _AddItemScreenState extends State<AddItemScreen> {
   final Set<String> _selectedItemIds = {};
+  final Set<String> _expandedItemIds = {};
 
   final _formKey = GlobalKey<FormState>();
 
@@ -39,8 +40,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   String _query = '';
   late final String listItemName;
-
-  bool _isListTileExpanded = false;
 
   @override
   void initState() {
@@ -317,7 +316,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
           ),
         ),
         _isSearching || _isFiltering ? SizedBox.shrink() : Spacer(),
-        // Spacer(),
         if (_isSearching)
           SizedBox(
             key: const ValueKey('searchField'),
@@ -454,6 +452,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
       itemCount: filteredPresetItems.length,
       padding: EdgeInsets.symmetric(horizontal: 8),
       itemBuilder: (BuildContext context, int index) {
+        final isExpanded = _expandedItemIds.contains(
+          filteredPresetItems[index].id,
+        );
+
         return Padding(
           padding: const EdgeInsets.only(top: 8.0),
           child: Container(
@@ -494,13 +496,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
                         style: context.bodyMedium,
                       )
                       : SizedBox.shrink(),
-                  if (_isListTileExpanded &&
+                  if (isExpanded &&
                       filteredPresetItems[index] is Workout) ...<Widget>[
                     SizedBox(height: 2),
                     Text('Exercises:'),
                     for (final exercise in filteredPresetItems[index].list)
                       Text(exercise.title),
-                  ] else if (_isListTileExpanded &&
+                  ] else if (isExpanded &&
                       filteredPresetItems[index]
                           is ExerciseTemplate) ...<Widget>[
                     SizedBox(height: 2),
@@ -516,13 +518,14 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     child: IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: Icon(
-                        _isListTileExpanded
-                            ? Icons.expand_less
-                            : Icons.expand_more,
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
                       ),
                       onPressed: () {
                         setState(() {
-                          _isListTileExpanded = !_isListTileExpanded;
+                          final id = filteredPresetItems[index].id;
+                          isExpanded
+                              ? _expandedItemIds.remove(id)
+                              : _expandedItemIds.add(id);
                         });
                       },
                     ),
