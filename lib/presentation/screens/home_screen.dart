@@ -1,3 +1,4 @@
+import 'package:flash_forward/services/session_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -189,9 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           backgroundColor: context.colorScheme.secondary,
                           foregroundColor: context.colorScheme.onSecondary,
                         ),
-                        onPressed: () {
-                          sessionLogData.clearAllLoggedSessions();
-                        },
+                        onPressed: _showClearLogsPopUp,
                         child: Text('Clear logs', style: context.bodyMedium),
                       ),
                     ],
@@ -343,5 +342,44 @@ class _HomeScreenState extends State<HomeScreen> {
     Future.delayed(Duration(seconds: 2), () {
       overlayEntry?.remove();
     });
+  }
+
+  void _showClearLogsPopUp() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('Clear logs', style: dialogContext.h3),
+          content: Text(
+            'Are you sure you want to clear your logs?',
+            style: dialogContext.bodyMedium,
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Cancel'),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    Provider.of<SessionLogProvider>(
+                      context,
+                      listen: false,
+                    ).clearAllLoggedSessions();
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Clear logs'),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
   }
 }

@@ -532,9 +532,49 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   ),
                 ],
               ),
-              trailing: Icon(Icons.edit), //TODO: make editable
+              trailing: IconButton(
+                onPressed: () {
+                  _editItemPopUp(filteredPresetItems[index]);
+                },
+                icon: Icon(Icons.edit),
+              ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _editItemPopUp(dynamic filteredPresetItem) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('Edit', style: dialogContext.h3),
+          content: Text(
+            filteredPresetItem.description,
+            style: dialogContext.bodyMedium,
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Cancel'),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Save'),
+                ),
+              ],
+            ),
+          ],
         );
       },
     );
