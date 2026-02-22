@@ -1,11 +1,15 @@
+import 'package:flash_forward/models/exercise_instance.dart';
+import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
+import 'package:flash_forward/themes/app_shadow.dart';
+import 'package:flash_forward/utils/timer_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/widgets/session_active_bottom_bar.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class ActiveSessionScreen extends StatefulWidget {
   const ActiveSessionScreen({super.key});
@@ -16,12 +20,6 @@ class ActiveSessionScreen extends StatefulWidget {
 
 class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
   bool _timerInitialized = false;
-
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,34 +42,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         final progress = sessionStateData.progress;
 
         Workout activeWorkout = activeSession.list[progress.workoutIndex];
-        Exercise activeExercise = activeWorkout.list[progress.exerciseIndex];
+        ExerciseInstance activeExercise =
+            activeWorkout.list[progress.exerciseIndex];
 
-        List<Widget> exerciseWidgets =
-            activeWorkout.list
-                .map(
-                  (name) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name.title,
-                        style: context.titleMedium.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        softWrap: true,
-                        maxLines: 2,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '${name.description} \n',
-                        style: context.bodyMedium.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-                .toList();
         List<Widget> workoutNames =
             activeSession.list
                 .map(
@@ -84,17 +57,64 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   ),
                 )
                 .toList();
+
         // Highlight the title of the current block in a list of block titles
-        for (int i = 0; i < workoutNames.length; i++) {
-          if (i == progress.workoutIndex) {
-            workoutNames[i] = Text(
-              activeSession.list[i].title,
-              style: context.h3,
-              softWrap: true,
-              maxLines: 2,
-              textAlign: TextAlign.end,
+        workoutNames[progress.workoutIndex] = Text(
+          activeSession.list[progress.workoutIndex].title,
+          style: context.bodyLarge.copyWith(
+            color: context.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+          softWrap: true,
+          maxLines: 2,
+          textAlign: TextAlign.end,
+        );
+
+        // Limit displayed workout names to max 4 with sliding window
+        final totalWorkouts = workoutNames.length;
+        final currentIndex = progress.workoutIndex;
+        List<Widget> displayedWorkoutNames;
+
+        if (totalWorkouts <= 4) {
+          // Show all items
+          displayedWorkoutNames = workoutNames;
+        } else if (currentIndex >= totalWorkouts - 3) {
+          // Near the end: show last 4 without ellipsis
+          displayedWorkoutNames = workoutNames.sublist(totalWorkouts - 4);
+        } else {
+          // In the middle: show 3 items + ellipsis
+          final startIndex = (currentIndex - 1).clamp(0, totalWorkouts - 4);
+          displayedWorkoutNames = [
+            ...workoutNames.sublist(startIndex, startIndex + 3),
+            Text('...', style: context.bodyMedium, textAlign: TextAlign.end),
+          ];
+        }
+
+        String phaseText;
+        TextStyle phaseTextStyle = context.h2.copyWith(
+          color: context.colorScheme.onPrimary,
+        );
+        switch (sessionStateData.phase) {
+          case TimerPhase.setRest:
+            phaseText = 'rest between sets';
+          case TimerPhase.rep:
+            phaseText = 'rep';
+          case TimerPhase.repRest:
+            phaseText = 'rest';
+          case TimerPhase.exerciseRest:
+            phaseText = 'rest between exercises';
+          case TimerPhase.workoutComplete:
+            phaseText = 'workout complete';
+          case TimerPhase.paused:
+            phaseText = 'paused';
+            phaseTextStyle = context.h2.copyWith(
+              color: context.colorScheme.tertiary,
             );
-          }
+          case TimerPhase.getReady:
+            phaseText = 'get ready';
+            phaseTextStyle = context.h2.copyWith(
+              color: context.colorScheme.secondary,
+            );
         }
 
         return Scaffold(
@@ -115,28 +135,30 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                SizedBox(height: 24),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12.0, 12.0, 36.0, 12.0),
+                  padding: const EdgeInsets.fromLTRB(12.0, 12.0, 20.0, 12.0),
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: FractionallySizedBox(
-                      widthFactor: 0.95,
+                      widthFactor: 0.97,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [...workoutNames, SizedBox(height: 8)],
+                        children: [
+                          ...displayedWorkoutNames,
+                          SizedBox(height: 8),
+                        ],
                       ),
                     ),
                   ),
                 ),
                 Expanded(
-                  // flex: 12,
                   child: Stack(
                     children: [
                       Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
+                          color: context.colorScheme.primary,
+                          boxShadow: context.shadowLarge,
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(150), // large curve
                           ),
@@ -146,124 +168,222 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
                           60.0,
-                          72.0,
-                          24.0,
+                          60.0,
+                          20.0,
                           12.0,
                         ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Center(
-                                child: switch (sessionStateData.phase) {
-                                  TimerPhase.setRest => Text(
-                                    'Rest between sets',
-                                    style: context.h2.copyWith(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                  TimerPhase.rep => Text(
-                                    'Rep',
-                                    style: context.h2.copyWith(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                  TimerPhase.repRest => Text(
-                                    'Rest between reps',
-                                    style: context.h2.copyWith(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                  TimerPhase.exerciseRest => Text(
-                                    'Rest between exercises',
-                                    style: context.h2.copyWith(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                  TimerPhase.workoutComplete => Text(
-                                    'Workout complete',
-                                    style: context.h2.copyWith(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              activeExercise.title,
+                              style: context.h1.copyWith(
+                                color: context.colorScheme.onPrimary,
                               ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '${progress.currentSet}/${activeExercise.sets} \nSets',
-                                    style: context.titleLarge.copyWith(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                  Text(
-                                    _formatDuration(sessionStateData.remaining),
-                                    style: context.h1.copyWith(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
-                                    ),
-                                    textScaler: TextScaler.linear(1.75),
-                                  ),
-
-                                  Text(
-                                    '${progress.currentRep}/${activeExercise.reps} \nReps',
-                                    style: context.titleLarge.copyWith(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                ],
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              activeExercise.description,
+                              style: context.bodyLarge.copyWith(
+                                color: context.colorScheme.onPrimary,
                               ),
-
-                              SizedBox(height: 8),
-
-                              Text(
-                                activeExercise.title,
-                                style: context.h3.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              if (activeExercise.description != null)
-                                Text(
-                                  activeExercise.description!,
-                                  style: context.bodyMedium.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-
-                              SizedBox(height: 200),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                Container(
+                  color: context.colorScheme.primary,
+                  child: Column(
+                    children: [
+                      Center(child: Text(phaseText, style: phaseTextStyle)),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Center(
+                            child: Text(
+                              formatDuration(sessionStateData.remaining),
+                              style: context.h1.copyWith(
+                                color: () {
+                                  if (sessionStateData.isPaused) {
+                                    return context.colorScheme.tertiary;
+                                  } else if (sessionStateData.phase ==
+                                      TimerPhase.getReady) {
+                                    return context.colorScheme.secondary;
+                                  } else if (sessionStateData.phase ==
+                                      TimerPhase.rep) {
+                                    return context.colorScheme.onPrimary;
+                                  } else if ((sessionStateData.phase ==
+                                              TimerPhase.repRest ||
+                                          sessionStateData.phase ==
+                                              TimerPhase.setRest ||
+                                          sessionStateData.phase ==
+                                              TimerPhase.exerciseRest) &&
+                                      sessionStateData.remaining <
+                                          Duration(seconds: 10)) {
+                                    return context.colorScheme.secondary;
+                                  } else {
+                                    return context.colorScheme.onPrimary;
+                                  }
+                                }(),
+                              ),
+                              textScaler: TextScaler.linear(2.5),
+                            ),
+                          ),
+                          Positioned(
+                            right: 20,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color: context.colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 44,
+                              height: 44,
+                              child: Center(
+                                child:
+                                    sessionStateData.isPaused
+                                        ? IconButton(
+                                          onPressed:
+                                              () => sessionStateData.resume(
+                                                activeSession,
+                                              ),
+                                          icon: Icon(Icons.play_arrow_rounded),
+                                          color: context.colorScheme.onPrimary,
+                                        )
+                                        : IconButton(
+                                          onPressed: sessionStateData.pause,
+                                          icon: Icon(Icons.pause_rounded),
+                                          color: context.colorScheme.onPrimary,
+                                        ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.primary,
+                                boxShadow: context.shadowMedium,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color: context.colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 160,
+                              height: 50,
+                              child: Center(
+                                child: Text(
+                                  '${progress.currentSet} / ${activeExercise.sets}   sets',
+                                  style: context.titleLarge.copyWith(
+                                    color: context.colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            Container(
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.primary,
+                                boxShadow: context.shadowMedium,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color: context.colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 160,
+                              height: 50,
+                              child: Center(
+                                child: Text(
+                                  '${progress.currentRep} / ${activeExercise.reps}   reps',
+                                  style: context.titleLarge.copyWith(
+                                    color: context.colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: context.shadowMedium,
+                                border: BoxBorder.all(
+                                  color: context.colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 220,
+                              height: 50,
+                              child: Center(
+                                child: Text(
+                                  'Load: ${activeExercise.load.toString()} kg',
+                                  style: context.titleLarge.copyWith(
+                                    color: context.colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.primary,
+                                boxShadow: context.shadowMedium,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color: context.colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 50,
+                              height: 50,
+                              child: Center(
+                                child: IconButton(
+                                  onPressed: () {
+                                    _showEditExerciseDialog(
+                                      context,
+                                      activeExercise,
+                                      sessionStateData,
+                                    );
+                                  },
+                                  icon: Icon(
+                                    Icons.edit,
+                                    color: context.colorScheme.onPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 24),
                     ],
                   ),
                 ),
@@ -298,6 +418,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
+                    SessionStateProvider().reset();
                     Navigator.of(context).pop(); // Close the dialog
                     Navigator.of(context).pop(); // Close the session screen
                   },
@@ -306,6 +427,169 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
               ],
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showEditExerciseDialog(
+    BuildContext context,
+    ExerciseInstance activeExercise,
+    SessionStateProvider sessionStateData,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              insetPadding: EdgeInsets.symmetric(horizontal: 20),
+              title: Text(activeExercise.title, style: context.h2),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Description:', style: context.titleMedium),
+                      Text(
+                        activeExercise.description,
+                        style: context.bodyMedium,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Time between sets:', style: context.titleMedium),
+                      Text(
+                        '${activeExercise.timeBetweenSets} seconds',
+                        style: context.bodyMedium,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Time per rep:', style: context.titleMedium),
+                      Text(
+                        '${activeExercise.timePerRep} seconds',
+                        style: context.bodyMedium,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Time between reps:', style: context.titleMedium),
+                      Text(
+                        '${activeExercise.timeBetweenReps} seconds',
+                        style: context.bodyMedium,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('RPE:', style: context.titleMedium),
+                      Text('${activeExercise.rpe}', style: context.bodyMedium),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text('Load:', style: context.titleMedium),
+                      SizedBox(width: 8),
+                      // TODO: change to edit field
+                      Text(
+                        activeExercise.load.toString(),
+                        style: context.bodyMedium,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Number of sets',
+                          style: context.titleMedium,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      IncrementDecrementNumberWidget(
+                        value: activeExercise.sets,
+                        minimum: sessionStateData.progress.currentSet,
+                        decrement: () {
+                          setDialogState(() {
+                            activeExercise.sets--;
+                          });
+                        },
+                        increment: () {
+                          setDialogState(() {
+                            activeExercise.sets++;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Number of reps',
+                          style: context.titleMedium,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      IncrementDecrementNumberWidget(
+                        value: activeExercise.reps,
+                        minimum: sessionStateData.progress.currentRep,
+                        decrement: () {
+                          setDialogState(() {
+                            activeExercise.reps--;
+                          });
+                        },
+                        increment: () {
+                          setDialogState(() {
+                            activeExercise.reps++;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        // TODO: autopause and unpause when dialog is opened
+                        // SessionStateProvider().resume(activeSession);
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Close',
+                        style: context.titleMedium.copyWith(
+                          color: context.colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         );
       },
     );

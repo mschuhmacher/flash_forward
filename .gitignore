@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+.env
+sentry.properties
+
+# Claude Code analysis files
+.claude/

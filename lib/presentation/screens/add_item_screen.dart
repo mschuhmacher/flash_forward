@@ -1,14 +1,17 @@
+import 'package:flash_forward/constants/field_limits.dart';
+import 'package:flash_forward/models/exercise_instance.dart';
+import 'package:flash_forward/models/exercise_template.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/add_exercise_modal_sheet.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class AddItemScreen extends StatefulWidget {
   final String itemName;
@@ -21,6 +24,7 @@ class AddItemScreen extends StatefulWidget {
 
 class _AddItemScreenState extends State<AddItemScreen> {
   final Set<String> _selectedItemIds = {};
+  final Set<String> _expandedItemIds = {};
 
   final _formKey = GlobalKey<FormState>();
 
@@ -36,8 +40,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   String _query = '';
   late final String listItemName;
-
-  bool _isListTileExpanded = false;
 
   @override
   void initState() {
@@ -87,7 +89,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
         final List<dynamic> allPresetItems =
             widget.itemName == 'session'
                 ? presetData.presetWorkouts
-                : presetData.presetExercises;
+                : presetData.presetExerciseTemplates;
+
+        // Determine which user ID set applies
+        final userIDs =
+            widget.itemName == 'session'
+                ? presetData.presetUserWorkoutsIDs
+                : presetData.presetUserExerciseTemplateIDs;
 
         final String labelFilter = _filterLabelController.text.trim();
 
@@ -128,7 +136,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
-                  // mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildFormFields(), // TODO: fix spacing issues
@@ -136,7 +143,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     _buildSearchFilterAddRow(context),
                     Expanded(
                       flex: 3,
-                      child: _buildListView(filteredPresetItems),
+                      child: _buildListView(filteredPresetItems, userIDs),
                     ),
                     SizedBox(height: 8),
                     SizedBox(
@@ -162,7 +169,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                   description: description,
                                   list:
                                       selectedPresetItems
-                                          .cast<Workout>()
+                                          .whereType<Workout>()
                                           .toList(),
                                 );
                                 presetData.addPresetSession(newSession);
@@ -176,15 +183,25 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                   ),
                                   list:
                                       selectedPresetItems
-                                          .cast<Exercise>()
+                                          .whereType<
+                                            ExerciseTemplate
+                                          >() //should be all, but safer than .cast()
+                                          .map(
+                                            (template) =>
+                                                ExerciseInstance.fromTemplate(
+                                                  template,
+                                                ),
+                                          )
                                           .toList(),
                                 );
                                 presetData.addPresetWorkout(newWorkout);
                               }
 
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Form submitted successfully!'),
+                                SnackBar(
+                                  content: Text(
+                                    '${widget.itemName} submitted successfully!',
+                                  ),
                                 ),
                               );
 
@@ -219,23 +236,42 @@ class _AddItemScreenState extends State<AddItemScreen> {
         Row(
           children: [
             Expanded(
-              flex: 1,
               child: TextFormField(
                 controller: _titleController,
-                autofocus: true,
+                // autofocus: true,
+                maxLength: FieldLimits.workoutTitleMaxLength,
                 decoration: InputDecoration(
-                  fillColor: Theme.of(context).colorScheme.surfaceBright,
+                  fillColor: context.colorScheme.surfaceBright,
                   labelText: 'Title',
                   labelStyle: context.bodyMedium,
                 ),
-                validator:
-                    (value) =>
-                        value == null || value.isEmpty
-                            ? 'Please enter a title'
-                            : null,
+                validator: FieldValidators.workoutTitle,
               ),
             ),
-            SizedBox(width: 16),
+          ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _descriptionController,
+                // autofocus: true,
+                maxLength: FieldLimits.workoutDescriptionMaxLength,
+                decoration: InputDecoration(
+                  fillColor: context.colorScheme.surfaceBright,
+                  labelText: 'Description',
+                  labelStyle: context.bodyMedium,
+                ),
+                validator: FieldValidators.workoutDescription,
+              ),
+            ),
+            if (widget.itemName == 'workout') ...[],
+          ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
             Expanded(
               child: MyLabelDropdownButton(
                 value:
@@ -254,40 +290,26 @@ class _AddItemScreenState extends State<AddItemScreen> {
                             : null,
               ),
             ),
-          ],
-        ),
-        SizedBox(height: 16),
-        Row(
-          children: [
+            SizedBox(width: 16),
             Expanded(
-              flex: 3,
-              child: TextFormField(
-                controller: _descriptionController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  fillColor: Theme.of(context).colorScheme.surfaceBright,
-                  labelText: 'Description',
-                  labelStyle: context.bodyMedium,
-                ),
-              ),
+              child:
+                  widget.itemName == 'workout'
+                      ? TextFormField(
+                        controller: _timeBetweenExercisesController,
+                        // autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          fillColor: context.colorScheme.surfaceBright,
+                          labelText: 'Time between exercises',
+                          labelStyle: context.bodyMedium,
+                        ),
+                      )
+                      : SizedBox.shrink(),
             ),
-            if (widget.itemName == 'workout') ...[
-              SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _timeBetweenExercisesController,
-                  autofocus: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    fillColor: Theme.of(context).colorScheme.surfaceBright,
-                    labelText:
-                        'Time between exercises', //TODO: too long, fix this
-                    labelStyle: context.bodyMedium,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
         SizedBox(height: 24),
@@ -302,13 +324,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
           width: MediaQuery.of(context).size.width * 0.35,
           child: Text(
             'All $listItemName',
-            style: context.h4.copyWith(
-              color: Theme.of(context).colorScheme.secondary,
-            ),
+            style: context.h4.copyWith(color: context.colorScheme.secondary),
           ),
         ),
         _isSearching || _isFiltering ? SizedBox.shrink() : Spacer(),
-        // Spacer(),
         if (_isSearching)
           SizedBox(
             key: const ValueKey('searchField'),
@@ -318,11 +337,11 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    autofocus: true,
+                    // autofocus: true,
                     decoration: InputDecoration(
                       hintText: 'Search...',
                       hintStyle: context.bodyMedium,
-                      fillColor: Theme.of(context).colorScheme.surfaceBright,
+                      fillColor: context.colorScheme.surfaceBright,
                       isDense: true,
                     ),
                     onChanged: (value) {
@@ -350,10 +369,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
           OutlinedButton(
             key: const ValueKey('searchButton'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSecondary,
-              backgroundColor: Theme.of(context).colorScheme.surfaceBright,
+              foregroundColor: context.colorScheme.onSecondary,
+              backgroundColor: context.colorScheme.surfaceBright,
               side: BorderSide(
-                color: Theme.of(context).colorScheme.secondary,
+                color: context.colorScheme.secondary,
                 width: 1.5,
               ),
             ),
@@ -408,10 +427,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
           OutlinedButton(
             key: const ValueKey('filterButton'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSecondary,
-              backgroundColor: Theme.of(context).colorScheme.surfaceBright,
+              foregroundColor: context.colorScheme.onSecondary,
+              backgroundColor: context.colorScheme.surfaceBright,
               side: BorderSide(
-                color: Theme.of(context).colorScheme.secondary,
+                color: context.colorScheme.secondary,
                 width: 1.5,
               ),
             ),
@@ -426,10 +445,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
             ? SizedBox.shrink()
             : OutlinedButton(
               style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.onSecondary,
-                backgroundColor: Theme.of(context).colorScheme.surfaceBright,
+                foregroundColor: context.colorScheme.onSecondary,
+                backgroundColor: context.colorScheme.surfaceBright,
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.secondary,
+                  color: context.colorScheme.secondary,
                   width: 1.5,
                 ),
               ),
@@ -440,11 +459,20 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 
-  ListView _buildListView(List<dynamic> filteredPresetItems) {
+  ListView _buildListView(
+    List<dynamic> filteredPresetItems,
+    Set<String> userIDs,
+  ) {
     return ListView.builder(
       itemCount: filteredPresetItems.length,
       padding: EdgeInsets.symmetric(horizontal: 8),
       itemBuilder: (BuildContext context, int index) {
+        final isExpanded = _expandedItemIds.contains(
+          filteredPresetItems[index].id,
+        );
+
+        final isUserDefined = userIDs.contains(filteredPresetItems[index].id);
+
         return Padding(
           padding: const EdgeInsets.only(top: 8.0),
           child: Container(
@@ -452,9 +480,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
                 width: 0.5,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: context.colorScheme.onSurface,
               ),
-              color: Theme.of(context).colorScheme.surfaceBright,
+              color: context.colorScheme.surfaceBright,
               boxShadow: context.shadowSmall,
             ),
             child: ListTile(
@@ -468,7 +496,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     value!
                         ? _selectedItemIds.add(id)
                         : _selectedItemIds.remove(id);
-                    ;
                   });
                 },
               ),
@@ -485,41 +512,110 @@ class _AddItemScreenState extends State<AddItemScreen> {
                         style: context.bodyMedium,
                       )
                       : SizedBox.shrink(),
-                  if (_isListTileExpanded &&
+                  if (isExpanded &&
                       filteredPresetItems[index] is Workout) ...<Widget>[
                     SizedBox(height: 2),
                     Text('Exercises:'),
                     for (final exercise in filteredPresetItems[index].list)
                       Text(exercise.title),
-                  ] else if (_isListTileExpanded &&
-                      filteredPresetItems[index] is Exercise) ...<Widget>[
+                  ] else if (isExpanded &&
+                      filteredPresetItems[index]
+                          is ExerciseTemplate) ...<Widget>[
                     SizedBox(height: 2),
                     Text(
                       'Load:',
                     ), //TODO: edit to display more useful information
-                    Text(filteredPresetItems[index].load),
+                    Text(
+                      '${filteredPresetItems[index].defaultLoad.toString()} kg',
+                    ),
                   ],
                   Align(
                     alignment: Alignment.centerRight,
                     child: IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: Icon(
-                        _isListTileExpanded
-                            ? Icons.expand_less
-                            : Icons.expand_more,
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
                       ),
                       onPressed: () {
                         setState(() {
-                          _isListTileExpanded = !_isListTileExpanded;
+                          final id = filteredPresetItems[index].id;
+                          isExpanded
+                              ? _expandedItemIds.remove(id)
+                              : _expandedItemIds.add(id);
                         });
                       },
                     ),
                   ),
                 ],
               ),
-              trailing: Icon(Icons.edit), //TODO: make editable
+              trailing:
+                  isUserDefined
+                      ? IconButton(
+                        onPressed: () {
+                          _removeItemPopUp(filteredPresetItems[index]);
+                        },
+                        icon: Icon(Icons.delete),
+                      )
+                      : null,
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _removeItemPopUp(dynamic filteredPresetItem) {
+    final item = filteredPresetItem;
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(item.title, style: dialogContext.h3),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Description: \n${item.description}',
+                style: dialogContext.bodyMedium,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Do you want to remove ${item.title}?',
+                style: dialogContext.bodyLarge,
+              ),
+            ],
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Cancel'),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    final presetData = Provider.of<PresetProvider>(
+                      context,
+                      listen: false,
+                    );
+                    if (item is Workout) {
+                      presetData.deleteUserPresetWorkout(item.id);
+                    } else if (item is ExerciseTemplate) {
+                      presetData.deleteUserPresetExercise(item.id);
+                    }
+                    Navigator.of(dialogContext).pop();
+                  },
+
+                  child: Text('Remove'),
+                ),
+              ],
+            ),
+          ],
         );
       },
     );

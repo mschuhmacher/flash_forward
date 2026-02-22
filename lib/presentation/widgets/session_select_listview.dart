@@ -4,7 +4,8 @@ import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class SessionSelectListView extends StatelessWidget {
   const SessionSelectListView({
@@ -87,9 +88,9 @@ class MyListViewCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
                 width: 0.25,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: context.colorScheme.onSurface,
               ),
-              color: Theme.of(context).colorScheme.surfaceBright,
+              color: context.colorScheme.surfaceBright,
               boxShadow: context.shadowSmall,
             ),
             child: Column(
@@ -109,7 +110,7 @@ class MyListViewCard extends StatelessWidget {
                     if (editMode == true) ...[
                       Spacer(),
                       IconButton.outlined(
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: context.colorScheme.onSurface,
                         onPressed: null,
                         icon: Icon(Icons.edit),
                       ),
@@ -128,7 +129,7 @@ class MyListViewCard extends StatelessWidget {
                 ),
                 Divider(
                   thickness: 0.75,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: context.colorScheme.onSurface,
                 ),
                 // loops through the exerciseList and creates Text widget for each one. ListView iterates through the blockList.
                 for (var item in item[index].list)

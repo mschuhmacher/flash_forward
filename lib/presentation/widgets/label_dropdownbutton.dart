@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/label.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class MyLabelDropdownButton extends StatelessWidget {
   final String? value;
@@ -68,7 +69,7 @@ class MyLabelDropdownButton extends StatelessWidget {
       isExpanded: true,
       borderRadius: BorderRadius.circular(25),
       decoration: InputDecoration(
-        fillColor: Theme.of(context).colorScheme.surfaceBright,
+        fillColor: context.colorScheme.surfaceBright,
       ),
       onChanged: onChanged,
       validator: validator,

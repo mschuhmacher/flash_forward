@@ -4,13 +4,15 @@ import 'package:intl/intl.dart';
 import 'package:flash_forward/data/labels.dart';
 
 import 'package:flash_forward/models/session.dart';
-import 'package:flash_forward/_UI_design_helper_screens/cheat_sheet_screen.dart';
-import 'package:flash_forward/_UI_design_helper_screens/colorscheme_demo_screen.dart';
 import 'package:flash_forward/presentation/widgets/my_calendar.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
+import 'package:flash_forward/presentation/screens/login_screen.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/themes/app_text_styles.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,53 +24,149 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final Map<int, GlobalKey> _iconButtonKeys = {};
 
+  Future<void> _signOut() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Sign Out?', style: context.h3),
+          content: Text(
+            'Are you sure you want to sign out?',
+            style: context.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && mounted) {
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
+
+      // Reset providers to allow re-initialization with different user
+      await sessionLogProvider.reset();
+      presetProvider.reset();
+
+      await authProvider.signOut();
+
+      // Navigate to login screen
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<SessionLogProvider>(
-      builder: (BuildContext context, sessionLogData, Widget? child) {
+    return Consumer2<SessionLogProvider, AuthProvider>(
+      builder: (
+        BuildContext context,
+        sessionLogData,
+        authProvider,
+        Widget? child,
+      ) {
         // Reverse the list to show the latest sessions first
         List<Session> selectedSessions =
             sessionLogData.selectedSessions.reversed.toList();
 
         return Scaffold(
-          // appBar: AppBar(
-          //   backgroundColor: Theme.of(context).colorScheme.surface,
-          //   title: SizedBox.shrink(),
-          // title: Row(
-          //   children: [
-          //     ElevatedButton(
-          //       onPressed: () {
-          //         Navigator.push(
-          //           context,
-          //           MaterialPageRoute(
-          //             builder: (context) => ColorSchemeDemoScreen(),
-          //           ),
-          //         );
-          //       },
-          //       child: Text(' test screen'),
-          //     ),
-          //     ElevatedButton(
-          //       onPressed: () {
-          //         Navigator.push(
-          //           context,
-          //           MaterialPageRoute(
-          //             builder: (context) => Material3ColorCheatSheet(),
-          //           ),
-          //         );
-          //       },
-          //       child: Text(' cheat sheet'),
-          //     ),
-          //   ],
-          // ),
-          //   centerTitle: true,
-          // ),
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 24, top: 24),
-                  child: Text('Hey, ready to climb?', style: context.h1),
+                  padding: const EdgeInsets.fromLTRB(24, 24, 16, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hey ${authProvider.userProfile?.firstName.isNotEmpty == true ? authProvider.userProfile!.firstName : "Climber"}!',
+                              style: context.h1,
+                            ),
+                            Text('Ready to climb?', style: context.bodyMedium),
+                          ],
+                        ),
+                      ),
+                      // Profile/Sign Out button
+                      PopupMenuButton<String>(
+                        icon: CircleAvatar(
+                          backgroundColor: context.colorScheme.primary,
+                          child: Text(
+                            authProvider.userProfile?.firstName.isNotEmpty ==
+                                    true
+                                ? authProvider.userProfile!.firstName[0]
+                                    .toUpperCase()
+                                : 'U',
+                            style: context.titleMedium.copyWith(
+                              color: context.colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                        onSelected: (value) {
+                          if (value == 'signout') {
+                            _signOut();
+                          }
+                          // Add more menu options here later (profile, settings, etc.)
+                        },
+                        itemBuilder:
+                            (BuildContext context) => [
+                              PopupMenuItem<String>(
+                                enabled: false,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      authProvider.userProfile?.fullName ?? '',
+                                      style: context.titleMedium,
+                                    ),
+                                    Text(
+                                      authProvider.userProfile?.email ?? '',
+                                      style: context.bodyMedium.copyWith(
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem<String>(
+                                value: 'signout',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.logout),
+                                    SizedBox(width: 8),
+                                    Text('Sign Out'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                      ),
+                    ],
+                  ),
                 ),
 
                 SizedBox(height: 40),
@@ -88,14 +186,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       Spacer(),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.secondary,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onSecondary,
+                          backgroundColor: context.colorScheme.secondary,
+                          foregroundColor: context.colorScheme.onSecondary,
                         ),
-                        onPressed: () {
-                          sessionLogData.clearAllLoggedSessions();
-                        },
+                        onPressed: _showClearLogsPopUp,
                         child: Text('Clear logs', style: context.bodyMedium),
                       ),
                     ],
@@ -150,8 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: context.bodyMedium,
             ),
             trailing:
-                (session.label != null &&
-                        kDefaultLabels.containsKey(session.label))
+                (kDefaultLabels.containsKey(session.label))
                     ? IconButton(
                       key: iconButtonKey,
                       icon: Icon(
@@ -160,16 +253,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         size: 20,
                       ),
                       onPressed: () {
-                        _showLabelPopup(context, session.label!, iconButtonKey);
+                        _showLabelPopup(context, session.label, iconButtonKey);
                       },
                       tooltip: session.label,
                     )
                     : null,
-            tileColor: Theme.of(context).colorScheme.surfaceBright,
+            tileColor: context.colorScheme.surfaceBright,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
               side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: context.colorScheme.onSurface,
                 width: 0.5,
               ),
             ),
@@ -248,5 +341,44 @@ class _HomeScreenState extends State<HomeScreen> {
     Future.delayed(Duration(seconds: 2), () {
       overlayEntry?.remove();
     });
+  }
+
+  void _showClearLogsPopUp() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('Clear logs', style: dialogContext.h3),
+          content: Text(
+            'Are you sure you want to clear your logs?',
+            style: dialogContext.bodyMedium,
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Cancel'),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    Provider.of<SessionLogProvider>(
+                      context,
+                      listen: false,
+                    ).clearAllLoggedSessions();
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Clear logs'),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
   }
 }
