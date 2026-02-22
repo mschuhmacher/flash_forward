@@ -58,6 +58,7 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                               SystemChannels.textInput.invokeMethod(
                                 'TextInput.hide',
                               );
+                              //  Still unfocus for the screen behind the modal
                               FocusManager.instance.primaryFocus?.unfocus();
                               Navigator.pop(context);
                             },
@@ -342,6 +343,8 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                               ),
                             );
                             presetData.addPresetExercise(newExercise);
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            Navigator.pop(context);
                           }
                         },
                         child: Text('Save'),
