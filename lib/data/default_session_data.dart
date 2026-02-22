@@ -71,12 +71,12 @@ final List<Session> kDefaultSessions = [
     label: 'Daily maintenance',
     list: [_findWorkout('Evening Stretch & Recovery')],
   ),
-  // TEST - UI LIMIT VERIFICATION SESSION
-  Session(
-    title: 'UI Test Session - Max Limits',
-    description: 'Test session with exercises at character limits for UI verification and finetuning purposes',
-    date: DateTime.now(),
-    label: 'Test',
-    list: [_findWorkout('Test Workout Maximum Title Lim')],
-  ),
+  // // TEST - UI LIMIT VERIFICATION SESSION
+  // Session(
+  //   title: 'UI Test Session - Max Limits',
+  //   description: 'Test session with exercises at character limits for UI verification and finetuning purposes',
+  //   date: DateTime.now(),
+  //   label: 'Test',
+  //   list: [_findWorkout('Test Workout Maximum Title Lim')],
+  // ),
 ];

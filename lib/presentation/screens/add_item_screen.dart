@@ -91,6 +91,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ? presetData.presetWorkouts
                 : presetData.presetExerciseTemplates;
 
+        // Determine which user ID set applies
+        final userIDs =
+            widget.itemName == 'session'
+                ? presetData.presetUserWorkoutsIDs
+                : presetData.presetUserExerciseTemplateIDs;
+
         final String labelFilter = _filterLabelController.text.trim();
 
         final List<dynamic> filteredPresetItems =
@@ -137,7 +143,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     _buildSearchFilterAddRow(context),
                     Expanded(
                       flex: 3,
-                      child: _buildListView(filteredPresetItems),
+                      child: _buildListView(filteredPresetItems, userIDs),
                     ),
                     SizedBox(height: 8),
                     SizedBox(
@@ -192,8 +198,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
                               }
 
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Form submitted successfully!'),
+                                SnackBar(
+                                  content: Text(
+                                    '${widget.itemName} submitted successfully!',
+                                  ),
                                 ),
                               );
 
@@ -284,19 +292,23 @@ class _AddItemScreenState extends State<AddItemScreen> {
             ),
             SizedBox(width: 16),
             Expanded(
-              child: TextFormField(
-                controller: _timeBetweenExercisesController,
-                // autofocus: true,
-                textInputAction: TextInputAction.done,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  fillColor: context.colorScheme.surfaceBright,
-                  labelText:
-                      'Time between exercises', //TODO: too long, fix this
-                  labelStyle: context.bodyMedium,
-                ),
-              ),
+              child:
+                  widget.itemName == 'workout'
+                      ? TextFormField(
+                        controller: _timeBetweenExercisesController,
+                        // autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          fillColor: context.colorScheme.surfaceBright,
+                          labelText: 'Time between exercises',
+                          labelStyle: context.bodyMedium,
+                        ),
+                      )
+                      : SizedBox.shrink(),
             ),
           ],
         ),
@@ -447,7 +459,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 
-  ListView _buildListView(List<dynamic> filteredPresetItems) {
+  ListView _buildListView(
+    List<dynamic> filteredPresetItems,
+    Set<String> userIDs,
+  ) {
     return ListView.builder(
       itemCount: filteredPresetItems.length,
       padding: EdgeInsets.symmetric(horizontal: 8),
@@ -455,6 +470,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
         final isExpanded = _expandedItemIds.contains(
           filteredPresetItems[index].id,
         );
+
+        final isUserDefined = userIDs.contains(filteredPresetItems[index].id);
 
         return Padding(
           padding: const EdgeInsets.only(top: 8.0),
@@ -479,7 +496,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     value!
                         ? _selectedItemIds.add(id)
                         : _selectedItemIds.remove(id);
-                    ;
                   });
                 },
               ),
@@ -532,12 +548,15 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   ),
                 ],
               ),
-              trailing: IconButton(
-                onPressed: () {
-                  _editItemPopUp(filteredPresetItems[index]);
-                },
-                icon: Icon(Icons.edit),
-              ),
+              trailing:
+                  isUserDefined
+                      ? IconButton(
+                        onPressed: () {
+                          _removeItemPopUp(filteredPresetItems[index]);
+                        },
+                        icon: Icon(Icons.delete),
+                      )
+                      : null,
             ),
           ),
         );
@@ -545,15 +564,27 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 
-  void _editItemPopUp(dynamic filteredPresetItem) {
+  void _removeItemPopUp(dynamic filteredPresetItem) {
+    final item = filteredPresetItem;
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: Text('Edit', style: dialogContext.h3),
-          content: Text(
-            filteredPresetItem.description,
-            style: dialogContext.bodyMedium,
+          title: Text(item.title, style: dialogContext.h3),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Description: \n${item.description}',
+                style: dialogContext.bodyMedium,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Do you want to remove ${item.title}?',
+                style: dialogContext.bodyLarge,
+              ),
+            ],
           ),
           actions: [
             Row(
@@ -568,9 +599,19 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () {
+                    final presetData = Provider.of<PresetProvider>(
+                      context,
+                      listen: false,
+                    );
+                    if (item is Workout) {
+                      presetData.deleteUserPresetWorkout(item.id);
+                    } else if (item is ExerciseTemplate) {
+                      presetData.deleteUserPresetExercise(item.id);
+                    }
                     Navigator.of(dialogContext).pop();
                   },
-                  child: Text('Save'),
+
+                  child: Text('Remove'),
                 ),
               ],
             ),
