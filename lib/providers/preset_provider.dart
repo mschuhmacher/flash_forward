@@ -41,6 +41,12 @@ class PresetProvider extends ChangeNotifier {
   List<Session> get presetDefaultSessions => _defaultSessions;
   List<Session> get presetUserSessions => _userSessions;
 
+  // Return the IDs of the user-defined workouts and exerciseTemplates
+  Set<String> get presetUserWorkoutsIDs =>
+      _userWorkouts.map((w) => w.id).toSet();
+  Set<String> get presetUserExerciseTemplateIDs =>
+      _userExerciseTemplates.map((e) => e.id).toSet();
+
   bool _isInitialized = false;
   bool _isLoading = false;
 
@@ -135,8 +141,9 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Remove user added preset
+  // Remove user added preset session
   Future<void> deleteUserPresetSession(int index) async {
+    //TODO: update to use IDs instead of index?
     final sessionToDelete = _userSessions[index];
     _userSessions.removeAt(index);
 
@@ -149,6 +156,48 @@ class PresetProvider extends ChangeNotifier {
     if (_syncService != null) {
       try {
         await _syncService!.deleteSession(sessionToDelete.id);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+
+    notifyListeners();
+  }
+
+  // Remove user added preset workout
+  Future<void> deleteUserPresetWorkout(String id) async {
+    _userWorkouts.removeWhere((w) => w.id == id);
+
+    await PresetLogger.savePresetToFile(
+      'user_preset_workouts.json',
+      _userWorkouts,
+    );
+
+    // Delete from cloud if available
+    if (_syncService != null) {
+      try {
+        await _syncService!.deleteWorkout(id);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+
+    notifyListeners();
+  }
+
+  // Remove user added preset exercise
+  Future<void> deleteUserPresetExercise(String id) async {
+    _userExerciseTemplates.removeWhere((w) => w.id == id);
+
+    await PresetLogger.savePresetToFile(
+      'user_preset_exercises.json',
+      _userExerciseTemplates,
+    );
+
+    // Delete from cloud if available
+    if (_syncService != null) {
+      try {
+        await _syncService!.deleteExercise(id);
       } catch (e, stackTrace) {
         Sentry.captureException(e, stackTrace: stackTrace);
       }
