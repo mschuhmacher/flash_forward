@@ -482,32 +482,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ],
                 ),
               ),
-              // Column(
-              //   crossAxisAlignment: CrossAxisAlignment.start,
-              //   children: [
-              //     Row(
-              //       children: [
-              //         Icon(
-              //           Icons.info_outline,
-              //           color: context.colorScheme.onPrimary,
-              //         ),
-              //         const SizedBox(width: 8),
-              //         Text(
-              //           'Privacy Notice',
-              //           style: context.titleMedium.copyWith(
-              //             color:
-              //                 context.colorScheme.onPrimary,
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //     const SizedBox(height: 8),
-              //     Text(
-              //       'Your data is encrypted and stored securely. We never share your personal information with third parties.',
-              //       style: context.bodyMedium.copyWith(fontSize: 12),
-              //     ),
-              //   ],
-              // ),
+              
             ),
           ],
         ),

@@ -189,4 +189,14 @@ class AuthService {
   bool isEmailConfirmed() {
     return supabase.auth.currentUser?.emailConfirmedAt != null;
   }
+
+  Future<bool> deleteUser() async {
+    try {
+      await supabase.rpc('delete_current_user');
+      return true;
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+      return false;
+    }
+  }
 }
