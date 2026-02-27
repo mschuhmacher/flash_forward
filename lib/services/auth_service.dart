@@ -21,59 +21,26 @@ class AuthService {
       final packageInfo = await PackageInfo.fromPlatform();
       final appVersion = packageInfo.version;
 
-      // Step 1: Create the auth user
-      // Trigger will create empty profile automatically
+      // Step 1: Create the auth user, storing profile fields in metadata.
+      // The profile row (id + email) is created by a Supabase trigger.
+      // Profile fields are applied after email confirmation in applyMetadataToProfile().
       final response = await supabase.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'first_name': firstName,
+          'last_name': lastName,
+          'phone_number': phoneNumber,
+          'country': country,
+          'marketing_consent': marketingConsent,
+          'app_version_at_signup': appVersion,
+        },
       );
 
       // Empty identities means this email is already registered — skip profile creation
       if (response.user?.identities != null &&
           response.user!.identities!.isEmpty) {
         return response;
-      }
-
-      if (response.user != null) {
-        // Create or update the profile
-        try {
-          // Check if profile already exists
-          final existing =
-              await supabase
-                  .from('profiles')
-                  .select()
-                  .eq('id', response.user!.id)
-                  .maybeSingle();
-
-          final profileData = {
-            'first_name': firstName,
-            'last_name': lastName,
-            'phone_number': phoneNumber,
-            'country': country,
-            'marketing_consent': marketingConsent,
-            'app_version_at_signup': appVersion,
-            'updated_at': DateTime.now().toIso8601String(),
-          };
-
-          if (existing == null) {
-            // No profile row exists - INSERT it
-            await supabase.from('profiles').insert({
-              'id': response.user!.id,
-              'email': email,
-              'account_created_at': DateTime.now().toIso8601String(),
-              ...profileData,
-            });
-          } else {
-            // Profile exists - UPDATE it
-            await supabase
-                .from('profiles')
-                .update(profileData)
-                .eq('id', response.user!.id);
-          }
-        } catch (profileError, stackTrace) {
-          Sentry.captureException(profileError, stackTrace: stackTrace);
-          // Don't fail the entire signup
-        }
       }
 
       return response;
@@ -164,6 +131,34 @@ class AuthService {
       Sentry.captureException(e, stackTrace: stackTrace);
 
       return null;
+    }
+  }
+
+  /// Applies profile fields stored in user metadata to the profiles table.
+  /// Call this after the user confirms their email and signs in for the first time.
+  /// Clears the metadata afterwards to avoid permanent duplication.
+  Future<void> applyMetadataToProfile() async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      final meta = user.userMetadata;
+      if (meta == null || meta.isEmpty) return;
+
+      await supabase.from('profiles').update({
+        'first_name': meta['first_name'],
+        'last_name': meta['last_name'],
+        'phone_number': meta['phone_number'],
+        'country': meta['country'],
+        'marketing_consent': meta['marketing_consent'],
+        'app_version_at_signup': meta['app_version_at_signup'],
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', user.id);
+
+      // Clear metadata from auth layer to avoid permanent duplication
+      await supabase.auth.updateUser(UserAttributes(data: {}));
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
     }
   }
 

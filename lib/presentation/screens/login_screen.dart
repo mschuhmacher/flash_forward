@@ -159,15 +159,34 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
-    } else if (authProvider.errorMessage?.contains('email not confirmed') ==
+    } else if (authProvider.errorMessage?.contains('Email not confirmed') ==
         true) {
       // Show email not confirmed error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            authProvider.errorMessage ??
-                'Your email address was not confirmed, please check your inbox',
-          ), //TODO: show better error message.
+            'Your email address was not confirmed, please check your inbox',
+            style: context.bodyLarge.copyWith(
+              color: context.colorScheme.onPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: context.colorScheme.error,
+        ),
+      );
+    } else if (authProvider.errorMessage?.contains(
+          'Invalid login credentials',
+        ) ==
+        true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Invalid login credentials',
+            style: context.bodyLarge.copyWith(
+              color: context.colorScheme.onPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
           backgroundColor: context.colorScheme.error,
         ),
       );
@@ -177,7 +196,11 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(
           content: Text(
             authProvider.errorMessage ?? 'Login failed',
-          ), //TODO: show better error message. if possible show whether email was not registered, or password was wrong.
+            style: context.bodyLarge.copyWith(
+              color: context.colorScheme.onPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
           backgroundColor: context.colorScheme.error,
         ),
       );

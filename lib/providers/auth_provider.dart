@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flash_forward/models/user_profile.dart';
 import 'package:flash_forward/services/auth_service.dart';
 
@@ -84,8 +85,15 @@ class AuthProvider extends ChangeNotifier {
       _pendingSignupPassword = password;
       return true;
     } catch (e, stackTrace) {
-      Sentry.captureException(e, stackTrace: stackTrace);
-      _errorMessage = e.toString();
+      if (e is AuthException &&
+          (e.message.toLowerCase().contains('rate limit') ||
+              e.code == 'over_email_send_rate_limit')) {
+        _errorMessage =
+            'Too many sign-up attempts. Please wait a few minutes before trying again.';
+      } else {
+        Sentry.captureException(e, stackTrace: stackTrace);
+        _errorMessage = e.toString();
+      }
       _isLoading = false;
       notifyListeners();
       return false;
@@ -113,10 +121,12 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> trySignInAfterConfirmation({
-    required String email,
-    required String password,
-  }) async {
+  /// Called once email confirmation is detected. Uses the stored signup password
+  /// to sign in automatically, applies profile metadata, then loads the profile.
+  Future<bool> autoSignInAfterConfirmation(String email) async {
+    final password = _pendingSignupPassword;
+    if (password == null) return false;
+
     try {
       final signInSuccess = await _authService.trySignIn(
         email: email,
@@ -124,8 +134,11 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (signInSuccess) {
+        await _authService.applyMetadataToProfile();
         await loadUserProfile();
       }
+
+      _pendingSignupPassword = null;
       return signInSuccess;
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
@@ -144,9 +157,7 @@ class AuthProvider extends ChangeNotifier {
     if (password == null) return EmailStatus.foundButNotConfirmed;
 
     final status = await _authService.checkEmailStatus(email, password);
-    if (status == EmailStatus.confirmed) {
-      _pendingSignupPassword = null;
-    }
+    // Don't clear _pendingSignupPassword here — it's needed for autoSignInAfterConfirmation
     return status;
   }
 
