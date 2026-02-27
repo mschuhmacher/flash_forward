@@ -18,7 +18,6 @@
 - prepopulate phone number prefix based on country selection
 ### UI:
 - add supersets functionality
-- background color of container/pop-up/dialog
 - remove individual logged sessions by swiping them
 
 

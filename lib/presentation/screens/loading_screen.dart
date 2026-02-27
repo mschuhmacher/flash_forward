@@ -1,9 +1,9 @@
+import 'package:flash_forward/presentation/screens/root_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
-import 'package:flash_forward/presentation/screens/home_screen.dart';
 import 'package:flash_forward/presentation/screens/login_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -43,16 +43,16 @@ class _LoadingScreenState extends State<LoadingScreen> {
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const LoginScreen(
-              showEmailConfirmationMessage: true,
-            ),
+            builder:
+                (context) =>
+                    const LoginScreen(showEmailConfirmationMessage: true),
           ),
         );
         return;
       }
       // Email confirmed - proceed to home
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const RootScreen()),
       );
     } else {
       Navigator.of(context).pushReplacement(

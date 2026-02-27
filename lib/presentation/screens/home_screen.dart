@@ -24,58 +24,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final Map<int, GlobalKey> _iconButtonKeys = {};
 
-  Future<void> _signOut() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    // Show confirmation dialog
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Sign Out?', style: context.h3),
-          content: Text(
-            'Are you sure you want to sign out?',
-            style: context.bodyMedium,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text('Sign Out'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm == true && mounted) {
-      final sessionLogProvider = Provider.of<SessionLogProvider>(
-        context,
-        listen: false,
-      );
-      final presetProvider = Provider.of<PresetProvider>(
-        context,
-        listen: false,
-      );
-
-      // Reset providers to allow re-initialization with different user
-      await sessionLogProvider.reset();
-      presetProvider.reset();
-
-      await authProvider.signOut();
-
-      // Navigate to login screen
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer2<SessionLogProvider, AuthProvider>(
@@ -89,127 +37,122 @@ class _HomeScreenState extends State<HomeScreen> {
         List<Session> selectedSessions =
             sessionLogData.selectedSessions.reversed.toList();
 
-        return Scaffold(
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 16, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Hey ${authProvider.userProfile?.firstName.isNotEmpty == true ? authProvider.userProfile!.firstName : "Climber"}!',
-                              style: context.h1,
-                            ),
-                            Text('Ready to climb?', style: context.bodyMedium),
-                          ],
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hey ${authProvider.userProfile?.firstName.isNotEmpty == true ? authProvider.userProfile!.firstName : "Climber"}!',
+                          style: context.h1,
+                        ),
+                        Text('Ready to climb?', style: context.bodyMedium),
+                      ],
+                    ),
+                  ),
+                  // Profile/Sign Out button
+                  PopupMenuButton<String>(
+                    icon: CircleAvatar(
+                      backgroundColor: context.colorScheme.primary,
+                      child: Text(
+                        authProvider.userProfile?.firstName.isNotEmpty == true
+                            ? authProvider.userProfile!.firstName[0]
+                                .toUpperCase()
+                            : 'U',
+                        style: context.titleMedium.copyWith(
+                          color: context.colorScheme.onPrimary,
                         ),
                       ),
-                      // Profile/Sign Out button
-                      PopupMenuButton<String>(
-                        icon: CircleAvatar(
-                          backgroundColor: context.colorScheme.primary,
-                          child: Text(
-                            authProvider.userProfile?.firstName.isNotEmpty ==
-                                    true
-                                ? authProvider.userProfile!.firstName[0]
-                                    .toUpperCase()
-                                : 'U',
-                            style: context.titleMedium.copyWith(
-                              color: context.colorScheme.onPrimary,
+                    ),
+                    onSelected: (value) {
+                      if (value == 'signout') {
+                        _signOut();
+                      }
+                      // Add more menu options here later (profile, settings, etc.)
+                    },
+                    itemBuilder:
+                        (BuildContext context) => [
+                          PopupMenuItem<String>(
+                            enabled: false,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  authProvider.userProfile?.fullName ?? '',
+                                  style: context.titleMedium,
+                                ),
+                                Text(
+                                  authProvider.userProfile?.email ?? '',
+                                  style: context.bodyMedium.copyWith(
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        onSelected: (value) {
-                          if (value == 'signout') {
-                            _signOut();
-                          }
-                          // Add more menu options here later (profile, settings, etc.)
-                        },
-                        itemBuilder:
-                            (BuildContext context) => [
-                              PopupMenuItem<String>(
-                                enabled: false,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      authProvider.userProfile?.fullName ?? '',
-                                      style: context.titleMedium,
-                                    ),
-                                    Text(
-                                      authProvider.userProfile?.email ?? '',
-                                      style: context.bodyMedium.copyWith(
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuDivider(),
-                              const PopupMenuItem<String>(
-                                value: 'signout',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.logout),
-                                    SizedBox(width: 8),
-                                    Text('Sign Out'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 40),
-                StartSessionButton(routeName: 'session_select_screen'),
-                SizedBox(height: 40),
-                MyCalendar(),
-                SizedBox(height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Logged sessions',
-                        style: context.h3,
-                        textAlign: TextAlign.start,
-                      ),
-                      Spacer(),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.colorScheme.secondary,
-                          foregroundColor: context.colorScheme.onSecondary,
-                        ),
-                        onPressed: _showClearLogsPopUp,
-                        child: Text('Clear logs', style: context.bodyMedium),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child:
-                      selectedSessions.isEmpty
-                          ? Center(
-                            child: Text(
-                              'No climbing sessions logged yet.',
-                              style: context.bodyLarge,
+                          const PopupMenuDivider(),
+                          const PopupMenuItem<String>(
+                            value: 'signout',
+                            child: Row(
+                              children: [
+                                Icon(Icons.logout),
+                                SizedBox(width: 8),
+                                Text('Sign Out'),
+                              ],
                             ),
-                          )
-                          : _buildListView(selectedSessions),
-                ),
-                SizedBox(height: 40),
-              ],
+                          ),
+                        ],
+                  ),
+                ],
+              ),
             ),
-          ),
+
+            SizedBox(height: 40),
+            StartSessionButton(routeName: 'session_select_screen'),
+            SizedBox(height: 40),
+            MyCalendar(),
+            SizedBox(height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Text(
+                    'Logged sessions',
+                    style: context.h3,
+                    textAlign: TextAlign.start,
+                  ),
+                  Spacer(),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: context.colorScheme.secondary,
+                      foregroundColor: context.colorScheme.onSecondary,
+                    ),
+                    onPressed: _showClearLogsPopUp,
+                    child: Text('Clear logs', style: context.bodyMedium),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child:
+                  selectedSessions.isEmpty
+                      ? Center(
+                        child: Text(
+                          'No climbing sessions logged yet.',
+                          style: context.bodyLarge,
+                        ),
+                      )
+                      : _buildListView(selectedSessions),
+            ),
+            SizedBox(height: 40),
+          ],
         );
       },
     );
@@ -380,5 +323,58 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  Future<void> _signOut() async {
+    //TODO: move this function elsewhere
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Sign Out?', style: context.h3),
+          content: Text(
+            'Are you sure you want to sign out?',
+            style: context.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && mounted) {
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
+
+      // Reset providers to allow re-initialization with different user
+      await sessionLogProvider.reset();
+      presetProvider.reset();
+
+      await authProvider.signOut();
+
+      // Navigate to login screen
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 }

@@ -123,104 +123,93 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
         return GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
-          child: Scaffold(
-            resizeToAvoidBottomInset: false,
-            appBar: AppBar(
-              title: Text('New ${widget.itemName}', style: context.h4),
-              surfaceTintColor:
-                  Colors
-                      .transparent, //disables Material3 overlay. I.e. doesn't change the color of the appBar when the ListView scrolls
-            ),
-            body: Form(
-              key: _formKey,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFormFields(), // TODO: fix spacing issues
-                    SizedBox(height: 16),
-                    _buildSearchFilterAddRow(context),
-                    Expanded(
-                      flex: 3,
-                      child: _buildListView(filteredPresetItems, userIDs),
-                    ),
-                    SizedBox(height: 8),
-                    SizedBox(
-                      height: 50,
-                      child: Center(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            textStyle: context.h4,
-                          ),
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              final title = _titleController.text.trim();
-                              final label = _itemLabelController.text.trim();
-                              final description =
-                                  _descriptionController.text.trim();
-                              final timeBetweenExercises =
-                                  _timeBetweenExercisesController.text.trim();
+          child: Form(
+            key: _formKey,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFormFields(), // TODO: fix spacing issues
+                  SizedBox(height: 16),
+                  _buildSearchFilterAddRow(context),
+                  Expanded(
+                    flex: 3,
+                    child: _buildListView(filteredPresetItems, userIDs),
+                  ),
+                  SizedBox(height: 8),
+                  SizedBox(
+                    height: 50,
+                    child: Center(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(textStyle: context.h4),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            final title = _titleController.text.trim();
+                            final label = _itemLabelController.text.trim();
+                            final description =
+                                _descriptionController.text.trim();
+                            final timeBetweenExercises =
+                                _timeBetweenExercisesController.text.trim();
 
-                              if (widget.itemName == 'session') {
-                                final newSession = Session(
-                                  title: title,
-                                  label: label,
-                                  description: description,
-                                  list:
-                                      selectedPresetItems
-                                          .whereType<Workout>()
-                                          .toList(),
-                                );
-                                presetData.addPresetSession(newSession);
-                              } else if (widget.itemName == 'workout') {
-                                final newWorkout = Workout(
-                                  title: title,
-                                  label: label,
-                                  description: description,
-                                  timeBetweenExercises: int.parse(
-                                    timeBetweenExercises,
-                                  ),
-                                  list:
-                                      selectedPresetItems
-                                          .whereType<
-                                            ExerciseTemplate
-                                          >() //should be all, but safer than .cast()
-                                          .map(
-                                            (template) =>
-                                                ExerciseInstance.fromTemplate(
-                                                  template,
-                                                ),
-                                          )
-                                          .toList(),
-                                );
-                                presetData.addPresetWorkout(newWorkout);
-                              }
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '${widget.itemName} submitted successfully!',
-                                  ),
-                                ),
+                            if (widget.itemName == 'session') {
+                              final newSession = Session(
+                                title: title,
+                                label: label,
+                                description: description,
+                                list:
+                                    selectedPresetItems
+                                        .whereType<Workout>()
+                                        .toList(),
                               );
-
-                              Navigator.pop(context);
+                              presetData.addPresetSession(newSession);
+                            } else if (widget.itemName == 'workout') {
+                              final newWorkout = Workout(
+                                title: title,
+                                label: label,
+                                description: description,
+                                timeBetweenExercises: int.parse(
+                                  timeBetweenExercises,
+                                ),
+                                list:
+                                    selectedPresetItems
+                                        .whereType<
+                                          ExerciseTemplate
+                                        >() //should be all, but safer than .cast()
+                                        .map(
+                                          (template) =>
+                                              ExerciseInstance.fromTemplate(
+                                                template,
+                                              ),
+                                        )
+                                        .toList(),
+                              );
+                              presetData.addPresetWorkout(newWorkout);
                             }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 4,
-                            ),
-                            child: Text('Save ${widget.itemName}'),
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${widget.itemName} submitted successfully!',
+                                ),
+                              ),
+                            );
+
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 4,
                           ),
+                          child: Text('Save ${widget.itemName}'),
                         ),
                       ),
                     ),
-                    SizedBox(height: 50),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: 50),
+                ],
               ),
             ),
           ),
