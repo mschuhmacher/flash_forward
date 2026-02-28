@@ -14,7 +14,7 @@ List<Workout> kDefaultWorkouts = [
   // WARM-UPS
   // ============================================================================
   Workout(
-    title: 'General Warm-up',
+    title: 'Climbing Warm-up',
     label: 'Warm-up',
     description: 'Finger and major muscle groups warm-up',
     difficulty: 'Beginner',
@@ -30,7 +30,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
-    title: 'Basic Warm-up',
+    title: 'General Warm-up',
     label: 'Warm-up',
     description: 'Complete warm-up for any training session',
     difficulty: 'Beginner',
@@ -46,23 +46,6 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
-    title: 'Climbing-Specific Warm-up',
-    label: 'Warm-up',
-    description: 'Targeted warm-up for climbing and hangboard sessions',
-    difficulty: 'Intermediate',
-    equipment: 'Resistance band',
-    timeBetweenExercises: 20,
-    list: [
-      _findInstance('arm-circles'),
-      _findInstance('shoulder-rolls'),
-      _findInstance('wrist-circles'),
-      _findInstance('finger-flexor-stretch'),
-      _findInstance('shoulder-dislocates'),
-      _findInstance('cat-cow-stretch'),
-    ],
-  ),
-
-  Workout(
     title: 'Strength Training Warm-up',
     label: 'Warm-up',
     description: 'Dynamic warm-up for pull-ups, dips, and strength work',
@@ -70,10 +53,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Low bar',
     timeBetweenExercises: 20,
     list: [
-      _findInstance('jumping-jacks'),
-      _findInstance('high-knees'),
-      _findInstance('arm-circles'),
+      _findInstance('scapular-pull-ups'),
       _findInstance('shoulder-dislocates'),
+      _findInstance('push-ups'),
       _findInstance('australian-pull-ups'),
     ],
   ),
@@ -231,6 +213,22 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    title: 'General Upper-body Strength',
+    label: 'Strength',
+    description: 'Upper-body strength exercises with push and pulls',
+    difficulty: 'Intermediate',
+    equipment: 'Pull-up bar, Resistance band',
+    timeBetweenExercises: 90,
+    list: [
+      _findInstance('weighted-pull-ups'),
+      _findInstance('dips'),
+      _findInstance('wall-touches'),
+      _findInstance('pike-push-ups'),
+      _findInstance('face-pulls'),
+    ],
+  ),
+
+  Workout(
     title: 'Beginner Strength Foundation',
     label: 'Strength',
     description: 'Build base strength for climbing progression',
@@ -315,7 +313,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
-    title: 'Upper Body Power',
+    title: 'Upper-body Power',
     label: 'Power',
     description: 'Explosive pulling and pushing movements',
     difficulty: 'Advanced',
@@ -409,7 +407,17 @@ List<Workout> kDefaultWorkouts = [
   // FINGER STRENGTH
   // ============================================================================
   Workout(
-    title: 'Max Fingerboard Strength',
+    title: 'Max Pick-ups & Minimum Edge Hangs',
+    label: 'Finger strength',
+    description: 'Maximum finger strength development',
+    difficulty: 'Advanced',
+    equipment: 'Hangboard',
+    timeBetweenExercises: 180,
+    list: [_findInstance('max-pick-ups'), _findInstance('minimum-edge-hangs')],
+  ),
+
+  Workout(
+    title: 'Max Hangs & Minimum Edge Hangs',
     label: 'Finger strength',
     description: 'Maximum finger strength development',
     difficulty: 'Advanced',
@@ -539,6 +547,15 @@ List<Workout> kDefaultWorkouts = [
   // CALISTHENICS SKILLS
   // ============================================================================
   Workout(
+    title: 'Handstand Training',
+    label: 'Skills',
+    description: 'General handstand practice',
+    difficulty: 'Intermediate',
+    equipment: 'Wall',
+    timeBetweenExercises: 60,
+    list: [_findInstance('freestanding-handstand'), _findInstance('crow-pose')],
+  ),
+  Workout(
     title: 'Handstand Progression Training',
     label: 'Skills',
     description: 'Develop handstand strength and balance',
@@ -654,18 +671,13 @@ List<Workout> kDefaultWorkouts = [
   // DAILY MAINTENANCE
   // ============================================================================
   Workout(
-    title: 'Morning Mobility Routine',
+    title: 'Quick Fingerboarding',
     label: 'Daily maintenance',
-    description: '10-minute morning routine to wake up fingers and joints',
+    description: 'Quick, light fingerboarding for in between',
     difficulty: 'Beginner',
     equipment: 'Hangboard',
     timeBetweenExercises: 30,
-    list: [
-      _findInstance('wrist-circles'),
-      _findInstance('finger-flexor-stretch'),
-      _findInstance('arm-circles'),
-      _findInstance('open-hand-hangs'),
-    ],
+    list: [_findInstance('repeaters')],
   ),
 
   Workout(
@@ -676,8 +688,8 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'Hangboard',
     timeBetweenExercises: 30,
     list: [
-      _findInstance('recruitment-pulls'),
-      _findInstance('standing-forward-fold-wide-legged'),
+      _findInstance('repeaters'),
+      _findInstance('seated-single-leg-stretch'),
       _findInstance('recruitment-pulls'),
       _findInstance('shoulder-dislocates'),
     ],
@@ -691,11 +703,9 @@ List<Workout> kDefaultWorkouts = [
     equipment: 'None',
     timeBetweenExercises: 20,
     list: [
-      _findInstance('cat-cow-stretch'),
+      _findInstance('seated-single-leg-stretch'),
       _findInstance('pigeon-pose'),
       _findInstance('shoulder-dislocates'),
-      _findInstance('standing-forward-fold-wide-legged'),
-      _findInstance('seated-forward-fold-single-leg'),
     ],
   ),
 
@@ -756,7 +766,6 @@ List<Workout> kDefaultWorkouts = [
       _findInstance('shoulder-rolls'),
       _findInstance('shoulder-dislocates'),
       _findInstance('external-rotations'),
-      _findInstance('face-pulls'),
     ],
   ),
 
@@ -773,20 +782,30 @@ List<Workout> kDefaultWorkouts = [
     list: [_findInstance('flash'), _findInstance('limit-bouldering')],
   ),
 
+  Workout(
+    title: 'Projecting',
+    label: 'Limit',
+    description: 'Focussing on trying hard',
+    difficulty: 'Intermediate',
+    equipment: 'Climbing wall',
+    timeBetweenExercises: 300,
+    list: [_findInstance('limit-bouldering')],
+  ),
+
   // ============================================================================
   // TEST - UI LIMIT VERIFICATION
   // ============================================================================
-  Workout(
-    title: 'Test Workout Maximum Title Lim', // exactly 30 characters
-    label: 'Test',
-    description:
-        'This workout description tests the maximum allowed character limit of exactly one hundred characters', // exactly 100 characters
-    difficulty: 'Beginner',
-    equipment: 'None',
-    timeBetweenExercises: 30,
-    list: [
-      _findInstance('test-max-title-25-chars'),
-      _findInstance('test-short-title'),
-    ],
-  ),
+  // Workout(
+  //   title: 'Test Workout Maximum Title Lim', // exactly 30 characters
+  //   label: 'Test',
+  //   description:
+  //       'This workout description tests the maximum allowed character limit of exactly one hundred characters', // exactly 100 characters
+  //   difficulty: 'Beginner',
+  //   equipment: 'None',
+  //   timeBetweenExercises: 30,
+  //   list: [
+  //     _findInstance('test-max-title-25-chars'),
+  //     _findInstance('test-short-title'),
+  //   ],
+  // ),
 ];
