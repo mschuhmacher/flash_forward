@@ -266,7 +266,7 @@ List<Workout> kDefaultWorkouts = [
     timeBetweenExercises: 0,
     list: [
       _findInstance('weighted-pull-ups'),
-      _findInstance('pick-ups'),
+      _findInstance('max-pick-ups'),
       _findInstance('standing-forward-fold-wide-legged'),
     ],
   ),

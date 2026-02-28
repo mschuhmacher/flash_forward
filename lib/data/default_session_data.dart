@@ -40,7 +40,7 @@ final List<Session> kDefaultSessions = [
       _findWorkout('Climbing Warm-up'),
       _findWorkout('Combined Limit Strength'),
       _findWorkout('Dynamic Climbing Power'),
-      _findWorkout('Upper Body Power'),
+      _findWorkout('Upper-body Power'),
     ],
   ),
   Session(

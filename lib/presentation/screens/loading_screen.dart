@@ -30,7 +30,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
     // Run initialization with minimum 2 second display time
     await Future.wait([
       _loadData(),
-      Future.delayed(const Duration(seconds: 2)),
+      Future.delayed(const Duration(seconds: 1, milliseconds: 500)),
     ]);
 
     if (!mounted) return;
@@ -43,9 +43,9 @@ class _LoadingScreenState extends State<LoadingScreen> {
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const LoginScreen(
-              showEmailConfirmationMessage: true,
-            ),
+            builder:
+                (context) =>
+                    const LoginScreen(showEmailConfirmationMessage: true),
           ),
         );
         return;
