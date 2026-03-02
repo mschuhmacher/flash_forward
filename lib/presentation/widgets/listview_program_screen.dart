@@ -151,12 +151,18 @@ class ProgramListviewCard extends StatelessWidget {
           trailing: SizedBox(
             width: 40,
             height: 40,
-            child: IconButton(
-              onPressed: () {
-                // _openListItem(listItems[index]); //TODO: create this function
-              },
+            child: PopupMenuButton<String>(
               icon: Icon(Icons.more_vert_rounded),
-              iconSize: 28,
+              iconSize: 24,
+              borderRadius: BorderRadius.circular(25),
+              color: context.colorScheme.surface,
+              onSelected: (value) {
+                // TODO: handle menu actions
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(value: 'edit', child: Text('Edit', style: context.bodyLarge,),),
+                PopupMenuItem(value: 'delete', child: Text('Delete', style: context.bodyLarge)),
+              ],
             ),
           ),
         ),
