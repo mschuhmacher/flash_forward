@@ -1,3 +1,4 @@
+import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -78,44 +79,9 @@ class _ProgramListviewState extends State<ProgramListview> {
                   itemBuilder: (BuildContext context, int index) {
                     // final isUserDefined = userIDs.contains(listItems[index].id);
 
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(25),
-                          border: Border.all(
-                            width: 0.5,
-                            color: context.colorScheme.onSurface,
-                          ),
-                          color: context.colorScheme.surfaceBright,
-                          boxShadow: context.shadowSmall,
-                        ),
-                        child: ListTile(
-                          contentPadding: EdgeInsets.fromLTRB(8, 8, 16, 0),
-                          minVerticalPadding: 0,
-                          title: Text(
-                            filteredListItems[index].title,
-                            style: context.titleMedium,
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              filteredListItems[index].description != null
-                                  ? Text(
-                                    filteredListItems[index].description!,
-                                    style: context.bodyMedium,
-                                  )
-                                  : SizedBox.shrink(),
-                            ],
-                          ),
-                          trailing: IconButton(
-                            onPressed: () {
-                              // _openListItem(listItems[index]); //TODO: create this function
-                            },
-                            icon: Icon(Icons.arrow_forward_ios_rounded),
-                          ),
-                        ),
-                      ),
+                    return ProgramListviewCard(
+                      filteredListItems: filteredListItems,
+                      index: index,
                     );
                   },
                 ),
@@ -124,6 +90,77 @@ class _ProgramListviewState extends State<ProgramListview> {
           ],
         );
       },
+    );
+  }
+}
+
+class ProgramListviewCard extends StatelessWidget {
+  const ProgramListviewCard({
+    super.key,
+    required this.filteredListItems,
+    required this.index,
+  });
+
+  final List<dynamic> filteredListItems;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(width: 0.5, color: context.colorScheme.onSurface),
+          color: context.colorScheme.surfaceBright,
+          boxShadow: context.shadowSmall,
+        ),
+        child: ListTile(
+          contentPadding: EdgeInsets.fromLTRB(6, 0, 16, 0),
+          minVerticalPadding: 6,
+          minTileHeight: 90,
+
+          horizontalTitleGap: 4,
+          leading: SizedBox(
+            width: 32,
+            height: 32,
+            child: Icon(
+              kDefaultLabels[filteredListItems[index].label]?.icon,
+              color: kDefaultLabels[filteredListItems[index].label]?.color,
+              size: 24,
+            ),
+          ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(filteredListItems[index].title, style: context.titleMedium),
+              // Icon(Icons.circle),
+            ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              filteredListItems[index].description != null
+                  ? Text(
+                    filteredListItems[index].description!,
+                    style: context.bodyMedium,
+                  )
+                  : SizedBox.shrink(),
+            ],
+          ),
+          trailing: SizedBox(
+            width: 40,
+            height: 40,
+            child: IconButton(
+              onPressed: () {
+                // _openListItem(listItems[index]); //TODO: create this function
+              },
+              icon: Icon(Icons.more_vert_rounded),
+              iconSize: 28,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -287,7 +287,7 @@ List<Workout> kDefaultWorkouts = [
   // POWER TRAINING
   // ============================================================================
   Workout(
-    title: 'Campus Board Power Development',
+    title: 'Campus Board Power',
     label: 'Power',
     description: 'Build explosive finger and pulling power',
     difficulty: 'Advanced',
