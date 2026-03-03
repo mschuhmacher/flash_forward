@@ -16,9 +16,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  SentryWidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase (this also loads dotenv)
+  // Initialize Supabase
   await SupabaseConfig.initialize();
 
   // Lock app to portrait mode
