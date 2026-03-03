@@ -178,6 +178,25 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> updatePassword(String newPassword) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _authService.updatePassword(newPassword);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Update the user's profile
   Future<void> updateProfile(UserProfile updatedProfile) async {
     _isLoading = true;

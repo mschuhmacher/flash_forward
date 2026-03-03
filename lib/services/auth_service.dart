@@ -170,7 +170,14 @@ class AuthService {
   }
 
   Future<void> resetPassword(String email) async {
-    await supabase.auth.resetPasswordForEmail(email);
+    await supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'io.supabase.flashforward://login/reset',
+    );
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    await supabase.auth.updateUser(UserAttributes(password: newPassword));
   }
 
   Stream<AuthState> get authStateChanges {

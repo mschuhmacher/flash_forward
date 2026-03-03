@@ -11,11 +11,13 @@ import 'package:flash_forward/themes/app_colors.dart';
 class LoginScreen extends StatefulWidget {
   final bool showEmailConfirmationMessage;
   final bool showEmailConfirmedMessage;
+  final bool showPasswordResetMessage;
 
   const LoginScreen({
     super.key,
     this.showEmailConfirmationMessage = false,
     this.showEmailConfirmedMessage = false,
+    this.showPasswordResetMessage = false,
   });
 
   @override
@@ -123,6 +125,46 @@ class _LoginScreenState extends State<LoginScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget? _banner(BuildContext context) {
+    if (widget.showEmailConfirmationMessage) {
+      return _infoBanner(context, Icons.mail_outline,
+          'Please check your email to confirm your account before logging in.');
+    }
+    if (widget.showEmailConfirmedMessage) {
+      return _infoBanner(context, Icons.check_circle_outline,
+          'Your email has been confirmed. Please sign in.');
+    }
+    if (widget.showPasswordResetMessage) {
+      return _infoBanner(context, Icons.check_circle_outline,
+          'Your password has been updated. Please sign in.');
+    }
+    return null;
+  }
+
+  Widget _infoBanner(BuildContext context, IconData icon, String message) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: context.colorScheme.onPrimaryContainer),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: context.bodyMedium.copyWith(
+                color: context.colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -243,59 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Email confirmation message (timeout — not yet confirmed)
-                  if (widget.showEmailConfirmationMessage)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.mail_outline,
-                            color: context.colorScheme.onPrimaryContainer,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Please check your email to confirm your account before logging in.',
-                              style: context.bodyMedium.copyWith(
-                                color: context.colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // Email confirmed message (user clicked the confirmation link)
-                  if (widget.showEmailConfirmedMessage)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            color: context.colorScheme.onPrimaryContainer,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Your email has been confirmed. Please sign in.',
-                              style: context.bodyMedium.copyWith(
-                                color: context.colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  if (_banner(context) case final b?) b,
                   const SizedBox(height: 24),
 
                   // Email field
