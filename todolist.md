@@ -56,6 +56,7 @@
 - ask claude to evaluate whether certain UI functions and/or widgets should be moved to separate widget files for readability of the files.
 - ask claude for looking up flutter framework on code design and evaluate my codebase
 - health check to my Supabase URL using a cron-job to keep the project from pausing
+- supabase redirect to the app on email confirmation (instead of web page). set up deep linking to do so
 
 
 ## LATER STAGE
