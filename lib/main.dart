@@ -12,7 +12,9 @@ import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_theme.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,20 +25,18 @@ void main() async {
   // Lock app to portrait mode
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
+  final packageInfo = await PackageInfo.fromPlatform();
+
   await SentryFlutter.init(
     (options) {
       options.dsn = dotenv.env['SENTRY_DSN'];
-      // Adds request headers and IP for users, for more info visit:
-      // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
+      options.environment = kDebugMode ? 'debug' : 'production';
+      options.release =
+          'flash_forward@${packageInfo.version}+${packageInfo.buildNumber}';
       options.sendDefaultPii = false;
       options.enableLogs = true;
-      // Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
-      // We recommend adjusting this value in production.
       options.tracesSampleRate = 0.2;
-      // The sampling rate for profiling is relative to tracesSampleRate
-      // Setting to 1.0 will profile 100% of sampled transactions:
       options.profilesSampleRate = 0.1;
-      // Configure Session Replay
       options.replay.sessionSampleRate = 0.1;
       options.replay.onErrorSampleRate = 1.0;
     },
