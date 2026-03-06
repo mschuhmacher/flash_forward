@@ -23,7 +23,6 @@
 ## BUGS:
 - create tests for offline mode
 - conflict resolution between local and cloud data
-- lower Sentry sample rates to traces: 0.2 and profiles: 0.1
 
 
 ## IDEAS:
@@ -55,6 +54,7 @@
 - ask claude to evaluate whether certain UI functions and/or widgets should be moved to separate widget files for readability of the files.
 - ask claude for looking up flutter framework on code design and evaluate my codebase
 - health check to my Supabase URL using a cron-job to keep the project from pausing
+- option for exercises to have no time. in practice: timer keeps running until user clicks to next exercise
 
 
 ## LATER STAGE
