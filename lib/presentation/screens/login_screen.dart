@@ -1,10 +1,10 @@
+import 'package:flash_forward/presentation/screens/root_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/presentation/screens/signup_screen.dart';
-import 'package:flash_forward/presentation/screens/home_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 
@@ -200,8 +200,8 @@ class _LoginScreenState extends State<LoginScreen> {
       // Navigate to home screen
       Navigator.of(
         context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
-    } else if (authProvider.errorMessage?.contains('Email not confirmed') ==
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const RootScreen()));
+    } else if (authProvider.errorMessage?.contains('email not confirmed') ==
         true) {
       // Show email not confirmed error
       ScaffoldMessenger.of(context).showSnackBar(

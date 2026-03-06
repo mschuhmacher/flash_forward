@@ -7,7 +7,7 @@ const Map<String, Label> kDefaultLabels = {
   'Finger strength': Label(
     name: 'Finger strength',
     icon: Icons.fingerprint_outlined,
-    color: Colors.yellow,
+    color: Colors.orange,
   ),
   'Power': Label(
     name: 'Power',
@@ -17,7 +17,7 @@ const Map<String, Label> kDefaultLabels = {
   'Powerendurance': Label(
     name: 'Powerendurance',
     icon: Icons.bolt,
-    color: Colors.orange,
+    color: Colors.amberAccent,
   ),
   'Endurance': Label(name: 'Endurance', icon: Icons.loop, color: Colors.blue),
   'Strength': Label(

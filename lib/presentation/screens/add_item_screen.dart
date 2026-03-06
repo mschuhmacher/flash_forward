@@ -8,6 +8,7 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/add_exercise_modal_sheet.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -30,15 +31,11 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   final _titleController = TextEditingController();
   final _itemLabelController = TextEditingController();
-  final _filterLabelController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _timeBetweenExercisesController = TextEditingController();
 
-  bool _isSearching = false;
-  bool _isFiltering = false;
-  final _searchController = TextEditingController();
-
   String _query = '';
+  String _filterLabel = '';
   late final String listItemName;
 
   @override
@@ -51,8 +48,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
   void dispose() {
     _titleController.dispose();
     _itemLabelController.dispose();
-    _filterLabelController.dispose();
-    _searchController.dispose();
     _descriptionController.dispose();
     _timeBetweenExercisesController.dispose();
     super.dispose();
@@ -97,7 +92,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ? presetData.presetUserWorkoutsIDs
                 : presetData.presetUserExerciseTemplateIDs;
 
-        final String labelFilter = _filterLabelController.text.trim();
+        final String labelFilter = _filterLabel.trim();
 
         final List<dynamic> filteredPresetItems =
             allPresetItems.where((item) {
@@ -121,17 +116,11 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 .where((item) => _selectedItemIds.contains(item.id))
                 .toList();
 
-        return GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Scaffold(
-            resizeToAvoidBottomInset: false,
-            appBar: AppBar(
-              title: Text('New ${widget.itemName}', style: context.h4),
-              surfaceTintColor:
-                  Colors
-                      .transparent, //disables Material3 overlay. I.e. doesn't change the color of the appBar when the ListView scrolls
-            ),
-            body: Form(
+        return Scaffold(
+          appBar: AppBar(),
+          body: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Form(
               key: _formKey,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -139,8 +128,15 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildFormFields(), // TODO: fix spacing issues
-                    SizedBox(height: 16),
-                    _buildSearchFilterAddRow(context),
+                    // SizedBox(height: 16),
+                    // SearchFilterRow(
+                    //   listItemName: listItemName,
+                    //   onQueryChanged: (value) => setState(() => _query = value),
+                    //   onFilterLabelChanged:
+                    //       (value) =>
+                    //           setState(() => _filterLabel = value ?? ''),
+                    //   onAddPressed: _onPressedAddButton,
+                    // ),
                     Expanded(
                       flex: 3,
                       child: _buildListView(filteredPresetItems, userIDs),
@@ -313,148 +309,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
           ],
         ),
         SizedBox(height: 24),
-      ],
-    );
-  }
-
-  Row _buildSearchFilterAddRow(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: MediaQuery.of(context).size.width * 0.35,
-          child: Text(
-            'All $listItemName',
-            style: context.h4.copyWith(color: context.colorScheme.secondary),
-          ),
-        ),
-        _isSearching || _isFiltering ? SizedBox.shrink() : Spacer(),
-        if (_isSearching)
-          SizedBox(
-            key: const ValueKey('searchField'),
-            width: MediaQuery.of(context).size.width * 0.54,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    // autofocus: true,
-                    decoration: InputDecoration(
-                      hintText: 'Search...',
-                      hintStyle: context.bodyMedium,
-                      fillColor: context.colorScheme.surfaceBright,
-                      isDense: true,
-                    ),
-                    onChanged: (value) {
-                      setState(() => _query = value);
-                    },
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _isSearching = false;
-                      _searchController.clear();
-                      _query = '';
-                      FocusScope.of(context).unfocus();
-                    });
-                  },
-                ),
-              ],
-            ),
-          )
-        else if (_isFiltering)
-          SizedBox.shrink()
-        else
-          OutlinedButton(
-            key: const ValueKey('searchButton'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: context.colorScheme.onSecondary,
-              backgroundColor: context.colorScheme.surfaceBright,
-              side: BorderSide(
-                color: context.colorScheme.secondary,
-                width: 1.5,
-              ),
-            ),
-            onPressed: () {
-              setState(() => _isSearching = true);
-            },
-            child: const Icon(Icons.search),
-          ),
-
-        _isSearching ? SizedBox.shrink() : SizedBox(width: 8),
-        if (_isFiltering)
-          SizedBox(
-            key: const ValueKey('filterField'),
-            height: 48,
-            width: MediaQuery.of(context).size.width * 0.54,
-            child: Row(
-              children: [
-                Expanded(
-                  child: MyLabelDropdownButton(
-                    value:
-                        _filterLabelController.text.isNotEmpty
-                            ? _filterLabelController.text
-                            : null,
-                    onChanged: (value) {
-                      setState(() {
-                        _filterLabelController.text = value ?? '';
-                      });
-                    },
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty
-                                ? 'Please select a label'
-                                : null,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _isFiltering = false;
-                      _filterLabelController.clear();
-                      FocusScope.of(context).unfocus();
-                    });
-                  },
-                ),
-              ],
-            ),
-          )
-        else if (_isSearching)
-          SizedBox.shrink()
-        else
-          OutlinedButton(
-            key: const ValueKey('filterButton'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: context.colorScheme.onSecondary,
-              backgroundColor: context.colorScheme.surfaceBright,
-              side: BorderSide(
-                color: context.colorScheme.secondary,
-                width: 1.5,
-              ),
-            ),
-            onPressed: () {
-              setState(() => _isFiltering = true);
-            },
-            child: const Icon(Icons.filter_alt_outlined),
-          ),
-
-        _isSearching || _isFiltering ? SizedBox.shrink() : SizedBox(width: 8),
-        _isSearching || _isFiltering
-            ? SizedBox.shrink()
-            : OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: context.colorScheme.onSecondary,
-                backgroundColor: context.colorScheme.surfaceBright,
-                side: BorderSide(
-                  color: context.colorScheme.secondary,
-                  width: 1.5,
-                ),
-              ),
-              onPressed: _onPressedAddButton,
-              child: Icon(Icons.add),
-            ),
       ],
     );
   }

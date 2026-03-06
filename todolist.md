@@ -55,6 +55,7 @@
 - ask claude for looking up flutter framework on code design and evaluate my codebase
 - health check to my Supabase URL using a cron-job to keep the project from pausing
 - option for exercises to have no time. in practice: timer keeps running until user clicks to next exercise
+- supabase redirect to the app on email confirmation (instead of web page). set up deep linking to do so
 
 
 ## LATER STAGE

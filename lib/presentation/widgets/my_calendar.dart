@@ -55,7 +55,15 @@ class _MyCalendarState extends State<MyCalendar> {
             return datesWithSessions.contains(normalizedDay) ? [Session] : [];
           },
 
-          headerStyle: HeaderStyle(titleTextStyle: context.titleLarge),
+          headerStyle: HeaderStyle(
+            titleTextStyle: context.titleLarge,
+            formatButtonDecoration: BoxDecoration(
+              border: Border.fromBorderSide(
+                BorderSide(color: context.colorScheme.secondary, width: 1.5),
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(12.0)),
+            ),
+          ),
 
           calendarStyle: CalendarStyle(
             defaultTextStyle: context.bodyMedium.copyWith(
@@ -75,7 +83,7 @@ class _MyCalendarState extends State<MyCalendar> {
                 width: 1.5,
                 color: context.colorScheme.secondary,
               ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
             markerDecoration: BoxDecoration(
               color: context.colorScheme.primary,
