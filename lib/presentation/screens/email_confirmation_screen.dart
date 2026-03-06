@@ -1,3 +1,4 @@
+import 'package:flash_forward/presentation/screens/loading_screen.dart';
 import 'package:flash_forward/presentation/screens/login_screen.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/services/auth_service.dart';
@@ -55,7 +56,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
   }
 
   void _startPollingTimer() {
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
       if (!mounted) return;
 
       final EmailStatus emailStatus = await _authProvider.pollForEmailConfirmation(
@@ -65,10 +66,13 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
       if (emailStatus == EmailStatus.confirmed && mounted) {
         timer.cancel();
         _countdownTimer?.cancel();
-        Navigator.of(context).pushReplacement(
+        final success = await _authProvider.autoSignInAfterConfirmation(widget.email);
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (_) => const LoginScreen(showEmailConfirmedMessage: true),
+            builder: (_) => success ? const LoadingScreen() : const LoginScreen(showEmailConfirmedMessage: true),
           ),
+          (route) => false,
         );
       }
     });

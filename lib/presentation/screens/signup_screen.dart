@@ -6,6 +6,7 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
+import 'package:country_picker/country_picker.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -34,24 +35,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   int _currentPage = 0;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String? _selectedCountry;
+  Country? _selectedCountry;
   bool _marketingConsent = false;
-  // Country list (simplified - expand as needed)
-  final List<String> _countries = [
-    'United States',
-    'United Kingdom',
-    'Canada',
-    'Australia',
-    'Germany',
-    'France',
-    'Spain',
-    'Netherlands',
-    'Belgium',
-    'Switzerland',
-    'Austria',
-    'Italy',
-    'Other',
-  ];
 
   @override
   void dispose() {
@@ -115,7 +100,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
-      country: _selectedCountry,
+      country: _selectedCountry?.name,
       marketingConsent: _marketingConsent,
     );
 
@@ -361,29 +346,53 @@ class _SignUpScreenState extends State<SignUpScreen> {
               },
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
+            FormField<Country>(
               initialValue: _selectedCountry,
-              decoration: InputDecoration(
-                labelText: 'Country *',
-                labelStyle: context.bodyMedium,
-                prefixIcon: const Icon(Icons.public),
-                fillColor: context.colorScheme.surfaceBright,
-              ),
-              items:
-                  _countries.map((country) {
-                    return DropdownMenuItem(
-                      value: country,
-                      child: Text(country),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                setState(() => _selectedCountry = value);
-              },
               validator: (value) {
-                if (value == null) {
-                  return 'Please select your country';
-                }
+                if (value == null) return 'Please select your country';
                 return null;
+              },
+              builder: (FormFieldState<Country> field) {
+                return InkWell(
+                  onTap: () {
+                    showCountryPicker(
+                      context: context,
+                      showPhoneCode: false,
+                      favorite: <String>[
+                        'NL',
+                        'DE',
+                        'FR',
+                        'ES',
+                        'UK',
+                        'US',
+                        'CA',
+                      ],
+
+                      onSelect: (Country country) {
+                        setState(() => _selectedCountry = country);
+                        field.didChange(country);
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(25),
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Country *',
+                      labelStyle: context.bodyMedium,
+                      prefixIcon: const Icon(Icons.public),
+                      fillColor: context.colorScheme.surfaceBright,
+                      errorText: field.errorText,
+                    ),
+                    isEmpty: _selectedCountry == null,
+                    child:
+                        _selectedCountry == null
+                            ? null
+                            : Text(
+                              '${_selectedCountry!.flagEmoji}  ${_selectedCountry!.name}',
+                              style: context.bodyMedium,
+                            ),
+                  ),
+                );
               },
             ),
           ],
@@ -411,7 +420,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
               decoration: InputDecoration(
                 labelText: 'Phone Number',
                 labelStyle: context.bodyMedium,
-                prefixIcon: const Icon(Icons.phone),
+                prefixIcon:
+                    _selectedCountry != null
+                        ? Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _selectedCountry!.flagEmoji,
+                                style: const TextStyle(fontSize: 20),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '+${_selectedCountry!.phoneCode}',
+                                style: context.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        )
+                        : const Icon(Icons.phone),
                 fillColor: context.colorScheme.surfaceBright,
                 helperText: 'For account recovery',
               ),
@@ -482,32 +510,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ],
                 ),
               ),
-              // Column(
-              //   crossAxisAlignment: CrossAxisAlignment.start,
-              //   children: [
-              //     Row(
-              //       children: [
-              //         Icon(
-              //           Icons.info_outline,
-              //           color: context.colorScheme.onPrimary,
-              //         ),
-              //         const SizedBox(width: 8),
-              //         Text(
-              //           'Privacy Notice',
-              //           style: context.titleMedium.copyWith(
-              //             color:
-              //                 context.colorScheme.onPrimary,
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //     const SizedBox(height: 8),
-              //     Text(
-              //       'Your data is encrypted and stored securely. We never share your personal information with third parties.',
-              //       style: context.bodyMedium.copyWith(fontSize: 12),
-              //     ),
-              //   ],
-              // ),
             ),
           ],
         ),

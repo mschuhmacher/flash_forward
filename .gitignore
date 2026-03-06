@@ -46,6 +46,7 @@ app.*.map.json
 
 
 .env
+config.json
 sentry.properties
 
 # Claude Code analysis files
