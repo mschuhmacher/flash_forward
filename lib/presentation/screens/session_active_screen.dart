@@ -265,7 +265,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                         )
                                         : IconButton(
                                           onPressed: () {
-                                            sessionStateData.pause;
+                                            sessionStateData.pause();
                                             WakelockPlus.disable();
                                           },
                                           icon: Icon(Icons.pause_rounded),

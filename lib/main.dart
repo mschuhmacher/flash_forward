@@ -94,7 +94,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: lightAppTheme,
       darkTheme: darkAppTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light, // switch to system when better dark mode colors set
       home: const LoadingScreen(),
     );
   }
