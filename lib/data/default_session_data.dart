@@ -14,7 +14,7 @@ final List<Session> kDefaultSessions = [
     date: DateTime.now(),
     label: 'Limit',
     list: [
-      _findWorkout('Climbing Warm-up'),
+      _findWorkout('General Warm-up'),
       _findWorkout('Flash and limit bouldering'),
       _findWorkout('Full-Body Strength Workout'),
     ],
@@ -25,10 +25,11 @@ final List<Session> kDefaultSessions = [
     date: DateTime.now(),
     label: 'Powerendurance',
     list: [
-      _findWorkout('Climbing Warm-up'),
-      _findWorkout('Max Pick-ups & Minimum Edge Hangs'),
+      _findWorkout('General Warm-up'),
+      _findWorkout('Fingerboard Strength Builder'),
       _findWorkout('Boulder Pyramid Endurance'),
-      _findWorkout('General Upper-body Strength'),
+      _findWorkout('Push & Antagonist Training'),
+      _findWorkout('Quick Core Maintenance'),
     ],
   ),
   Session(
@@ -37,21 +38,10 @@ final List<Session> kDefaultSessions = [
     date: DateTime.now(),
     label: 'Power',
     list: [
-      _findWorkout('Climbing Warm-up'),
+      _findWorkout('General Warm-up'),
       _findWorkout('Combined Limit Strength'),
       _findWorkout('Dynamic Climbing Power'),
-      _findWorkout('Upper-body Power'),
-    ],
-  ),
-  Session(
-    title: 'Volume',
-    description: 'Lots of easy climbing',
-    date: DateTime.now(),
-    label: 'Endurance',
-    list: [
-      _findWorkout('Climbing Warm-up'),
-      _findWorkout('Route Laps Endurance'),
-      _findWorkout('Full-Body Strength Workout'),
+      _findWorkout('Upper Body Power'),
     ],
   ),
   Session(
@@ -60,9 +50,9 @@ final List<Session> kDefaultSessions = [
     date: DateTime.now(),
     label: 'Strength',
     list: [
-      _findWorkout('Strength Training Warm-up'),
-      _findWorkout('Handstand Training'),
+      _findWorkout('General Warm-up'),
       _findWorkout('Pull-ups & Pick-ups Set'),
+      _findWorkout('Handstand Progression Training'),
       _findWorkout('Dips and front lever'),
       _findWorkout('Barbell Strength Training'),
     ],
@@ -80,13 +70,6 @@ final List<Session> kDefaultSessions = [
     date: DateTime.now(),
     label: 'Daily maintenance',
     list: [_findWorkout('Evening Stretch & Recovery')],
-  ),
-  Session(
-    title: 'Quick fingerboarding',
-    description: 'As you\'re passing the fingerboard ',
-    date: DateTime.now(),
-    label: 'Daily maintenance',
-    list: [_findWorkout('Quick Fingerboarding')],
   ),
   // // TEST - UI LIMIT VERIFICATION SESSION
   // Session(
