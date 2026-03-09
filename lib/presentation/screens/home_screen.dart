@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flash_forward/data/labels.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/presentation/widgets/my_calendar.dart';
@@ -69,58 +70,46 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: context.titleMedium.copyWith(
                           color: context.colorScheme.onPrimary,
                         ),
-                        onSelected: (value) {
-                          switch (value) {
-                            case 'signout':
-                              _signOut();
-                            case 'delete':
-                              _deleteAccount();
-
-                              break;
-                            default:
-                          }
-                        },
-                        itemBuilder:
-                            (BuildContext context) => [
-                              PopupMenuItem<String>(
-                                enabled: false,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      authProvider.userProfile?.fullName ?? '',
-                                      style: context.titleMedium,
-                                    ),
-                                    Text(
-                                      authProvider.userProfile?.email ?? '',
-                                      style: context.bodyMedium.copyWith(
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
+                      ),
+                    ),
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'signout':
+                          _signOut();
+                        case 'delete':
+                          _deleteAccount();
+                          break;
+                        default:
+                      }
+                    },
+                    itemBuilder:
+                        (BuildContext context) => [
+                          PopupMenuItem<String>(
+                            enabled: false,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  authProvider.userProfile?.fullName ?? '',
+                                  style: context.titleMedium,
                                 ),
-                              ),
-                              const PopupMenuDivider(),
-                              const PopupMenuItem<String>(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete_rounded),
-                                    SizedBox(width: 8),
-                                    Text('Delete account'),
-                                  ],
+                                Text(
+                                  authProvider.userProfile?.email ?? '',
+                                  style: context.bodyMedium.copyWith(
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
-                              const PopupMenuDivider(),
-                              const PopupMenuItem<String>(
-                                value: 'signout',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.logout),
-                                    SizedBox(width: 8),
-                                    Text('Sign Out'),
-                                  ],
-                                ),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_rounded),
+                                SizedBox(width: 8),
+                                Text('Delete account'),
                               ],
                             ),
                           ),
@@ -312,7 +301,11 @@ class _HomeScreenState extends State<HomeScreen> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_outline, size: 48, color: context.colorScheme.primary,),
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 48,
+                    color: context.colorScheme.primary,
+                  ),
                   SizedBox(height: 16),
                   Text('Account deleted', style: context.h3),
                   SizedBox(height: 8),
@@ -358,35 +351,65 @@ class _HomeScreenState extends State<HomeScreen> {
         final formattedTime =
             date != null ? DateFormat('HH:mm').format(date) : '';
 
-        return Material(
-          //ListTile is wwrapped in a material widget so prevent the list from overflowing into the other widgets in the column. Known issue.
-          child: ListTile(
-            title: Text(session.title, style: context.titleMedium),
-            subtitle: Text(
-              '$formattedDate at $formattedTime',
-              style: context.bodyMedium,
-            ),
-            trailing:
-                (kDefaultLabels.containsKey(session.label))
-                    ? IconButton(
-                      key: iconButtonKey,
-                      icon: Icon(
-                        kDefaultLabels[session.label]!.icon,
-                        color: kDefaultLabels[session.label]!.color,
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        _showLabelPopup(context, session.label, iconButtonKey);
-                      },
-                      tooltip: session.label,
-                    )
-                    : null,
-            tileColor: context.colorScheme.surfaceBright,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-              side: BorderSide(
-                color: context.colorScheme.onSurface,
-                width: 0.5,
+        return Slidable(
+          key: ValueKey(session.id),
+          endActionPane: ActionPane(
+            motion: ScrollMotion(),
+            children: [
+              SizedBox(width: 8),
+              SlidableAction(
+                // An action can be bigger than the others.
+                flex: 3,
+                onPressed: (context) {},
+                backgroundColor: context.colorScheme.secondary,
+                foregroundColor: context.colorScheme.onError,
+                icon: Icons.edit_rounded,
+                label: 'Edit',
+              ),
+              SlidableAction(
+                flex: 2,
+                onPressed: (context) {},
+                backgroundColor: context.colorScheme.error,
+                foregroundColor: context.colorScheme.onError,
+                icon: Icons.delete_rounded,
+                label: 'Delete',
+              ),
+            ],
+          ),
+          child: Material(
+            //ListTile is wwrapped in a material widget so prevent the list from overflowing into the other widgets in the column. Known issue.
+            child: ListTile(
+              title: Text(session.title, style: context.titleMedium),
+              subtitle: Text(
+                '$formattedDate at $formattedTime',
+                style: context.bodyMedium,
+              ),
+              trailing:
+                  (kDefaultLabels.containsKey(session.label))
+                      ? IconButton(
+                        key: iconButtonKey,
+                        icon: Icon(
+                          kDefaultLabels[session.label]!.icon,
+                          color: kDefaultLabels[session.label]!.color,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          _showLabelPopup(
+                            context,
+                            session.label,
+                            iconButtonKey,
+                          );
+                        },
+                        tooltip: session.label,
+                      )
+                      : null,
+              tileColor: context.colorScheme.surfaceBright,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+                side: BorderSide(
+                  color: context.colorScheme.onSurface,
+                  width: 0.5,
+                ),
               ),
             ),
           ),
@@ -503,58 +526,5 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
-  }
-
-  Future<void> _signOut() async {
-    //TODO: move this function elsewhere
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    // Show confirmation dialog
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Sign Out?', style: context.h3),
-          content: Text(
-            'Are you sure you want to sign out?',
-            style: context.bodyMedium,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text('Sign Out'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm == true && mounted) {
-      final sessionLogProvider = Provider.of<SessionLogProvider>(
-        context,
-        listen: false,
-      );
-      final presetProvider = Provider.of<PresetProvider>(
-        context,
-        listen: false,
-      );
-
-      // Reset providers to allow re-initialization with different user
-      await sessionLogProvider.reset();
-      presetProvider.reset();
-
-      await authProvider.signOut();
-
-      // Navigate to login screen
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
   }
 }
