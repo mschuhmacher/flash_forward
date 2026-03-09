@@ -9,6 +9,7 @@ import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class ActiveSessionBottomBar extends StatefulWidget {
   const ActiveSessionBottomBar({super.key});
@@ -222,6 +223,9 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
 
                       // Reset the session state data
                       SessionStateProvider().reset();
+
+                      // Disable keeping the screen awake.
+                      WakelockPlus.disable();
 
                       // Keeps popping routes until the current route is the first route. Not named,so no errors.
                       Navigator.popUntil(context, (route) => route.isFirst);

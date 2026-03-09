@@ -69,30 +69,57 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: context.titleMedium.copyWith(
                           color: context.colorScheme.onPrimary,
                         ),
-                      ),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'signout') {
-                        _signOut();
-                      }
-                      // Add more menu options here later (profile, settings, etc.)
-                    },
-                    itemBuilder:
-                        (BuildContext context) => [
-                          PopupMenuItem<String>(
-                            enabled: false,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  authProvider.userProfile?.fullName ?? '',
-                                  style: context.titleMedium,
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'signout':
+                              _signOut();
+                            case 'delete':
+                              _deleteAccount();
+
+                              break;
+                            default:
+                          }
+                        },
+                        itemBuilder:
+                            (BuildContext context) => [
+                              PopupMenuItem<String>(
+                                enabled: false,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      authProvider.userProfile?.fullName ?? '',
+                                      style: context.titleMedium,
+                                    ),
+                                    Text(
+                                      authProvider.userProfile?.email ?? '',
+                                      style: context.bodyMedium.copyWith(
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  authProvider.userProfile?.email ?? '',
-                                  style: context.bodyMedium.copyWith(
-                                    fontSize: 12,
-                                  ),
+                              ),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem<String>(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete_rounded),
+                                    SizedBox(width: 8),
+                                    Text('Delete account'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem<String>(
+                                value: 'signout',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.logout),
+                                    SizedBox(width: 8),
+                                    Text('Sign Out'),
+                                  ],
                                 ),
                               ],
                             ),
@@ -155,6 +182,160 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  Future<void> _signOut() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Sign Out?', style: context.h3),
+          content: Text(
+            'Are you sure you want to sign out?',
+            style: context.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && mounted) {
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
+
+      // Reset providers to allow re-initialization with different user
+      await sessionLogProvider.reset();
+      presetProvider.reset();
+
+      await authProvider.signOut();
+
+      // Navigate to login screen
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final _deleteController = TextEditingController();
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete account?', style: context.h3),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Are you sure you want to delete your account? This is irreversible.',
+                style: context.bodyMedium,
+              ),
+              SizedBox(height: 16),
+              Text('Type \'delete\' to confirm.', style: context.bodyMedium),
+              SizedBox(height: 8),
+              TextField(controller: _deleteController),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _deleteController,
+              builder: (context, value, child) {
+                return ElevatedButton(
+                  onPressed:
+                      value.text == 'delete'
+                          ? () {
+                            Navigator.of(context).pop(true);
+                          }
+                          : null,
+                  child: Text('Delete account'),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && mounted) {
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
+
+      // Reset providers to allow re-initialization with different user
+      await sessionLogProvider.reset();
+      presetProvider.reset();
+
+      // Delete user
+      await authProvider.deleteUser();
+
+      if (!mounted) return;
+
+      // Show brief confirmation dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_outline, size: 48, color: context.colorScheme.primary,),
+                  SizedBox(height: 16),
+                  Text('Account deleted', style: context.h3),
+                  SizedBox(height: 8),
+                  Text(
+                    'Your account has been permanently deleted.',
+                    style: context.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+      );
+
+      // Wait 3 seconds, then navigate (pushAndRemoveUntil also removes the dialog route)
+      await Future.delayed(const Duration(seconds: 3));
+
+      // Navigate to login screen
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   ListView _buildListView(List<Session> selectedSessions) {

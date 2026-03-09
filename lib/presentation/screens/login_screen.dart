@@ -11,11 +11,13 @@ import 'package:flash_forward/themes/app_colors.dart';
 class LoginScreen extends StatefulWidget {
   final bool showEmailConfirmationMessage;
   final bool showEmailConfirmedMessage;
+  final bool showPasswordResetMessage;
 
   const LoginScreen({
     super.key,
     this.showEmailConfirmationMessage = false,
     this.showEmailConfirmedMessage = false,
+    this.showPasswordResetMessage = false,
   });
 
   @override
@@ -126,6 +128,46 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Widget? _banner(BuildContext context) {
+    if (widget.showEmailConfirmationMessage) {
+      return _infoBanner(context, Icons.mail_outline,
+          'Please check your email to confirm your account before logging in.');
+    }
+    if (widget.showEmailConfirmedMessage) {
+      return _infoBanner(context, Icons.check_circle_outline,
+          'Your email has been confirmed. Please sign in.');
+    }
+    if (widget.showPasswordResetMessage) {
+      return _infoBanner(context, Icons.check_circle_outline,
+          'Your password has been updated. Please sign in.');
+    }
+    return null;
+  }
+
+  Widget _infoBanner(BuildContext context, IconData icon, String message) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: context.colorScheme.onPrimaryContainer),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: context.bodyMedium.copyWith(
+                color: context.colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -165,9 +207,28 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            authProvider.errorMessage ??
-                'Your email address was not confirmed, please check your inbox',
-          ), //TODO: show better error message.
+            'Your email address was not confirmed, please check your inbox',
+            style: context.bodyLarge.copyWith(
+              color: context.colorScheme.onPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: context.colorScheme.error,
+        ),
+      );
+    } else if (authProvider.errorMessage?.contains(
+          'Invalid login credentials',
+        ) ==
+        true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Invalid login credentials',
+            style: context.bodyLarge.copyWith(
+              color: context.colorScheme.onPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
           backgroundColor: context.colorScheme.error,
         ),
       );
@@ -177,7 +238,11 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(
           content: Text(
             authProvider.errorMessage ?? 'Login failed',
-          ), //TODO: show better error message. if possible show whether email was not registered, or password was wrong.
+            style: context.bodyLarge.copyWith(
+              color: context.colorScheme.onPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
           backgroundColor: context.colorScheme.error,
         ),
       );
@@ -220,59 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Email confirmation message (timeout — not yet confirmed)
-                  if (widget.showEmailConfirmationMessage)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.mail_outline,
-                            color: context.colorScheme.onPrimaryContainer,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Please check your email to confirm your account before logging in.',
-                              style: context.bodyMedium.copyWith(
-                                color: context.colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // Email confirmed message (user clicked the confirmation link)
-                  if (widget.showEmailConfirmedMessage)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            color: context.colorScheme.onPrimaryContainer,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Your email has been confirmed. Please sign in.',
-                              style: context.bodyMedium.copyWith(
-                                color: context.colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  if (_banner(context) case final b?) b,
                   const SizedBox(height: 24),
 
                   // Email field

@@ -10,6 +10,7 @@ import 'package:flash_forward/presentation/widgets/session_active_bottom_bar.dar
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class ActiveSessionScreen extends StatefulWidget {
   const ActiveSessionScreen({super.key});
@@ -29,13 +30,16 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         final activeSession =
             presetData.presetSessions[sessionStateData.sessionIndex];
 
-        // Initialize the timer once when the screen first builds.
+        // Initialize the timer & keep screen awake once when the screen first builds.
         if (!_timerInitialized) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             // Guard again in case the widget unmounted before the callback.
             if (!mounted || _timerInitialized) return;
             sessionStateData.start(activeSession);
             _timerInitialized = true;
+
+            // Start keeping screen awake
+            WakelockPlus.enable();
           });
         }
 
@@ -250,15 +254,20 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 child:
                                     sessionStateData.isPaused
                                         ? IconButton(
-                                          onPressed:
-                                              () => sessionStateData.resume(
-                                                activeSession,
-                                              ),
+                                          onPressed: () {
+                                            sessionStateData.resume(
+                                              activeSession,
+                                            );
+                                            WakelockPlus.enable();
+                                          },
                                           icon: Icon(Icons.play_arrow_rounded),
                                           color: context.colorScheme.onPrimary,
                                         )
                                         : IconButton(
-                                          onPressed: sessionStateData.pause,
+                                          onPressed: () {
+                                            sessionStateData.pause();
+                                            WakelockPlus.disable();
+                                          },
                                           icon: Icon(Icons.pause_rounded),
                                           color: context.colorScheme.onPrimary,
                                         ),
