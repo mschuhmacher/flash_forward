@@ -48,7 +48,7 @@ Active development. Currently implementing user authentication and cloud sync fo
 
 1. Clone the repository
 2. Run `flutter pub get`
-3. Create `.env` file with Supabase credentials
+3. Create `config.json` file with Supabase credentials
 4. Run `flutter run`
 
 ## Requirements
