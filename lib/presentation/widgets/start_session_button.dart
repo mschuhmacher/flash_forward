@@ -13,6 +13,7 @@ class StartSessionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
+      height: 50,
       width: double.infinity,
       child: Padding(
         padding: const EdgeInsets.only(left: 20.0, right: 20.0),

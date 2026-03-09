@@ -114,11 +114,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            SizedBox(height: 40),
-            StartSessionButton(routeName: 'session_select_screen'),
-            SizedBox(height: 40),
-            MyCalendar(),
             SizedBox(height: 32),
+            StartSessionButton(routeName: 'session_select_screen'),
+            SizedBox(height: 32),
+            MyCalendar(),
+            SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
@@ -151,7 +151,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       )
                       : _buildListView(selectedSessions),
             ),
-            SizedBox(height: 40),
           ],
         );
       },

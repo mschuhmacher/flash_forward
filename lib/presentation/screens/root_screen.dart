@@ -46,7 +46,7 @@ class _RootScreenState extends State<RootScreen> {
                   surfaceTintColor:
                       Colors
                           .transparent, //disables Material3 overlay. I.e. doesn't change the color of the appBar when the ListView scrolls
-                  // bottom: 
+                  // bottom:
                 )
                 : null,
         body: SafeArea(child: destinationScreens[_selectedScreenIndex]),
@@ -61,7 +61,7 @@ class _RootScreenState extends State<RootScreen> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Consumer<AuthProvider>(
                 builder:
                     (context, authProvider, child) => GNav(
