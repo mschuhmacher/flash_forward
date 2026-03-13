@@ -5,7 +5,7 @@ class Workout {
   Workout({
     String? id,
     required this.title,
-    this.subtitle,
+    this.subtitle, //TODO: delete subtitle field
     required this.label,
     this.description,
     this.date,

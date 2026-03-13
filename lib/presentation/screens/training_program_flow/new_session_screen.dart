@@ -24,8 +24,10 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = widget.session;
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.session?.title ?? 'New Session')),
+      appBar: AppBar(title: Text(session?.title ?? 'New Session')),
       body: Form(
         key: _formKey,
         child: Padding(
@@ -93,7 +95,28 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                 ],
               ),
               SizedBox(height: 8),
-              Expanded(child: Center(child: Text('No workouts added yet!'))),
+              // Expanded(child: Center(child: Text('No workouts added yet!'))),
+              Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(session!.list[0].title),
+                        Icon(Icons.more_horiz),
+                      ],
+                    ),
+                    Text(session.list[0].description!),
+                    Text(session.list[0].difficulty!),
+                    Text(session.list[0].equipment!),
+                    Text(session!.list[0].label),
+                    Text(session.list[0].timeBetweenExercises.toString()),
+                    Text('Add edit button to the dots (replace with swiping later), which takes you to the workout to edit')
+                  ],
+                ),
+              ),
+              SizedBox(height: 16),
               Text('Save'),
               SizedBox(height: 16),
             ],
