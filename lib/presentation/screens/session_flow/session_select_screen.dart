@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/data/labels.dart';
-import 'package:flash_forward/presentation/screens/add_item_screen.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/widgets/session_select_row.dart';
 import 'package:flash_forward/presentation/widgets/session_select_listview.dart';

@@ -8,7 +8,6 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/add_exercise_modal_sheet.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
-import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';

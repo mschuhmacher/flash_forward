@@ -24,6 +24,12 @@
 - create tests for offline mode
 - conflict resolution between local and cloud data
 
+## USER FEEDBACK
+- during sign up: continue button is hidden by keyboard, no minimize keyboard button
+- on home_screen, no clear navigation to create sessions
+  - check if logged sessions is completely empty --> refer to create session functionality
+- name did not populate for Hilde
+
 
 ## IDEAS:
 - user can start only a workout or exercise

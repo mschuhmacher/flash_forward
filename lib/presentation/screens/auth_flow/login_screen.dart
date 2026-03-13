@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
-import 'package:flash_forward/presentation/screens/signup_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/signup_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 

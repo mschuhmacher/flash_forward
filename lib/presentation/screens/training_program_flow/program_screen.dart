@@ -6,7 +6,9 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 
 class ProgramScreen extends StatefulWidget {
-  const ProgramScreen({super.key});
+  final TabController tabController;
+
+  const ProgramScreen({super.key, required this.tabController});
 
   @override
   State<ProgramScreen> createState() => _ProgramScreenState();
@@ -15,8 +17,9 @@ class ProgramScreen extends StatefulWidget {
 class _ProgramScreenState extends State<ProgramScreen> {
   @override
   Widget build(BuildContext context) {
-    return const TabBarView(
-      children: [
+    return TabBarView(
+      controller: widget.tabController,
+      children: const [
         SessionTabBarView(),
         WorkoutTabBarView(),
         ExerciseTabBarView(),

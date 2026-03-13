@@ -7,7 +7,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/presentation/widgets/my_calendar.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
-import 'package:flash_forward/presentation/screens/login_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
@@ -357,10 +357,11 @@ class _HomeScreenState extends State<HomeScreen> {
             motion: ScrollMotion(),
             children: [
               SizedBox(width: 8),
+              //TODO: add rounded corners
               SlidableAction(
                 // An action can be bigger than the others.
                 flex: 3,
-                onPressed: (context) {},
+                onPressed: (context) {}, //TODO: hook up to edit screen
                 backgroundColor: context.colorScheme.secondary,
                 foregroundColor: context.colorScheme.onError,
                 icon: Icons.edit_rounded,
@@ -368,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               SlidableAction(
                 flex: 2,
-                onPressed: (context) {},
+                onPressed: (context) {}, //TODO: hookup to delete function
                 backgroundColor: context.colorScheme.error,
                 foregroundColor: context.colorScheme.onError,
                 icon: Icons.delete_rounded,

@@ -1,4 +1,7 @@
 import 'package:flash_forward/data/labels.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -80,8 +83,9 @@ class _ProgramListviewState extends State<ProgramListview> {
                     // final isUserDefined = userIDs.contains(listItems[index].id);
 
                     return ProgramListviewCard(
-                      filteredListItems: filteredListItems,
-                      index: index,
+                      filteredListItem: filteredListItems[index],
+                      // index: index,
+                      itemType: widget.itemType,
                     );
                   },
                 ),
@@ -97,12 +101,14 @@ class _ProgramListviewState extends State<ProgramListview> {
 class ProgramListviewCard extends StatelessWidget {
   const ProgramListviewCard({
     super.key,
-    required this.filteredListItems,
-    required this.index,
+    required this.filteredListItem,
+    // required this.index,
+    required this.itemType,
   });
 
-  final List<dynamic> filteredListItems;
-  final int index;
+  final dynamic filteredListItem;
+  // final int index;
+  final ItemType itemType;
 
   @override
   Widget build(BuildContext context) {
@@ -125,24 +131,24 @@ class ProgramListviewCard extends StatelessWidget {
             width: 32,
             height: 32,
             child: Icon(
-              kDefaultLabels[filteredListItems[index].label]?.icon,
-              color: kDefaultLabels[filteredListItems[index].label]?.color,
+              kDefaultLabels[filteredListItem.label]?.icon,
+              color: kDefaultLabels[filteredListItem.label]?.color,
               size: 24,
             ),
           ),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(filteredListItems[index].title, style: context.titleMedium),
+              Text(filteredListItem.title, style: context.titleMedium),
               // Icon(Icons.circle),
             ],
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              filteredListItems[index].description != null
+              filteredListItem.description != null
                   ? Text(
-                    filteredListItems[index].description!,
+                    filteredListItem.description!,
                     style: context.bodyMedium,
                   )
                   : SizedBox.shrink(),
@@ -157,12 +163,50 @@ class ProgramListviewCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(25),
               color: context.colorScheme.surface,
               onSelected: (value) {
-                // TODO: handle menu actions
+                if (value == 'edit') {
+                  switch (itemType) {
+                    case ItemType.sessions:
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) =>
+                                  NewSessionScreen(session: filteredListItem),
+                        ),
+                      );
+
+                    case ItemType.workouts:
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) =>
+                                  NewWorkoutScreen(workout: filteredListItem),
+                        ),
+                      );
+                    case ItemType.exercises:
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) =>
+                                  NewExerciseScreen(exercise: filteredListItem),
+                        ),
+                      );
+                  }
+                }
               },
-              itemBuilder: (context) => [
-                PopupMenuItem(value: 'edit', child: Text('Edit', style: context.bodyLarge,),),
-                PopupMenuItem(value: 'delete', child: Text('Delete', style: context.bodyLarge)),
-              ],
+              itemBuilder:
+                  (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit', style: context.bodyLarge),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete', style: context.bodyLarge),
+                    ),
+                  ],
             ),
           ),
         ),

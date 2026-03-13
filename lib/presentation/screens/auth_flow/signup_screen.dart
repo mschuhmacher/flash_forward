@@ -1,4 +1,4 @@
-import 'package:flash_forward/presentation/screens/email_confirmation_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/email_confirmation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';

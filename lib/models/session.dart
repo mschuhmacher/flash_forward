@@ -18,7 +18,7 @@ class Session {
   final String id;
   final String title;
   final String label;
-  final String? subtitle;
+  final String? subtitle; //TODO: remove subtitle field from model
   final String? description;
   final DateTime? date;
   final List<Workout> list;
