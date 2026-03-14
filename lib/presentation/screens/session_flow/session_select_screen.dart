@@ -70,7 +70,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                     _editSessionModalSheet(context);
                   },
                   icon: Icon(Icons.edit),
-                ),
+                ), //TODO: remove this button
               ],
             ),
             centerTitle: true,

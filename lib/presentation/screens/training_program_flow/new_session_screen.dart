@@ -2,6 +2,7 @@ import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,24 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
     final session = widget.session;
 
     return Scaffold(
-      appBar: AppBar(title: Text(session?.title ?? 'New Session')),
+      appBar: AppBar(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            SizedBox.shrink(),
+            Text(session?.title ?? 'New Session'),
+            ElevatedButton(
+              onPressed: () {},
+              style: ButtonStyle().copyWith(
+                padding: WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                ),
+              ),
+              child: Text('Save'),
+            ),
+          ],
+        ),
+      ),
       body: Form(
         key: _formKey,
         child: Padding(
@@ -48,6 +66,10 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                         fillColor: context.colorScheme.surfaceBright,
                         labelText: 'Title',
                         labelStyle: context.bodyMedium,
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 8,
+                        ),
                       ),
                       validator: FieldValidators.workoutTitle,
                     ),
@@ -87,6 +109,10 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                         fillColor: context.colorScheme.surfaceBright,
                         labelText: 'Description',
                         labelStyle: context.bodyMedium,
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
                       ),
                       validator: FieldValidators.sessionDescription,
                     ),
@@ -96,30 +122,42 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
               ),
               SizedBox(height: 8),
               // Expanded(child: Center(child: Text('No workouts added yet!'))),
-              if (session != null)
-                Card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(session.workouts[0].title),
-                          Icon(Icons.more_horiz),
-                        ],
-                      ),
-                      Text(session.workouts[0].description!),
-                      Text(session.workouts[0].difficulty!),
-                      Text(session.workouts[0].equipment!),
-                      Text(session.workouts[0].label),
-                      Text(session.workouts[0].timeBetweenExercises.toString()),
-                      Text('Add edit button to the dots (replace with swiping later), which takes you to the workout to edit')
-                    ],
+              session == null
+                  ? Center(child: Text('Add a workout!'))
+                  : Expanded(
+                    child: SessionSelectListView(item: session.workouts),
+
+                    // ListView.builder(
+                    //   itemCount: session.workouts.length,
+                    //   itemBuilder: (BuildContext context, int index) {
+                    //     return Card(
+                    //       child: Column(
+                    //         crossAxisAlignment: CrossAxisAlignment.start,
+                    //         children: [
+                    //           Row(
+                    //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    //             children: [
+                    //               Text(session.workouts[0].title),
+                    //               Icon(Icons.more_horiz),
+                    //             ],
+                    //           ),
+                    //           Text(session.workouts[index].description!),
+                    //           Text(session.workouts[index].difficulty!),
+                    //           Text(session.workouts[index].equipment!),
+                    //           Text(session.workouts[index].label),
+                    //           Text(
+                    //             session.workouts[index].timeBetweenExercises
+                    //                 .toString(),
+                    //           ),
+                    //           Text(
+                    //             'Add edit button to the dots (replace with swiping later), which takes you to the workout to edit',
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     );
+                    //   },
+                    // ),
                   ),
-                ),
-              SizedBox(height: 16),
-              Text('Save'),
-              SizedBox(height: 16),
             ],
           ),
         ),

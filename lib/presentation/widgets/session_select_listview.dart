@@ -19,7 +19,7 @@ class SessionSelectListView extends StatelessWidget {
   final List<dynamic> item;
   final dynamic route;
   final void Function(int index)?
-  setIndex; // was used for session_overview_screen. all session in a list, and tapping a session would set the index of the row_selection to the correct sessions. Remove?
+  setIndex; //TODO: was used for session_overview_screen. all session in a list, and tapping a session would set the index of the row_selection to the correct sessions. Remove?
   final bool editMode;
   final bool scrollMode;
 
@@ -132,7 +132,7 @@ class MyListViewCard extends StatelessWidget {
                   color: context.colorScheme.onSurface,
                 ),
                 // loops through the exerciseList and creates Text widget for each one. ListView iterates through the blockList.
-                for (var item in item[index].exercises)
+                for (var item in item[index].exercises) //TODO: remove the edit button in the session_select_screen
                   Text(item.title, style: context.bodyMedium),
               ],
             ),

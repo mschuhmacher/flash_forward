@@ -33,6 +33,7 @@ class MyLabelDropdownButton extends StatelessWidget {
           expandedInsets: EdgeInsets.zero,
           hintText: hintText,
           label: Text(labelText),
+          textStyle: context.bodyMedium,
           errorText: state.errorText,
           menuStyle: MenuStyle(
             backgroundColor: WidgetStatePropertyAll(
@@ -41,10 +42,13 @@ class MyLabelDropdownButton extends StatelessWidget {
             shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
             ),
+            padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 4, horizontal: 8)
+)
           ),
           inputDecorationTheme: InputDecorationTheme(
             fillColor: context.colorScheme.surfaceBright,
             filled: true,
+            contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           ),
           onSelected: (val) {
             state.didChange(val);
