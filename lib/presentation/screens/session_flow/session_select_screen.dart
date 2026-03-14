@@ -103,7 +103,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
               SizedBox(height: 12),
               Expanded(
                 child: SessionSelectListView(
-                  item: currentSessionList[sessionStateData.sessionIndex].list,
+                  item: currentSessionList[sessionStateData.sessionIndex].workouts,
                 ),
               ),
               SizedBox(height: 80),

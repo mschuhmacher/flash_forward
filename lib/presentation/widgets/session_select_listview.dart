@@ -132,7 +132,7 @@ class MyListViewCard extends StatelessWidget {
                   color: context.colorScheme.onSurface,
                 ),
                 // loops through the exerciseList and creates Text widget for each one. ListView iterates through the blockList.
-                for (var item in item[index].list)
+                for (var item in item[index].exercises)
                   Text(item.title, style: context.bodyMedium),
               ],
             ),

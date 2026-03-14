@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flash_forward/models/exercise_template.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/models/session.dart';
@@ -46,7 +46,7 @@ class PresetLogger {
     }
   }
 
-  static Future<Iterable<ExerciseTemplate>> readUserPresetExercises() async {
+  static Future<Iterable<Exercise>> readUserPresetExercises() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
 
@@ -58,7 +58,7 @@ class PresetLogger {
       final content = await userPresetExercisesFile.readAsString();
       if (content.isEmpty) return [];
       final data = json.decode(content) as List;
-      return data.map((e) => ExerciseTemplate.fromJson(e));
+      return data.map((e) => Exercise.fromJson(e));
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
       return [];

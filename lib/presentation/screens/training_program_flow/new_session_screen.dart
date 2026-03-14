@@ -103,15 +103,15 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(session!.list[0].title),
+                        Text(session!.workouts[0].title),
                         Icon(Icons.more_horiz),
                       ],
                     ),
-                    Text(session.list[0].description!),
-                    Text(session.list[0].difficulty!),
-                    Text(session.list[0].equipment!),
-                    Text(session!.list[0].label),
-                    Text(session.list[0].timeBetweenExercises.toString()),
+                    Text(session.workouts[0].description!),
+                    Text(session.workouts[0].difficulty!),
+                    Text(session.workouts[0].equipment!),
+                    Text(session!.workouts[0].label),
+                    Text(session.workouts[0].timeBetweenExercises.toString()),
                     Text('Add edit button to the dots (replace with swiping later), which takes you to the workout to edit')
                   ],
                 ),

@@ -1,4 +1,4 @@
-import 'package:flash_forward/models/exercise_instance.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/utils/timer_utils.dart';
@@ -26,16 +26,14 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
   Widget build(BuildContext context) {
     return Consumer2<PresetProvider, SessionStateProvider>(
       builder: (context, presetData, sessionStateData, child) {
-        // Retrieving the needed data for the workout screen
-        final activeSession =
-            presetData.presetSessions[sessionStateData.sessionIndex];
-
         // Initialize the timer & keep screen awake once when the screen first builds.
+        // Passes the preset session to start(), which deep-copies it internally.
         if (!_timerInitialized) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             // Guard again in case the widget unmounted before the callback.
             if (!mounted || _timerInitialized) return;
-            sessionStateData.start(activeSession);
+            final presetSession = presetData.presetSessions[sessionStateData.sessionIndex];
+            sessionStateData.start(presetSession);
             _timerInitialized = true;
 
             // Start keeping screen awake
@@ -43,14 +41,17 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           });
         }
 
+        // Use the provider's active session copy — never the preset directly
+        final activeSession = sessionStateData.activeSession;
+        if (activeSession == null) return const Scaffold();
+
         final progress = sessionStateData.progress;
 
-        Workout activeWorkout = activeSession.list[progress.workoutIndex];
-        ExerciseInstance activeExercise =
-            activeWorkout.list[progress.exerciseIndex];
+        Workout activeWorkout = activeSession.workouts[progress.workoutIndex];
+        Exercise activeExercise = activeWorkout.exercises[progress.exerciseIndex];
 
         List<Widget> workoutNames =
-            activeSession.list
+            activeSession.workouts
                 .map(
                   (name) => Text(
                     name.title,
@@ -64,7 +65,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
 
         // Highlight the title of the current block in a list of block titles
         workoutNames[progress.workoutIndex] = Text(
-          activeSession.list[progress.workoutIndex].title,
+          activeSession.workouts[progress.workoutIndex].title,
           style: context.bodyLarge.copyWith(
             color: context.colorScheme.primary,
             fontWeight: FontWeight.bold,
@@ -221,13 +222,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       TimerPhase.rep) {
                                     return context.colorScheme.onPrimary;
                                   } else if ((sessionStateData.phase ==
-                                              TimerPhase.repRest ||
-                                          sessionStateData.phase ==
-                                              TimerPhase.setRest ||
-                                          sessionStateData.phase ==
-                                              TimerPhase.exerciseRest) &&
-                                      sessionStateData.remaining <
-                                          Duration(seconds: 10)) {
+                                                  TimerPhase.repRest ||
+                                              sessionStateData.phase ==
+                                                  TimerPhase.setRest ||
+                                              sessionStateData.phase ==
+                                                  TimerPhase.exerciseRest) &&
+                                          sessionStateData.remaining <
+                                              Duration(seconds: 10)) {
                                     return context.colorScheme.secondary;
                                   } else {
                                     return context.colorScheme.onPrimary;
@@ -255,9 +256,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                     sessionStateData.isPaused
                                         ? IconButton(
                                           onPressed: () {
-                                            sessionStateData.resume(
-                                              activeSession,
-                                            );
+                                            sessionStateData.resume();
                                             WakelockPlus.enable();
                                           },
                                           icon: Icon(Icons.play_arrow_rounded),
@@ -380,6 +379,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       context,
                                       activeExercise,
                                       sessionStateData,
+                                      progress.workoutIndex,
+                                      progress.exerciseIndex,
                                     );
                                   },
                                   icon: Icon(
@@ -443,9 +444,15 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
 
   void _showEditExerciseDialog(
     BuildContext context,
-    ExerciseInstance activeExercise,
+    Exercise activeExercise,
     SessionStateProvider sessionStateData,
+    int workoutIndex,
+    int exerciseIndex,
   ) {
+    // Track local edits in dialog state; apply to provider on close
+    int localSets = activeExercise.sets;
+    int localReps = activeExercise.reps;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -533,17 +540,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       ),
                       SizedBox(width: 8),
                       IncrementDecrementNumberWidget(
-                        value: activeExercise.sets,
+                        value: localSets,
                         minimum: sessionStateData.progress.currentSet,
                         decrement: () {
-                          setDialogState(() {
-                            activeExercise.sets--;
-                          });
+                          setDialogState(() => localSets--);
                         },
                         increment: () {
-                          setDialogState(() {
-                            activeExercise.sets++;
-                          });
+                          setDialogState(() => localSets++);
                         },
                       ),
                     ],
@@ -560,17 +563,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       ),
                       SizedBox(width: 8),
                       IncrementDecrementNumberWidget(
-                        value: activeExercise.reps,
+                        value: localReps,
                         minimum: sessionStateData.progress.currentRep,
                         decrement: () {
-                          setDialogState(() {
-                            activeExercise.reps--;
-                          });
+                          setDialogState(() => localReps--);
                         },
                         increment: () {
-                          setDialogState(() {
-                            activeExercise.reps++;
-                          });
+                          setDialogState(() => localReps++);
                         },
                       ),
                     ],
@@ -583,8 +582,16 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
+                        // Apply local edits to the active session copy via the provider
+                        sessionStateData.updateActiveExercise(
+                          workoutIndex,
+                          exerciseIndex,
+                          activeExercise.copyWith(
+                            sets: localSets,
+                            reps: localReps,
+                          ),
+                        );
                         // TODO: autopause and unpause when dialog is opened
-                        // SessionStateProvider().resume(activeSession);
                         Navigator.pop(context);
                       },
                       child: Text(

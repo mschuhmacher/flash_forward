@@ -4,7 +4,6 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -21,24 +20,23 @@ class ActiveSessionBottomBar extends StatefulWidget {
 class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
   @override
   Widget build(BuildContext context) {
-    return Consumer3<PresetProvider, SessionLogProvider, SessionStateProvider>(
-      builder: (context, presetData, sessionLogData, sessionStateData, child) {
-        final Session activeSession =
-            presetData.presetSessions[sessionStateData.sessionIndex];
+    return Consumer2<SessionLogProvider, SessionStateProvider>(
+      builder: (context, sessionLogData, sessionStateData, child) {
+        final activeSession = sessionStateData.activeSession!;
 
         final progress = sessionStateData.progress;
-        Workout activeWorkout = activeSession.list[progress.workoutIndex];
+        Workout activeWorkout = activeSession.workouts[progress.workoutIndex];
 
         String nextExerciseString;
-        if (progress.exerciseIndex + 1 < activeWorkout.list.length) {
+        if (progress.exerciseIndex + 1 < activeWorkout.exercises.length) {
           nextExerciseString =
-              'Next exercise: \n${activeWorkout.list[progress.exerciseIndex + 1].title}';
-        } else if (progress.exerciseIndex + 1 == activeWorkout.list.length &&
-            progress.workoutIndex + 1 < activeSession.list.length) {
+              'Next exercise: \n${activeWorkout.exercises[progress.exerciseIndex + 1].title}';
+        } else if (progress.exerciseIndex + 1 == activeWorkout.exercises.length &&
+            progress.workoutIndex + 1 < activeSession.workouts.length) {
           nextExerciseString =
-              'Next exercise: \n${activeSession.list[progress.workoutIndex + 1].list[0].title}';
-        } else if (progress.exerciseIndex + 1 == activeWorkout.list.length &&
-            progress.workoutIndex + 1 == activeSession.list.length) {
+              'Next exercise: \n${activeSession.workouts[progress.workoutIndex + 1].exercises[0].title}';
+        } else if (progress.exerciseIndex + 1 == activeWorkout.exercises.length &&
+            progress.workoutIndex + 1 == activeSession.workouts.length) {
           nextExerciseString = 'Next exercise: \nDone';
         } else {
           nextExerciseString = '';
@@ -60,7 +58,6 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           onTap: () {
                             sessionStateData.jumpToExercise(
                               sessionStateData.exerciseIndex - 1,
-                              activeSession,
                             );
                           },
                           child: MyIconButton(
@@ -84,14 +81,13 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                     // Return true as long as there are more workouts or exercises to be completed. When last exercise of last workout, show complete button
                     (progress.workoutIndex >= 0 &&
                             (progress.workoutIndex + 1 <
-                                    activeSession.list.length ||
+                                    activeSession.workouts.length ||
                                 progress.exerciseIndex + 1 <
-                                    activeWorkout.list.length))
+                                    activeWorkout.exercises.length))
                         ? GestureDetector(
                           onTap: () {
                             sessionStateData.jumpToExercise(
                               sessionStateData.exerciseIndex + 1,
-                              activeSession,
                             );
                           },
                           child: MyIconButton(
@@ -144,7 +140,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
               children: [
                 Text('Workouts completed:', style: dialogContext.bodyLarge),
                 SizedBox(height: 8),
-                ...activeSession.list.map(
+                ...activeSession.workouts.map(
                   (workout) => Padding(
                     padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
                     child: Text(
@@ -197,17 +193,14 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                 SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () async {
-                    // Create a new session with the label and description
-                    final finishedSession = Session(
-                      id: activeSession.id,
-                      title: activeSession.title,
+                    // Create a new session with the label, description, and completion time
+                    final finishedSession = activeSession.copyWith(
                       label: labelController.text,
                       description:
                           descriptionController.text.isEmpty
                               ? null
                               : descriptionController.text,
-                      date: DateTime.now(),
-                      list: activeSession.list,
+                      completedAt: DateTime.now(),
                     );
 
                     Navigator.of(dialogContext).pop();

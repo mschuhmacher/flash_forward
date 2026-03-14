@@ -1,8 +1,8 @@
-import 'package:flash_forward/models/exercise_template.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:flutter/material.dart';
 
 class NewExerciseScreen extends StatefulWidget {
-  final ExerciseTemplate? exercise;
+  final Exercise? exercise;
 
   const NewExerciseScreen({super.key, this.exercise});
 

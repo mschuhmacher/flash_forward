@@ -11,9 +11,8 @@ final List<Session> kDefaultSessions = [
   Session(
     title: 'Projecting session',
     description: 'Flash tries and projecting',
-    date: DateTime.now(),
     label: 'Limit',
-    list: [
+    workouts: [
       _findWorkout('General Warm-up'),
       _findWorkout('Flash and limit bouldering'),
       _findWorkout('Full-Body Strength Workout'),
@@ -22,9 +21,8 @@ final List<Session> kDefaultSessions = [
   Session(
     title: 'Powerendurance training',
     description: 'Powerendurance',
-    date: DateTime.now(),
     label: 'Powerendurance',
-    list: [
+    workouts: [
       _findWorkout('General Warm-up'),
       _findWorkout('Fingerboard Strength Builder'),
       _findWorkout('Boulder Pyramid Endurance'),
@@ -35,9 +33,8 @@ final List<Session> kDefaultSessions = [
   Session(
     title: 'Power',
     description: 'Training power',
-    date: DateTime.now(),
     label: 'Power',
-    list: [
+    workouts: [
       _findWorkout('General Warm-up'),
       _findWorkout('Combined Limit Strength'),
       _findWorkout('Dynamic Climbing Power'),
@@ -47,9 +44,8 @@ final List<Session> kDefaultSessions = [
   Session(
     title: 'Full body strength training',
     description: 'No climbing, just strength and finger training',
-    date: DateTime.now(),
     label: 'Strength',
-    list: [
+    workouts: [
       _findWorkout('General Warm-up'),
       _findWorkout('Pull-ups & Pick-ups Set'),
       _findWorkout('Handstand Progression Training'),
@@ -60,23 +56,13 @@ final List<Session> kDefaultSessions = [
   Session(
     title: 'Daily fingerboard and stretching',
     description: 'Quick light fingerboard and stretching',
-    date: DateTime.now(),
     label: 'Daily maintenance',
-    list: [_findWorkout('Daily Mobility & Light Hangs')],
+    workouts: [_findWorkout('Daily Mobility & Light Hangs')],
   ),
   Session(
     title: 'Daily evening stretch',
     description: 'Relaxed stretching at the end of the day',
-    date: DateTime.now(),
     label: 'Daily maintenance',
-    list: [_findWorkout('Evening Stretch & Recovery')],
+    workouts: [_findWorkout('Evening Stretch & Recovery')],
   ),
-  // // TEST - UI LIMIT VERIFICATION SESSION
-  // Session(
-  //   title: 'UI Test Session - Max Limits',
-  //   description: 'Test session with exercises at character limits for UI verification and finetuning purposes',
-  //   date: DateTime.now(),
-  //   label: 'Test',
-  //   list: [_findWorkout('Test Workout Maximum Title Lim')],
-  // ),
 ];

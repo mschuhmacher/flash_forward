@@ -338,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
       separatorBuilder: (context, index) => SizedBox(height: 8),
       itemBuilder: (context, index) {
         final session = selectedSessions[index];
-        final date = session.date;
+        final date = session.completedAt;
 
         // Ensure we have a GlobalKey for this index
         if (!_iconButtonKeys.containsKey(index)) {

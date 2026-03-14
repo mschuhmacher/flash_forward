@@ -65,6 +65,8 @@
 - longitudinal progress tracking (max hangs progressions)
 - set certain exercises as testing sessions (max hangs, pickups, big 3 strength)
 - catalog propagation: change made to the catalog exercises/workouts, ask user to propagate to the existing sessions/workouts. let users select which ones
+- review/change the time fields of exercises/workouts. activeTime
+- clear all logs button to profile / settings
 
 
 ## LATER STAGE

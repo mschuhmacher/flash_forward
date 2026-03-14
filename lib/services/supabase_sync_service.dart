@@ -1,5 +1,4 @@
-import 'package:flash_forward/models/exercise_instance.dart';
-import 'package:flash_forward/models/exercise_template.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/services/supabase_config.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
@@ -37,10 +36,9 @@ class SupabaseSyncService {
         'user_id': userId,
         'title': session.title,
         'label': session.label,
-        'subtitle': session.subtitle,
         'description': session.description,
-        'date': session.date?.toIso8601String(),
-        'workouts': session.list.map((w) => w.toJson()).toList(),
+        'completed_at': session.completedAt?.toIso8601String(),
+        'workouts': session.workouts.map((w) => w.toJson()).toList(),
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
@@ -65,20 +63,11 @@ class SupabaseSyncService {
         .order('created_at', ascending: false);
 
     return (response as List).map((json) {
-      // Convert workouts JSONB back to Workout objects
-      final workoutsList =
-          (json['workouts'] as List).map((w) => Workout.fromJson(w)).toList();
-
-      return Session(
-        id: json['id'],
-        title: json['title'],
-        label: json['label'],
-        subtitle: json['subtitle'],
-        description: json['description'],
-        date: json['date'] != null ? DateTime.parse(json['date']) : null,
-        list: workoutsList,
-        userId: json['user_id'],
-      );
+      // Use Session.fromJson so field renames and backward-compat fallbacks are handled centrally
+      return Session.fromJson({
+        ...json as Map<String, dynamic>,
+        'userId': json['user_id'],
+      });
     }).toList();
   }
 
@@ -161,23 +150,12 @@ class SupabaseSyncService {
     return (response as List).map((item) {
       final sessionData = item['session_data'] as Map<String, dynamic>;
 
-      // Convert workouts list from JSON
-      final workoutsList =
-          (sessionData['list'] as List)
-              .map((w) => Workout.fromJson(w as Map<String, dynamic>))
-              .toList();
-
-      // Create session with completed_at timestamp as the date
-      return Session(
-        id: sessionData['id'] as String,
-        title: sessionData['title'] as String,
-        label: sessionData['label'] as String,
-        subtitle: sessionData['subtitle'] as String?,
-        description: sessionData['description'] as String?,
-        date: DateTime.parse(item['completed_at'] as String),
-        list: workoutsList,
-        userId: sessionData['userId'] as String?,
-      );
+      // Inject completed_at from the log row — overrides whatever is in session_data
+      return Session.fromJson({
+        ...sessionData,
+        'completedAt': item['completed_at'],
+        'userId': sessionData['userId'] ?? sessionData['user_id'],
+      });
     }).toList();
   }
 
@@ -199,12 +177,11 @@ class SupabaseSyncService {
         'user_id': userId,
         'title': workout.title,
         'label': workout.label,
-        'subtitle': workout.subtitle,
         'description': workout.description,
         'difficulty': workout.difficulty,
         'equipment': workout.equipment,
         'time_between_exercises': workout.timeBetweenExercises,
-        'exercises': workout.list.map((e) => e.toJson()).toList(),
+        'exercises': workout.exercises.map((e) => e.toJson()).toList(),
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
@@ -229,24 +206,12 @@ class SupabaseSyncService {
         .order('created_at', ascending: false);
 
     return (response as List).map((json) {
-      // Convert exercises JSONB back to Exercise objects
-      final exercisesList =
-          (json['exercises'] as List)
-              .map((e) => ExerciseInstance.fromJson(e as Map<String, dynamic>))
-              .toList();
-
-      return Workout(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        label: json['label'] as String,
-        subtitle: json['subtitle'] as String?,
-        description: json['description'] as String?,
-        difficulty: json['difficulty'] as String?,
-        equipment: json['equipment'] as String?,
-        timeBetweenExercises: json['time_between_exercises'] as int,
-        list: exercisesList,
-        userId: json['user_id'] as String,
-      );
+      // Use Workout.fromJson so field renames and backward-compat fallbacks are handled centrally
+      return Workout.fromJson({
+        ...json as Map<String, dynamic>,
+        'timeBetweenExercises': json['time_between_exercises'],
+        'userId': json['user_id'],
+      });
     }).toList();
   }
 
@@ -263,32 +228,33 @@ class SupabaseSyncService {
 
   /// Upload a custom exercise to user's exercise library
   /// If upload fails, queues the operation for retry
-  Future<void> uploadExercise(ExerciseTemplate exerciseTemplate, {bool isRetry = false}) async {
+  Future<void> uploadExercise(Exercise exercise, {bool isRetry = false}) async {
     try {
       await supabase.from('user_exercises').upsert({
-        'id': exerciseTemplate.id,
+        'id': exercise.id,
         'user_id': userId,
-        'title': exerciseTemplate.title,
-        'label': exerciseTemplate.label,
-        'description': exerciseTemplate.description,
-        'sets': exerciseTemplate.defaultSets,
-        'reps': exerciseTemplate.defaultReps,
-        'time_between_sets': exerciseTemplate.defaultTimeBetweenSets,
-        'time_per_rep': exerciseTemplate.defaultTimePerRep,
-        'time_between_reps': exerciseTemplate.defaultTimeBetweenReps,
-        'load': exerciseTemplate.defaultLoad,
-        'rpe': exerciseTemplate.defaultRpe,
-        'equipment': exerciseTemplate.equipment,
-        'muscle_groups': exerciseTemplate.muscleGroups,
-        'difficulty': exerciseTemplate.difficulty,
+        'title': exercise.title,
+        'label': exercise.label,
+        'description': exercise.description,
+        'sets': exercise.sets,
+        'reps': exercise.reps,
+        'time_between_sets': exercise.timeBetweenSets,
+        'time_per_rep': exercise.timePerRep,
+        'time_between_reps': exercise.timeBetweenReps,
+        'load': exercise.load,
+        'load_unit': exercise.loadUnit,
+        'rpe': exercise.rpe,
+        'equipment': exercise.equipment,
+        'muscle_groups': exercise.muscleGroups,
+        'difficulty': exercise.difficulty,
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
       if (!isRetry) {
         await _syncQueue.enqueue(SyncOperation(
-          id: exerciseTemplate.id,
+          id: exercise.id,
           type: 'uploadExercise',
-          data: exerciseTemplate.toJson(),
+          data: exercise.toJson(),
           createdAt: DateTime.now(),
         ));
       }
@@ -297,7 +263,7 @@ class SupabaseSyncService {
   }
 
   /// Fetch all user's custom exercises from the cloud
-  Future<List<ExerciseTemplate>> fetchUserExercises() async {
+  Future<List<Exercise>> fetchUserExercises() async {
     final response = await supabase
         .from('user_exercises')
         .select()
@@ -305,18 +271,20 @@ class SupabaseSyncService {
         .order('created_at', ascending: false);
 
     return (response as List).map((json) {
-      return ExerciseTemplate(
+      // Map snake_case Supabase columns to camelCase Exercise fields
+      return Exercise(
         id: json['id'] as String,
         title: json['title'] as String,
         label: json['label'] as String,
         description: json['description'] as String,
-        defaultSets: json['sets'] as int,
-        defaultReps: json['reps'] as int,
-        defaultTimeBetweenSets: json['time_between_sets'] as int,
-        defaultTimePerRep: json['time_per_rep'] as int,
-        defaultTimeBetweenReps: json['time_between_reps'] as int,
-        defaultLoad: (json['load'] as num).toDouble(),
-        defaultRpe: json['rpe'] as int?,
+        sets: json['sets'] as int,
+        reps: json['reps'] as int,
+        timeBetweenSets: json['time_between_sets'] as int,
+        timePerRep: json['time_per_rep'] as int,
+        timeBetweenReps: json['time_between_reps'] as int,
+        load: (json['load'] as num).toDouble(),
+        loadUnit: json['load_unit'] as String?,
+        rpe: json['rpe'] as int?,
         equipment: json['equipment'] as String?,
         muscleGroups: json['muscle_groups'] as String?,
         difficulty: json['difficulty'] as String?,
@@ -364,8 +332,8 @@ class SupabaseSyncService {
             await uploadWorkout(workout, isRetry: true);
             break;
           case 'uploadExercise':
-            final exerciseTemplate = ExerciseTemplate.fromJson(operation.data);
-            await uploadExercise(exerciseTemplate, isRetry: true);
+            final exercise = Exercise.fromJson(operation.data);
+            await uploadExercise(exercise, isRetry: true);
             break;
           default:
             Sentry.captureMessage('Unknown sync operation type: ${operation.type}');

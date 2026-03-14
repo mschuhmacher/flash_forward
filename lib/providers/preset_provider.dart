@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:flash_forward/data/default_exercise_templates.dart';
+import 'package:flash_forward/data/default_exercises.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
-import 'package:flash_forward/models/exercise_instance.dart';
-import 'package:flash_forward/models/exercise_template.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/services/preset_logger.dart';
 import 'package:flash_forward/services/supabase_sync_service.dart';
@@ -11,41 +10,38 @@ import '../models/session.dart';
 import '../data/default_session_data.dart';
 
 /// Responsibilities:
-/// - Holds in-memory state of all presets (sessions, blocks, exercises).
+/// - Holds in-memory state of all presets (sessions, workouts, exercises).
 /// - Provides getters for UI and business logic to access presets.
 /// - Loads user-added presets from local JSON and merges with defaults.
 /// - Allows adding new user presets and persists them to local JSON.
 /// - Notifies listeners when presets change.
 ///
 /// Why:
-/// This provider manages the app’s active preset data, keeping the UI
+/// This provider manages the app's active preset data, keeping the UI
 /// reactive while separating mutable user data from the immutable defaults.
 
 class PresetProvider extends ChangeNotifier {
   List<Session> _defaultSessions = [];
   List<Workout> _defaultWorkouts = [];
-  List<ExerciseTemplate> _defaultExerciseTemplates = [];
+  List<Exercise> _defaultExercises = [];
 
   List<Session> _userSessions = [];
   List<Workout> _userWorkouts = [];
-  List<ExerciseTemplate> _userExerciseTemplates = [];
+  List<Exercise> _userExercises = [];
 
   SupabaseSyncService? _syncService;
 
   List<Session> get presetSessions => [..._defaultSessions, ..._userSessions];
   List<Workout> get presetWorkouts => [..._defaultWorkouts, ..._userWorkouts];
-  List<ExerciseTemplate> get presetExerciseTemplates => [
-    ..._defaultExerciseTemplates,
-    ..._userExerciseTemplates,
-  ];
+  List<Exercise> get presetExercises => [..._defaultExercises, ..._userExercises];
   List<Session> get presetDefaultSessions => _defaultSessions;
   List<Session> get presetUserSessions => _userSessions;
 
-  // Return the IDs of the user-defined workouts and exerciseTemplates
+  // Return the IDs of the user-defined workouts and exercises
   Set<String> get presetUserWorkoutsIDs =>
       _userWorkouts.map((w) => w.id).toSet();
-  Set<String> get presetUserExerciseTemplateIDs =>
-      _userExerciseTemplates.map((e) => e.id).toSet();
+  Set<String> get presetUserExerciseIDs =>
+      _userExercises.map((e) => e.id).toSet();
 
   bool _isInitialized = false;
   bool _isLoading = false;
@@ -62,7 +58,7 @@ class PresetProvider extends ChangeNotifier {
     // Load defaults
     _defaultSessions = List.from(kDefaultSessions);
     _defaultWorkouts = List.from(kDefaultWorkouts);
-    _defaultExerciseTemplates = List.from(kDefaultExerciseTemplates);
+    _defaultExercises = List.from(kDefaultExercises);
 
     // If user is logged in, load their cloud data
     if (userId != null) {
@@ -84,7 +80,7 @@ class PresetProvider extends ChangeNotifier {
     try {
       _userSessions = await _syncService!.fetchUserSessions();
       _userWorkouts = await _syncService!.fetchUserWorkouts();
-      _userExerciseTemplates = await _syncService!.fetchUserExercises();
+      _userExercises = await _syncService!.fetchUserExercises();
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
       await _loadUserPresetDataFromLocal();
@@ -95,14 +91,13 @@ class PresetProvider extends ChangeNotifier {
   Future<void> _loadUserPresetDataFromLocal() async {
     _userSessions = (await PresetLogger.readUserPresetSessions()).toList();
     _userWorkouts = (await PresetLogger.readUserPresetWorkouts()).toList();
-    _userExerciseTemplates =
-        (await PresetLogger.readUserPresetExercises()).toList();
+    _userExercises = (await PresetLogger.readUserPresetExercises()).toList();
   }
 
   Future<void> deleteAllUserPresets() async {
     _userSessions = [];
     _userWorkouts = [];
-    _userExerciseTemplates = [];
+    _userExercises = [];
 
     await PresetLogger.deleteAllUserPresetFiles();
 
@@ -187,11 +182,11 @@ class PresetProvider extends ChangeNotifier {
 
   // Remove user added preset exercise
   Future<void> deleteUserPresetExercise(String id) async {
-    _userExerciseTemplates.removeWhere((w) => w.id == id);
+    _userExercises.removeWhere((e) => e.id == id);
 
     await PresetLogger.savePresetToFile(
       'user_preset_exercises.json',
-      _userExerciseTemplates,
+      _userExercises,
     );
 
     // Delete from cloud if available
@@ -224,17 +219,17 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addPresetExercise(ExerciseTemplate exerciseTemplate) async {
-    _userExerciseTemplates.add(exerciseTemplate);
+  Future<void> addPresetExercise(Exercise exercise) async {
+    _userExercises.add(exercise);
     await PresetLogger.savePresetToFile(
       'user_preset_exercises.json',
-      _userExerciseTemplates,
+      _userExercises,
     );
 
     // Save to cloud if available
     if (_syncService != null) {
       try {
-        await _syncService!.uploadExercise(exerciseTemplate);
+        await _syncService!.uploadExercise(exercise);
       } catch (e, stackTrace) {
         Sentry.captureException(e, stackTrace: stackTrace);
       }
@@ -251,10 +246,10 @@ class PresetProvider extends ChangeNotifier {
     _syncService = null;
     _defaultSessions = [];
     _defaultWorkouts = [];
-    _defaultExerciseTemplates = [];
+    _defaultExercises = [];
     _userSessions = [];
     _userWorkouts = [];
-    _userExerciseTemplates = [];
+    _userExercises = [];
     notifyListeners();
   }
 
@@ -269,31 +264,5 @@ class PresetProvider extends ChangeNotifier {
   Future<int> processPendingSync() async {
     if (_syncService == null) return 0;
     return await _syncService!.processPendingSync();
-  }
-
-  /// Create an ExerciseInstance from a template
-  ExerciseInstance createExerciseInstanceFromTemplate(
-    String templateId, {
-    int? sets,
-    int? reps,
-    int? timeBetweenSets,
-    int? timePerRep,
-    int? timeBetweenReps,
-    double? load,
-    int? rpe,
-  }) {
-    final template = presetExerciseTemplates.firstWhere(
-      (template) => template.id == templateId,
-    );
-    return ExerciseInstance.fromTemplate(
-      template,
-      sets: sets,
-      reps: reps,
-      timeBetweenSets: timeBetweenSets,
-      timePerRep: timePerRep,
-      timeBetweenReps: timeBetweenReps,
-      load: load,
-      rpe: rpe,
-    );
   }
 }

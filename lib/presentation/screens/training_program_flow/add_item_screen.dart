@@ -1,6 +1,5 @@
 import 'package:flash_forward/constants/field_limits.dart';
-import 'package:flash_forward/models/exercise_instance.dart';
-import 'package:flash_forward/models/exercise_template.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
@@ -83,13 +82,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
         final List<dynamic> allPresetItems =
             widget.itemName == 'session'
                 ? presetData.presetWorkouts
-                : presetData.presetExerciseTemplates;
+                : presetData.presetExercises;
 
         // Determine which user ID set applies
         final userIDs =
             widget.itemName == 'session'
                 ? presetData.presetUserWorkoutsIDs
-                : presetData.presetUserExerciseTemplateIDs;
+                : presetData.presetUserExerciseIDs;
 
         final String labelFilter = _filterLabel.trim();
 
@@ -162,7 +161,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                   title: title,
                                   label: label,
                                   description: description,
-                                  list:
+                                  workouts:
                                       selectedPresetItems
                                           .whereType<Workout>()
                                           .toList(),
@@ -176,17 +175,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                   timeBetweenExercises: int.parse(
                                     timeBetweenExercises,
                                   ),
-                                  list:
+                                  exercises:
                                       selectedPresetItems
                                           .whereType<
-                                            ExerciseTemplate
+                                            Exercise
                                           >() //should be all, but safer than .cast()
-                                          .map(
-                                            (template) =>
-                                                ExerciseInstance.fromTemplate(
-                                                  template,
-                                                ),
-                                          )
+                                          .map((e) => e.deepCopy())
                                           .toList(),
                                 );
                                 presetData.addPresetWorkout(newWorkout);
@@ -369,17 +363,17 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       filteredPresetItems[index] is Workout) ...<Widget>[
                     SizedBox(height: 2),
                     Text('Exercises:'),
-                    for (final exercise in filteredPresetItems[index].list)
+                    for (final exercise in filteredPresetItems[index].exercises)
                       Text(exercise.title),
                   ] else if (isExpanded &&
                       filteredPresetItems[index]
-                          is ExerciseTemplate) ...<Widget>[
+                          is Exercise) ...<Widget>[
                     SizedBox(height: 2),
                     Text(
                       'Load:',
                     ), //TODO: edit to display more useful information
                     Text(
-                      '${filteredPresetItems[index].defaultLoad.toString()} kg',
+                      '${filteredPresetItems[index].load.toString()} kg',
                     ),
                   ],
                   Align(
@@ -458,7 +452,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     );
                     if (item is Workout) {
                       presetData.deleteUserPresetWorkout(item.id);
-                    } else if (item is ExerciseTemplate) {
+                    } else if (item is Exercise) {
                       presetData.deleteUserPresetExercise(item.id);
                     }
                     Navigator.of(dialogContext).pop();

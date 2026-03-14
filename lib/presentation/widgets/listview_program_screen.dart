@@ -37,7 +37,7 @@ class _ProgramListviewState extends State<ProgramListview> {
           case ItemType.workouts:
             listItems = presetData.presetWorkouts;
           case ItemType.exercises:
-            listItems = presetData.presetExerciseTemplates;
+            listItems = presetData.presetExercises;
         }
 
         final String labelFilter = _filterLabel.trim();

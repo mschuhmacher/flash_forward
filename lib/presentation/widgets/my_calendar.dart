@@ -28,12 +28,12 @@ class _MyCalendarState extends State<MyCalendar> {
         final Set<DateTime> datesWithSessions = {};
 
         for (var session in sessionData.loggedSessions) {
-          if (session.date != null) {
+          if (session.completedAt != null) {
             // Normalize date to ignore time
             final normalizedDate = DateTime(
-              session.date!.year,
-              session.date!.month,
-              session.date!.day,
+              session.completedAt!.year,
+              session.completedAt!.month,
+              session.completedAt!.day,
             );
             datesWithSessions.add(normalizedDate);
           }
