@@ -96,26 +96,27 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
               ),
               SizedBox(height: 8),
               // Expanded(child: Center(child: Text('No workouts added yet!'))),
-              Card(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(session!.workouts[0].title),
-                        Icon(Icons.more_horiz),
-                      ],
-                    ),
-                    Text(session.workouts[0].description!),
-                    Text(session.workouts[0].difficulty!),
-                    Text(session.workouts[0].equipment!),
-                    Text(session!.workouts[0].label),
-                    Text(session.workouts[0].timeBetweenExercises.toString()),
-                    Text('Add edit button to the dots (replace with swiping later), which takes you to the workout to edit')
-                  ],
+              if (session != null)
+                Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(session.workouts[0].title),
+                          Icon(Icons.more_horiz),
+                        ],
+                      ),
+                      Text(session.workouts[0].description!),
+                      Text(session.workouts[0].difficulty!),
+                      Text(session.workouts[0].equipment!),
+                      Text(session.workouts[0].label),
+                      Text(session.workouts[0].timeBetweenExercises.toString()),
+                      Text('Add edit button to the dots (replace with swiping later), which takes you to the workout to edit')
+                    ],
+                  ),
                 ),
-              ),
               SizedBox(height: 16),
               Text('Save'),
               SizedBox(height: 16),

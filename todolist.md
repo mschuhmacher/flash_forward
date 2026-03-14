@@ -67,6 +67,7 @@
 - catalog propagation: change made to the catalog exercises/workouts, ask user to propagate to the existing sessions/workouts. let users select which ones
 - review/change the time fields of exercises/workouts. activeTime
 - clear all logs button to profile / settings
+- add a today button in the calendar
 
 
 ## LATER STAGE

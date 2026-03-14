@@ -13,7 +13,7 @@ final List<Session> kDefaultSessions = [
     description: 'Flash tries and projecting',
     label: 'Limit',
     workouts: [
-      _findWorkout('General Warm-up'),
+      _findWorkout('Climbing Warm-up'),
       _findWorkout('Flash and limit bouldering'),
       _findWorkout('Full-Body Strength Workout'),
     ],
@@ -23,11 +23,10 @@ final List<Session> kDefaultSessions = [
     description: 'Powerendurance',
     label: 'Powerendurance',
     workouts: [
-      _findWorkout('General Warm-up'),
-      _findWorkout('Fingerboard Strength Builder'),
+      _findWorkout('Climbing Warm-up'),
+      _findWorkout('Max Pick-ups & Min Edge Hangs'),
       _findWorkout('Boulder Pyramid Endurance'),
-      _findWorkout('Push & Antagonist Training'),
-      _findWorkout('Quick Core Maintenance'),
+      _findWorkout('General Upper-body Strength'),
     ],
   ),
   Session(
@@ -35,10 +34,20 @@ final List<Session> kDefaultSessions = [
     description: 'Training power',
     label: 'Power',
     workouts: [
-      _findWorkout('General Warm-up'),
+      _findWorkout('Climbing Warm-up'),
       _findWorkout('Combined Limit Strength'),
       _findWorkout('Dynamic Climbing Power'),
-      _findWorkout('Upper Body Power'),
+      _findWorkout('Upper-body Power'),
+    ],
+  ),
+  Session(
+    title: 'Volume',
+    description: 'Lots of easy climbing',
+    label: 'Endurance',
+    workouts: [
+      _findWorkout('Climbing Warm-up'),
+      _findWorkout('Route Laps Endurance'),
+      _findWorkout('Full-Body Strength Workout'),
     ],
   ),
   Session(
@@ -46,9 +55,9 @@ final List<Session> kDefaultSessions = [
     description: 'No climbing, just strength and finger training',
     label: 'Strength',
     workouts: [
-      _findWorkout('General Warm-up'),
+      _findWorkout('Strength Training Warm-up'),
+      _findWorkout('Handstand Training'),
       _findWorkout('Pull-ups & Pick-ups Set'),
-      _findWorkout('Handstand Progression Training'),
       _findWorkout('Dips and front lever'),
       _findWorkout('Barbell Strength Training'),
     ],
@@ -64,5 +73,11 @@ final List<Session> kDefaultSessions = [
     description: 'Relaxed stretching at the end of the day',
     label: 'Daily maintenance',
     workouts: [_findWorkout('Evening Stretch & Recovery')],
+  ),
+  Session(
+    title: 'Quick fingerboarding',
+    description: 'As you\'re passing the fingerboard ',
+    label: 'Daily maintenance',
+    workouts: [_findWorkout('Quick Fingerboarding')],
   ),
 ];

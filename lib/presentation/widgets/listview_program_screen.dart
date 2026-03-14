@@ -139,7 +139,11 @@ class ProgramListviewCard extends StatelessWidget {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(filteredListItem.title, style: context.titleMedium),
+              Text(
+                filteredListItem.title,
+                style: context.titleMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
               // Icon(Icons.circle),
             ],
           ),
