@@ -62,6 +62,9 @@
 - health check to my Supabase URL using a cron-job to keep the project from pausing
 - option for exercises to have no time. in practice: timer keeps running until user clicks to next exercise
 - supabase redirect to the app on email confirmation (instead of web page). set up deep linking to do so
+- longitudinal progress tracking (max hangs progressions)
+- set certain exercises as testing sessions (max hangs, pickups, big 3 strength)
+- catalog propagation: change made to the catalog exercises/workouts, ask user to propagate to the existing sessions/workouts. let users select which ones
 
 
 ## LATER STAGE
