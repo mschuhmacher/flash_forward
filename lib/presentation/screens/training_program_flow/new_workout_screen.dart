@@ -166,10 +166,15 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                                   ],
                                 ),
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(workout.exercises[index].description),
+                                    Expanded(
+                                      child: Text(
+                                        workout.exercises[index].description,
+                                      ),
+                                    ),
                                     Text(
                                       workout.exercises[index].timeBetweenSets
                                           .toString(),
@@ -185,7 +190,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                                     children: [
                                       SizedBox(
                                         width: 60,
-                                        child: Text('Set $i'),
+                                        child: Text(
+                                          'Sets: ${workout.exercises[index].sets}',
+                                        ),
                                       ),
                                       SizedBox(
                                         width: 80,
@@ -201,20 +208,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                                       ),
                                     ],
                                   ),
-                                Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(4.0),
-                                    child: SizedBox(
-                                      height: 20,
-                                      width: 120,
-                                      child: ElevatedButton(
-                                        onPressed:
-                                            () {}, //TODO: make button functional
-                                        child: Text('Add set'),
-                                      ),
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -227,7 +220,12 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => NewExerciseScreen()),
+          );
+        },
         child: Icon(Icons.add),
       ),
     );

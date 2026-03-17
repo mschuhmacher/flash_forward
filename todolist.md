@@ -69,6 +69,12 @@
 - review/change the time fields of exercises/workouts. activeTime
 - clear all logs button to profile / settings
 - add a today button in the calendar
+- separate reps and load per set
+  - list of sets in ExerciseCard in NewWorkoutScreen
+  - rep field is editable per set
+  - load field is editable per set
+  - add set button
+  - remove set button
 
 
 ## LATER STAGE

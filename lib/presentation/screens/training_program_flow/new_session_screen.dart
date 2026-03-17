@@ -22,6 +22,7 @@ class NewSessionScreen extends StatefulWidget {
 class _NewSessionScreenState extends State<NewSessionScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // Title, label, workouts are required fields, so session must be initialized with them
   late Session _session =
       widget.session ?? Session(title: 'title', label: 'label', workouts: []);
 
@@ -105,8 +106,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           _itemLabelController.text = value ?? '';
                         });
                       },
-                      validator:
-                          FieldValidators.sessionLabel
+                      validator: FieldValidators.sessionLabel,
                     ),
                   ),
                 ],
