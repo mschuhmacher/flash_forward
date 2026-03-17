@@ -95,6 +95,14 @@ class _AddWorkoutScreenState extends State<AddWorkoutScreen> {
                                     : _selectedItemIds.add(id);
                               });
                             },
+                            isExpanded: _expandedItemIds.contains(id),
+                            onIconTap: () {
+                              setState(() {
+                                _expandedItemIds.contains(id)
+                                    ? _expandedItemIds.remove(id)
+                                    : _expandedItemIds.add(id);
+                              });
+                            },
                           );
                         },
                       ),
@@ -106,11 +114,9 @@ class _AddWorkoutScreenState extends State<AddWorkoutScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
-                            // style: ElevatedButton.styleFrom(
-                            //   backgroundColor: Colors.transparent,
-                            //   shadowColor: Colors.transparent,
-                            // ),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.pop(context, selectedPresetItems);
+                            },
                             child: Text(buttonLabel),
                           ),
                         ),
@@ -132,12 +138,16 @@ class WorkoutCard extends StatelessWidget {
     super.key,
     required this.workout,
     required this.isSelected,
+    required this.isExpanded,
     required this.onTap,
+    required this.onIconTap,
   });
 
   final Workout workout;
   final bool isSelected;
+  final bool isExpanded;
   final VoidCallback onTap;
+  final VoidCallback onIconTap;
 
   @override
   Widget build(BuildContext context) {
@@ -165,8 +175,33 @@ class WorkoutCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [Text(workout.title), Text(workout.label)],
               ),
-              Text(workout.description!),
-              for (var exercise in workout.exercises) Text(exercise.title),
+              Row(
+                children: [
+                  Expanded(child: Text(workout.description!)),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
+                      ),
+                      onPressed: onIconTap,
+                    ),
+                  ),
+                ],
+              ),
+
+              if (isExpanded)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 4),
+                    Text('Exercises:'),
+                    ...workout.exercises.map(
+                      (exercise) => Text(exercise.title),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),

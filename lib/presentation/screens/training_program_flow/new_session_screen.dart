@@ -1,6 +1,7 @@
 import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_workout_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
@@ -20,6 +21,9 @@ class NewSessionScreen extends StatefulWidget {
 
 class _NewSessionScreenState extends State<NewSessionScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  late Session _session =
+      widget.session ?? Session(title: 'title', label: 'label', workouts: []);
 
   late final _titleController = TextEditingController(
     text: widget.session?.title,
@@ -41,15 +45,14 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final session = widget.session;
-
+    final session = _session;
     return Scaffold(
       appBar: AppBar(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             SizedBox.shrink(),
-            Text(session == null ? 'New Session' : 'Edit session'),
+            Text(session.title == 'title' ? 'New Session' : 'Edit session'),
             ElevatedButton(
               onPressed: () {},
               style: ButtonStyle().copyWith(
@@ -76,18 +79,17 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                     flex: 3,
                     child: TextFormField(
                       controller: _titleController,
-                      maxLength: FieldLimits.workoutTitleMaxLength,
+                      maxLength: FieldLimits.sessionTitleMaxLength,
                       decoration: InputDecoration(
                         fillColor: context.colorScheme.surfaceBright,
                         labelText: 'Title',
                         labelStyle: context.bodyMedium,
-
                         contentPadding: EdgeInsets.symmetric(
                           vertical: 16,
                           horizontal: 8,
                         ),
                       ),
-                      validator: FieldValidators.workoutTitle,
+                      validator: FieldValidators.sessionTitle,
                     ),
                   ),
                   SizedBox(width: 8),
@@ -104,10 +106,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                         });
                       },
                       validator:
-                          (value) =>
-                              value == null || value.isEmpty
-                                  ? 'Please select a label'
-                                  : null,
+                          FieldValidators.sessionLabel
                     ),
                   ),
                 ],
@@ -138,8 +137,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
               ),
               SizedBox(height: 8),
               // Expanded(child: Center(child: Text('No workouts added yet!'))),
-              session == null
-                  ? Center(child: Text('Add a workout!'))
+              session.workouts.isEmpty
+                  ? Expanded(child: Center(child: Text('Add a workout!')))
                   : Expanded(
                     child:
                     // SessionSelectListView(item: session.workouts),
@@ -232,11 +231,21 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          List<Workout>? addedWorkouts = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => AddWorkoutScreen()),
+            MaterialPageRoute<List<Workout>>(
+              builder: (context) => AddWorkoutScreen(),
+            ),
           );
+
+          if (addedWorkouts != null && addedWorkouts.isNotEmpty) {
+            setState(() {
+              _session = _session.copyWith(
+                workouts: [..._session.workouts, ...addedWorkouts],
+              );
+            });
+          }
         },
         child: Icon(Icons.add),
       ),

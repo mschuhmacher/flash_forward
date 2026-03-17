@@ -17,6 +17,10 @@ class FieldValidators {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
     }
+    if (value == 'title') {
+      return "Session cannot be named 'title'";
+    }
+
     if (value.length > FieldLimits.sessionTitleMaxLength) {
       return 'Title must be ${FieldLimits.sessionTitleMaxLength} characters or less';
     }
@@ -63,6 +67,13 @@ class FieldValidators {
     if (value != null &&
         value.length > FieldLimits.exerciseDescriptionMaxLength) {
       return 'Description must be ${FieldLimits.exerciseDescriptionMaxLength} characters or less';
+    }
+    return null;
+  }
+
+  static String? sessionLabel(String? value) {
+    if (value == null || value.isEmpty || value == 'label') {
+      return 'Please select a label';
     }
     return null;
   }
