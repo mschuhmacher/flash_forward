@@ -106,7 +106,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           _itemLabelController.text = value ?? '';
                         });
                       },
-                      validator: FieldValidators.sessionLabel,
+                      validator: FieldValidators.label,
                     ),
                   ),
                 ],
@@ -235,8 +235,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
           List<Workout>? addedWorkouts = await Navigator.push(
             context,
             MaterialPageRoute<List<Workout>>(
-              builder:
-                  (context) => AddWorkoutScreen(itemType: ItemType.workouts),
+              builder: (context) => AddItemScreen(itemType: ItemType.workouts),
             ),
           );
 

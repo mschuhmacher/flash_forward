@@ -31,6 +31,9 @@ class FieldValidators {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
     }
+    if (value == 'title') {
+      return "Workout cannot be named 'title'";
+    }
     if (value.length > FieldLimits.workoutTitleMaxLength) {
       return 'Title must be ${FieldLimits.workoutTitleMaxLength} characters or less';
     }
@@ -40,6 +43,9 @@ class FieldValidators {
   static String? exerciseTitle(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
+    }
+    if (value == 'title') {
+      return "Exercise cannot be named 'title'";
     }
     if (value.length > FieldLimits.exerciseTitleMaxLength) {
       return 'Title must be ${FieldLimits.exerciseTitleMaxLength} characters or less';
@@ -71,7 +77,7 @@ class FieldValidators {
     return null;
   }
 
-  static String? sessionLabel(String? value) {
+  static String? label(String? value) {
     if (value == null || value.isEmpty || value == 'label') {
       return 'Please select a label';
     }

@@ -57,7 +57,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             SizedBox.shrink(),
-            Text(workout == null ? 'New workout' : 'Edit workout'),
+            Text(workout.title == 'title' ? 'New workout' : 'Edit workout'),
             ElevatedButton(
               onPressed: () {},
               style: ButtonStyle().copyWith(
@@ -111,11 +111,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           _itemLabelController.text = value ?? '';
                         });
                       },
-                      validator:
-                          (value) =>
-                              value == null || value.isEmpty
-                                  ? 'Please select a label'
-                                  : null,
+                      validator: FieldValidators.label,
                     ),
                   ),
                 ],
@@ -146,8 +142,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
               ),
               SizedBox(height: 8),
               // Expanded(child: Center(child: Text('No workouts added yet!'))),
-              workout == null
-                  ? Center(child: Text('Add a exercise!'))
+              workout.exercises.isEmpty
+                  ? Expanded(child: Center(child: Text('Add a exercise!')))
                   : Expanded(
                     child: ListView.builder(
                       itemCount: workout.exercises.length,
@@ -235,8 +231,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           List<Exercise>? addedExercises = await Navigator.push(
             context,
             MaterialPageRoute<List<Exercise>>(
-              builder:
-                  (context) => AddWorkoutScreen(itemType: ItemType.exercises),
+              builder: (context) => AddItemScreen(itemType: ItemType.exercises),
             ),
           );
 
@@ -249,7 +244,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           }
         },
 
-        
         child: Icon(Icons.add),
       ),
     );

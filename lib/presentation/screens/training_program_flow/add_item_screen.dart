@@ -8,16 +8,16 @@ import 'package:provider/provider.dart';
 
 enum ItemType { workouts, exercises }
 
-class AddWorkoutScreen extends StatefulWidget {
+class AddItemScreen extends StatefulWidget {
   final ItemType itemType;
 
-  const AddWorkoutScreen({super.key, required this.itemType});
+  const AddItemScreen({super.key, required this.itemType});
 
   @override
-  State<AddWorkoutScreen> createState() => _AddWorkoutScreenState();
+  State<AddItemScreen> createState() => _AddItemScreenState();
 }
 
-class _AddWorkoutScreenState extends State<AddWorkoutScreen> {
+class _AddItemScreenState extends State<AddItemScreen> {
   final Set<String> _selectedItemIds = {};
   final Set<String> _expandedItemIds = {};
 
