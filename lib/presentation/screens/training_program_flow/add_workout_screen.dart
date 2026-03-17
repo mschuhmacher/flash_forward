@@ -1,6 +1,7 @@
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -50,6 +51,15 @@ class _AddWorkoutScreenState extends State<AddWorkoutScreen> {
                 .where((item) => _selectedItemIds.contains(item.id))
                 .toList();
 
+        String buttonLabel;
+        if (selectedPresetItems.isEmpty) {
+          buttonLabel = 'Select workouts';
+        } else if (selectedPresetItems.length == 1) {
+          buttonLabel = 'Add 1 workout';
+        } else {
+          buttonLabel = 'Add ${selectedPresetItems.length} workouts';
+        }
+
         return Scaffold(
           appBar: AppBar(title: const Text('Add Workout')),
           body: Column(
@@ -59,6 +69,7 @@ class _AddWorkoutScreenState extends State<AddWorkoutScreen> {
                 onFilterLabelChanged:
                     (value) => setState(() => _filterLabel = value ?? ''),
               ),
+              SizedBox(height: 8),
               Expanded(
                 child: Stack(
                   children: [
@@ -100,9 +111,7 @@ class _AddWorkoutScreenState extends State<AddWorkoutScreen> {
                             //   shadowColor: Colors.transparent,
                             // ),
                             onPressed: () {},
-                            child: Text(
-                              'Add ${selectedPresetItems.length} workouts',
-                            ),
+                            child: Text(buttonLabel),
                           ),
                         ),
                       ),
@@ -135,13 +144,15 @@ class WorkoutCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
+        color: context.colorScheme.surfaceBright,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
           side: BorderSide(
+            width: isSelected ? 2.5 : 1.5,
             color:
                 isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.black,
+                    ? context.colorScheme.primary
+                    : context.colorScheme.secondary,
           ),
         ),
         child: Padding(
