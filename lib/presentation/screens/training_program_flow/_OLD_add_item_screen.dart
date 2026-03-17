@@ -1,0 +1,470 @@
+import 'package:flash_forward/constants/field_limits.dart';
+import 'package:flash_forward/models/exercise.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/presentation/widgets/add_exercise_modal_sheet.dart';
+import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/themes/app_shadow.dart';
+import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/themes/app_colors.dart';
+
+class AddItemScreen extends StatefulWidget {
+  final String itemName;
+
+  const AddItemScreen({super.key, required this.itemName});
+
+  @override
+  State<AddItemScreen> createState() => _AddItemScreenState();
+}
+
+class _AddItemScreenState extends State<AddItemScreen> {
+  final Set<String> _selectedItemIds = {};
+  final Set<String> _expandedItemIds = {};
+
+  final _formKey = GlobalKey<FormState>();
+
+  final _titleController = TextEditingController();
+  final _itemLabelController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _timeBetweenExercisesController = TextEditingController();
+
+  String _query = '';
+  String _filterLabel = '';
+  late final String listItemName;
+
+  @override
+  void initState() {
+    super.initState();
+    listItemName = widget.itemName == 'session' ? 'workouts' : 'exercises';
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _itemLabelController.dispose();
+    _descriptionController.dispose();
+    _timeBetweenExercisesController.dispose();
+    super.dispose();
+  }
+
+  void _onPressedAddButton() {
+    if (widget.itemName == 'session') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AddItemScreen(itemName: 'workout'),
+        ),
+      );
+    } else if (widget.itemName == 'workout') {
+      addExerciseModalSheet();
+    }
+  }
+
+  Future<dynamic> addExerciseModalSheet() {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (BuildContext builder) {
+        return AddExerciseModalSheet();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PresetProvider>(
+      builder: (BuildContext context, presetData, Widget? child) {
+        final List<dynamic> allPresetItems =
+            widget.itemName == 'session'
+                ? presetData.presetWorkouts
+                : presetData.presetExercises;
+
+        // Determine which user ID set applies
+        final userIDs =
+            widget.itemName == 'session'
+                ? presetData.presetUserWorkoutsIDs
+                : presetData.presetUserExerciseIDs;
+
+        final String labelFilter = _filterLabel.trim();
+
+        final List<dynamic> filteredPresetItems =
+            allPresetItems.where((item) {
+              // Check whether presetItems contains the search query typed by user
+              final matchesTitle = item.title.toLowerCase().contains(
+                _query.toLowerCase().trim(),
+              );
+
+              // Check whether presetItems contains the label selected
+              final matchesLabel =
+                  labelFilter.isEmpty
+                      ? true
+                      : (item.label ?? '').toLowerCase() ==
+                          labelFilter.toLowerCase();
+
+              return matchesTitle && matchesLabel;
+            }).toList();
+
+        final List<dynamic> selectedPresetItems =
+            allPresetItems
+                .where((item) => _selectedItemIds.contains(item.id))
+                .toList();
+
+        return Scaffold(
+          appBar: AppBar(),
+          body: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Form(
+              key: _formKey,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildFormFields(), // TODO: fix spacing issues
+                    // SizedBox(height: 16),
+                    // SearchFilterRow(
+                    //   listItemName: listItemName,
+                    //   onQueryChanged: (value) => setState(() => _query = value),
+                    //   onFilterLabelChanged:
+                    //       (value) =>
+                    //           setState(() => _filterLabel = value ?? ''),
+                    //   onAddPressed: _onPressedAddButton,
+                    // ),
+                    Expanded(
+                      flex: 3,
+                      child: _buildListView(filteredPresetItems, userIDs),
+                    ),
+                    SizedBox(height: 8),
+                    SizedBox(
+                      height: 50,
+                      child: Center(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            textStyle: context.h4,
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              final title = _titleController.text.trim();
+                              final label = _itemLabelController.text.trim();
+                              final description =
+                                  _descriptionController.text.trim();
+                              final timeBetweenExercises =
+                                  _timeBetweenExercisesController.text.trim();
+
+                              if (widget.itemName == 'session') {
+                                final newSession = Session(
+                                  title: title,
+                                  label: label,
+                                  description: description,
+                                  workouts:
+                                      selectedPresetItems
+                                          .whereType<Workout>()
+                                          .toList(),
+                                );
+                                presetData.addPresetSession(newSession);
+                              } else if (widget.itemName == 'workout') {
+                                final newWorkout = Workout(
+                                  title: title,
+                                  label: label,
+                                  description: description,
+                                  timeBetweenExercises: int.parse(
+                                    timeBetweenExercises,
+                                  ),
+                                  exercises:
+                                      selectedPresetItems
+                                          .whereType<
+                                            Exercise
+                                          >() //should be all, but safer than .cast()
+                                          .map((e) => e.deepCopy())
+                                          .toList(),
+                                );
+                                presetData.addPresetWorkout(newWorkout);
+                              }
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${widget.itemName} submitted successfully!',
+                                  ),
+                                ),
+                              );
+
+                              Navigator.pop(context);
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 4,
+                            ),
+                            child: Text('Save ${widget.itemName}'),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 50),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Column _buildFormFields() {
+    return Column(
+      children: [
+        SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _titleController,
+                // autofocus: true,
+                maxLength: FieldLimits.workoutTitleMaxLength,
+                decoration: InputDecoration(
+                  fillColor: context.colorScheme.surfaceBright,
+                  labelText: 'Title',
+                  labelStyle: context.bodyMedium,
+                ),
+                validator: FieldValidators.workoutTitle,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _descriptionController,
+                // autofocus: true,
+                maxLength: FieldLimits.workoutDescriptionMaxLength,
+                decoration: InputDecoration(
+                  fillColor: context.colorScheme.surfaceBright,
+                  labelText: 'Description',
+                  labelStyle: context.bodyMedium,
+                ),
+                validator: FieldValidators.workoutDescription,
+              ),
+            ),
+            if (widget.itemName == 'workout') ...[],
+          ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: MyLabelDropdownButton(
+                value:
+                    _itemLabelController.text.isNotEmpty
+                        ? _itemLabelController.text
+                        : null,
+                onChanged: (value) {
+                  setState(() {
+                    _itemLabelController.text = value ?? '';
+                  });
+                },
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty
+                            ? 'Please select a label'
+                            : null,
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child:
+                  widget.itemName == 'workout'
+                      ? TextFormField(
+                        controller: _timeBetweenExercisesController,
+                        // autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          fillColor: context.colorScheme.surfaceBright,
+                          labelText: 'Time between exercises',
+                          labelStyle: context.bodyMedium,
+                        ),
+                      )
+                      : SizedBox.shrink(),
+            ),
+          ],
+        ),
+        SizedBox(height: 24),
+      ],
+    );
+  }
+
+  ListView _buildListView(
+    List<dynamic> filteredPresetItems,
+    Set<String> userIDs,
+  ) {
+    return ListView.builder(
+      itemCount: filteredPresetItems.length,
+      padding: EdgeInsets.symmetric(horizontal: 8),
+      itemBuilder: (BuildContext context, int index) {
+        final isExpanded = _expandedItemIds.contains(
+          filteredPresetItems[index].id,
+        );
+
+        final isUserDefined = userIDs.contains(filteredPresetItems[index].id);
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                width: 0.5,
+                color: context.colorScheme.onSurface,
+              ),
+              color: context.colorScheme.surfaceBright,
+              boxShadow: context.shadowSmall,
+            ),
+            child: ListTile(
+              contentPadding: EdgeInsets.fromLTRB(8, 8, 16, 0),
+              minVerticalPadding: 0,
+              leading: Checkbox(
+                value: _selectedItemIds.contains(filteredPresetItems[index].id),
+                onChanged: (bool? value) {
+                  setState(() {
+                    final id = filteredPresetItems[index].id;
+                    value!
+                        ? _selectedItemIds.add(id)
+                        : _selectedItemIds.remove(id);
+                  });
+                },
+              ),
+              title: Text(
+                filteredPresetItems[index].title,
+                style: context.titleMedium,
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  filteredPresetItems[index].description != null
+                      ? Text(
+                        filteredPresetItems[index].description!,
+                        style: context.bodyMedium,
+                      )
+                      : SizedBox.shrink(),
+                  if (isExpanded &&
+                      filteredPresetItems[index] is Workout) ...<Widget>[
+                    SizedBox(height: 2),
+                    Text('Exercises:'),
+                    for (final exercise in filteredPresetItems[index].exercises)
+                      Text(exercise.title),
+                  ] else if (isExpanded &&
+                      filteredPresetItems[index]
+                          is Exercise) ...<Widget>[
+                    SizedBox(height: 2),
+                    Text(
+                      'Load:',
+                    ), //TODO: edit to display more useful information
+                    Text(
+                      '${filteredPresetItems[index].load.toString()} kg',
+                    ),
+                  ],
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          final id = filteredPresetItems[index].id;
+                          isExpanded
+                              ? _expandedItemIds.remove(id)
+                              : _expandedItemIds.add(id);
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              trailing:
+                  isUserDefined
+                      ? IconButton(
+                        onPressed: () {
+                          _removeItemPopUp(filteredPresetItems[index]);
+                        },
+                        icon: Icon(Icons.delete),
+                      )
+                      : null,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _removeItemPopUp(dynamic filteredPresetItem) {
+    final item = filteredPresetItem;
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(item.title, style: dialogContext.h3),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Description: \n${item.description}',
+                style: dialogContext.bodyMedium,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Do you want to remove ${item.title}?',
+                style: dialogContext.bodyLarge,
+              ),
+            ],
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Cancel'),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    final presetData = Provider.of<PresetProvider>(
+                      context,
+                      listen: false,
+                    );
+                    if (item is Workout) {
+                      presetData.deleteUserPresetWorkout(item.id);
+                    } else if (item is Exercise) {
+                      presetData.deleteUserPresetExercise(item.id);
+                    }
+                    Navigator.of(dialogContext).pop();
+                  },
+
+                  child: Text('Remove'),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}

@@ -1,5 +1,7 @@
 import 'package:flash_forward/constants/field_limits.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -17,6 +19,15 @@ class NewWorkoutScreen extends StatefulWidget {
 
 class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  late Workout _workout =
+      widget.workout ??
+      Workout(
+        title: 'title',
+        label: 'label',
+        exercises: [],
+        timeBetweenExercises: 120,
+      );
 
   late final _titleController = TextEditingController(
     text: widget.workout?.title,
@@ -38,7 +49,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final workout = widget.workout;
+    final workout = _workout;
 
     return Scaffold(
       appBar: AppBar(
@@ -220,12 +231,25 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          List<Exercise>? addedExercises = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => NewExerciseScreen()),
+            MaterialPageRoute<List<Exercise>>(
+              builder:
+                  (context) => AddWorkoutScreen(itemType: ItemType.exercises),
+            ),
           );
+
+          if (addedExercises != null && addedExercises.isNotEmpty) {
+            setState(() {
+              _workout = _workout.copyWith(
+                exercises: [..._workout.exercises, ...addedExercises],
+              );
+            });
+          }
         },
+
+        
         child: Icon(Icons.add),
       ),
     );

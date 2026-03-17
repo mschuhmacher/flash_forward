@@ -2,7 +2,7 @@ import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/add_workout_screen.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
@@ -235,7 +235,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
           List<Workout>? addedWorkouts = await Navigator.push(
             context,
             MaterialPageRoute<List<Workout>>(
-              builder: (context) => AddWorkoutScreen(),
+              builder:
+                  (context) => AddWorkoutScreen(itemType: ItemType.workouts),
             ),
           );
 
