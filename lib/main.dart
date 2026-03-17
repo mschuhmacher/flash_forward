@@ -12,7 +12,6 @@ import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_theme.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -29,7 +28,7 @@ void main() async {
 
   await SentryFlutter.init(
     (options) {
-      options.dsn = const String.fromEnvironment('SENTRY_DSN');
+      options.dsn = kDebugMode ? '' : const String.fromEnvironment('SENTRY_DSN');
       options.environment = kDebugMode ? 'debug' : 'production';
       options.release =
           'flash_forward@${packageInfo.version}+${packageInfo.buildNumber}';

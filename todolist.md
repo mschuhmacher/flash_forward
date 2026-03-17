@@ -23,6 +23,7 @@
 ## BUGS:
 - create tests for offline mode
 - conflict resolution between local and cloud data
+- RAM overusage - check Sentry WatchDogTermination error
 
 ## USER FEEDBACK
 - during sign up: continue button is hidden by keyboard, no minimize keyboard button
