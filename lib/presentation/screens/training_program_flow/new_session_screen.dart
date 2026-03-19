@@ -7,6 +7,7 @@ import 'package:flash_forward/presentation/screens/training_program_flow/new_wor
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -138,88 +139,29 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
               SizedBox(height: 8),
               // Expanded(child: Center(child: Text('No workouts added yet!'))),
               session.workouts.isEmpty
-                  ? Expanded(child: Center(child: Text('Add a workout!')))
+                  ? Expanded(
+                    child: Center(
+                      child: Text(
+                        'No workouts yet',
+                        style: context.bodyMedium.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  )
                   : Expanded(
-                    child:
-                    // SessionSelectListView(item: session.workouts),
-                    ListView.builder(
+                    child: ListView.builder(
+                      padding: EdgeInsets.only(top: 4, bottom: 16),
                       itemCount: session.workouts.length,
                       itemBuilder: (BuildContext context, int index) {
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => NewWorkoutScreen(
-                                      workout: session.workouts[index],
-                                    ),
-                              ),
-                            );
-                          },
-                          child: Card(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(session.workouts[index].title),
-                                    Text(session.workouts[index].label),
-                                  ],
-                                ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      flex: 5,
-                                      child: Text(
-                                        session.workouts[index].description!,
-                                        overflow: TextOverflow.fade,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 1,
-                                      child: Text(
-                                        session
-                                            .workouts[index]
-                                            .timeBetweenExercises
-                                            .toString(),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    SizedBox(width: 60, child: Text('Sets:')),
-                                    SizedBox(width: 60, child: Text('Reps:')),
-                                    SizedBox(width: 70, child: Text('Load:')),
-                                  ],
-                                ),
-                                for (var exercise
-                                    in session.workouts[index].exercises)
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Expanded(child: Text(exercise.title)),
-                                      SizedBox(
-                                        width: 60,
-                                        child: Text(exercise.sets.toString()),
-                                      ),
-                                      SizedBox(
-                                        width: 60,
-                                        child: Text(exercise.reps.toString()),
-                                      ),
-                                      SizedBox(
-                                        width: 70,
-                                        child: Text(exercise.load.toString()),
-                                      ),
-                                    ],
-                                  ),
-                              ],
+                        final workout = session.workouts[index];
+                        return _WorkoutCard(
+                          workout: workout,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  NewWorkoutScreen(workout: workout),
                             ),
                           ),
                         );
@@ -248,6 +190,167 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
           }
         },
         child: Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _WorkoutCard extends StatelessWidget {
+  final Workout workout;
+  final VoidCallback onTap;
+
+  const _WorkoutCard({required this.workout, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.colorScheme.surfaceBright,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: context.colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+          boxShadow: context.shadowSmall,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(workout.title, style: context.titleMedium),
+                _LabelBadge(labelKey: workout.label),
+              ],
+            ),
+            if (workout.description != null &&
+                workout.description!.isNotEmpty) ...[
+              SizedBox(height: 2),
+              Text(
+                workout.description!,
+                style: context.bodyMedium.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (workout.exercises.isNotEmpty) ...[
+              SizedBox(height: 10),
+              Divider(height: 1),
+              SizedBox(height: 8),
+              // Column headers
+              Row(
+                children: [
+                  Expanded(child: SizedBox.shrink()),
+                  SizedBox(
+                    width: 40,
+                    child: Text(
+                      'Sets',
+                      style: context.bodyMedium.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 40,
+                    child: Text(
+                      'Reps',
+                      style: context.bodyMedium.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      'Load',
+                      style: context.bodyMedium.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 4),
+              // Exercise rows
+              for (final exercise in workout.exercises)
+                Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(exercise.title, style: context.bodyMedium),
+                      ),
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '${exercise.sets}',
+                          style: context.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '${exercise.reps}',
+                          style: context.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 60,
+                        child: Text(
+                          exercise.load > 0
+                              ? exercise.loadUnit != null
+                                  ? '${exercise.load} ${exercise.loadUnit}'
+                                  : '${exercise.load}'
+                              : '—',
+                          style: context.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LabelBadge extends StatelessWidget {
+  final String labelKey;
+  const _LabelBadge({required this.labelKey});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = kDefaultLabels[labelKey];
+    if (label == null) return SizedBox.shrink();
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: label.color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(label.icon, size: 12, color: label.color),
+          SizedBox(width: 4),
+          Text(
+            label.name,
+            style: context.bodyMedium.copyWith(color: label.color, fontSize: 12),
+          ),
+        ],
       ),
     );
   }

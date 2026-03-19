@@ -1,10 +1,12 @@
 import 'package:flash_forward/constants/field_limits.dart';
+import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -143,79 +145,29 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
               SizedBox(height: 8),
               // Expanded(child: Center(child: Text('No workouts added yet!'))),
               workout.exercises.isEmpty
-                  ? Expanded(child: Center(child: Text('Add a exercise!')))
+                  ? Expanded(
+                    child: Center(
+                      child: Text(
+                        'No exercises yet',
+                        style: context.bodyMedium.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  )
                   : Expanded(
                     child: ListView.builder(
+                      padding: EdgeInsets.only(top: 4, bottom: 16),
                       itemCount: workout.exercises.length,
                       itemBuilder: (BuildContext context, int index) {
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => NewExerciseScreen(
-                                      exercise: workout.exercises[index],
-                                    ),
-                              ),
-                            );
-                          },
-                          child: Card(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(workout.exercises[index].title),
-                                    Text(workout.exercises[index].label),
-                                  ],
-                                ),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        workout.exercises[index].description,
-                                      ),
-                                    ),
-                                    Text(
-                                      workout.exercises[index].timeBetweenSets
-                                          .toString(),
-                                    ),
-                                  ],
-                                ),
-                                for (
-                                  int i = 0;
-                                  i < workout.exercises[index].sets;
-                                  i++
-                                )
-                                  Row(
-                                    children: [
-                                      SizedBox(
-                                        width: 60,
-                                        child: Text(
-                                          'Sets: ${workout.exercises[index].sets}',
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 80,
-                                        child: Text(
-                                          'Reps: ${workout.exercises[index].reps}',
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 80,
-                                        child: Text(
-                                          'Load: ${workout.exercises[index].load}',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                              ],
+                        final exercise = workout.exercises[index];
+                        return _ExerciseCard(
+                          exercise: exercise,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  NewExerciseScreen(exercise: exercise),
                             ),
                           ),
                         );
@@ -245,6 +197,131 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         },
 
         child: Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _ExerciseCard extends StatelessWidget {
+  final Exercise exercise;
+  final VoidCallback onTap;
+
+  const _ExerciseCard({required this.exercise, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.colorScheme.surfaceBright,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: context.colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+          boxShadow: context.shadowSmall,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(exercise.title, style: context.titleMedium),
+                _LabelBadge(labelKey: exercise.label),
+              ],
+            ),
+            if (exercise.description.isNotEmpty) ...[
+              SizedBox(height: 2),
+              Text(
+                exercise.description,
+                style: context.bodyMedium.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            SizedBox(height: 10),
+            Divider(height: 1),
+            SizedBox(height: 8),
+            Wrap(
+              spacing: 16,
+              runSpacing: 6,
+              children: [
+                _StatPill(label: 'Sets', value: '${exercise.sets}'),
+                _StatPill(label: 'Reps', value: '${exercise.reps}'),
+                if (exercise.load > 0)
+                  _StatPill(
+                    label: 'Load',
+                    value: exercise.loadUnit != null
+                        ? '${exercise.load} ${exercise.loadUnit}'
+                        : '${exercise.load}',
+                  ),
+                _StatPill(
+                  label: 'Rest',
+                  value: '${exercise.timeBetweenSets}s',
+                ),
+                _StatPill(
+                  label: 'Active',
+                  value: '${exercise.timePerRep * exercise.reps}s',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _StatPill({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$label ',
+          style: context.bodyMedium.copyWith(
+            color: context.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Text(value, style: context.bodyMedium),
+      ],
+    );
+  }
+}
+
+class _LabelBadge extends StatelessWidget {
+  final String labelKey;
+  const _LabelBadge({required this.labelKey});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = kDefaultLabels[labelKey];
+    if (label == null) return SizedBox.shrink();
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: label.color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(label.icon, size: 12, color: label.color),
+          SizedBox(width: 4),
+          Text(
+            label.name,
+            style: context.bodyMedium.copyWith(color: label.color, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
