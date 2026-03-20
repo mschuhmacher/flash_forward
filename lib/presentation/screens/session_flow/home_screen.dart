@@ -486,7 +486,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Auto-dismiss after 2 seconds
     Future.delayed(Duration(seconds: 2), () {
-      overlayEntry?.remove();
+      if (overlayEntry?.mounted == true) {
+        overlayEntry?.remove();
+      }
     });
   }
 
