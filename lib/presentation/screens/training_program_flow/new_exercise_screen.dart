@@ -1,6 +1,7 @@
 import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
+import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -47,10 +48,13 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
   late String? _difficulty = widget.exercise?.difficulty;
   late String? _loadUnit = widget.exercise?.loadUnit;
 
-  late ExerciseType _exerciseType = widget.exercise?.type ?? ExerciseType.timedReps;
+  late ExerciseType _exerciseType =
+      widget.exercise?.type ?? ExerciseType.timedReps;
   late int _sets = widget.exercise?.sets ?? 3;
-  late int? _reps = widget.exercise?.reps ?? 10; // null = no target for fixedDuration/manual
-  late bool _repsEnabled = widget.exercise?.reps != null; // only used for fixedDuration/manual
+  late int? _reps =
+      widget.exercise?.reps ?? 10; // null = no target for fixedDuration/manual
+  late bool _repsEnabled =
+      widget.exercise?.reps != null; // only used for fixedDuration/manual
   late int _timeBetweenSets = widget.exercise?.timeBetweenSets ?? 60;
   late int _timePerRep = widget.exercise?.timePerRep ?? 3;
   late int _timeBetweenReps = widget.exercise?.timeBetweenReps ?? 0;
@@ -103,9 +107,10 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
         difficulty: _difficulty,
         type: _exerciseType,
         sets: _sets,
-        reps: _exerciseType == ExerciseType.timedReps
-            ? (_reps ?? 10)
-            : (_repsEnabled ? _reps : null),
+        reps:
+            _exerciseType == ExerciseType.timedReps
+                ? (_reps ?? 10)
+                : (_repsEnabled ? _reps : null),
         timeBetweenSets: _timeBetweenSets,
         timePerRep: _timePerRep,
         timeBetweenReps: _timeBetweenReps,
@@ -150,6 +155,8 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
           child: ListView(
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
             children: [
+              const KeyboardDismissButton(),
+
               // ── Title + Label ──────────────────────────────────
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,16 +235,17 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                   // ── Exercise type selector ──
                   _ExerciseTypeSelector(
                     value: _exerciseType,
-                    onChanged: (type) => setState(() {
-                      _exerciseType = type;
-                      // Reset reps enablement when switching types
-                      if (type == ExerciseType.timedReps) {
-                        _repsEnabled = true;
-                        _reps ??= 10;
-                      } else {
-                        _repsEnabled = widget.exercise?.reps != null;
-                      }
-                    }),
+                    onChanged:
+                        (type) => setState(() {
+                          _exerciseType = type;
+                          // Reset reps enablement when switching types
+                          if (type == ExerciseType.timedReps) {
+                            _repsEnabled = true;
+                            _reps ??= 10;
+                          } else {
+                            _repsEnabled = widget.exercise?.reps != null;
+                          }
+                        }),
                   ),
                   _Divider(),
 
@@ -257,15 +265,26 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       label: 'Reps',
                       value: _reps ?? 10,
                       minimum: 1,
-                      onDecrement: () => setState(() => _reps = ((_reps ?? 10) - 1).clamp(1, 9999)),
-                      onIncrement: () => setState(() => _reps = (_reps ?? 10) + 1),
+                      onDecrement:
+                          () => setState(
+                            () => _reps = ((_reps ?? 10) - 1).clamp(1, 9999),
+                          ),
+                      onIncrement:
+                          () => setState(() => _reps = (_reps ?? 10) + 1),
                     ),
                     _Divider(),
                     _CounterRow(
                       label: 'Rest between sets',
                       value: _timeBetweenSets,
                       minimum: 0,
-                      onDecrement: () => setState(() => _timeBetweenSets = (_timeBetweenSets - 5).clamp(0, 9999)),
+                      onDecrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenSets = (_timeBetweenSets - 5).clamp(
+                                  0,
+                                  9999,
+                                ),
+                          ),
                       onIncrement: () => setState(() => _timeBetweenSets += 5),
                     ),
                     SizedBox(height: 8),
@@ -289,7 +308,11 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       label: 'Active time (s)',
                       value: _activeTime,
                       minimum: 5,
-                      onDecrement: () => setState(() => _activeTime = (_activeTime - 5).clamp(5, 9999)),
+                      onDecrement:
+                          () => setState(
+                            () =>
+                                _activeTime = (_activeTime - 5).clamp(5, 9999),
+                          ),
                       onIncrement: () => setState(() => _activeTime += 5),
                     ),
                     _Divider(),
@@ -297,19 +320,31 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       label: 'Rest between sets',
                       value: _timeBetweenSets,
                       minimum: 0,
-                      onDecrement: () => setState(() => _timeBetweenSets = (_timeBetweenSets - 5).clamp(0, 9999)),
+                      onDecrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenSets = (_timeBetweenSets - 5).clamp(
+                                  0,
+                                  9999,
+                                ),
+                          ),
                       onIncrement: () => setState(() => _timeBetweenSets += 5),
                     ),
                     _Divider(),
                     _OptionalRepsRow(
                       enabled: _repsEnabled,
                       reps: _reps ?? 5,
-                      onToggle: (enabled) => setState(() {
-                        _repsEnabled = enabled;
-                        if (enabled) _reps ??= 5;
-                      }),
-                      onDecrement: () => setState(() => _reps = ((_reps ?? 5) - 1).clamp(1, 9999)),
-                      onIncrement: () => setState(() => _reps = (_reps ?? 5) + 1),
+                      onToggle:
+                          (enabled) => setState(() {
+                            _repsEnabled = enabled;
+                            if (enabled) _reps ??= 5;
+                          }),
+                      onDecrement:
+                          () => setState(
+                            () => _reps = ((_reps ?? 5) - 1).clamp(1, 9999),
+                          ),
+                      onIncrement:
+                          () => setState(() => _reps = (_reps ?? 5) + 1),
                     ),
                   ] else ...[
                     // manual
@@ -317,19 +352,31 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       label: 'Rest between sets',
                       value: _timeBetweenSets,
                       minimum: 0,
-                      onDecrement: () => setState(() => _timeBetweenSets = (_timeBetweenSets - 5).clamp(0, 9999)),
+                      onDecrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenSets = (_timeBetweenSets - 5).clamp(
+                                  0,
+                                  9999,
+                                ),
+                          ),
                       onIncrement: () => setState(() => _timeBetweenSets += 5),
                     ),
                     _Divider(),
                     _OptionalRepsRow(
                       enabled: _repsEnabled,
                       reps: _reps ?? 5,
-                      onToggle: (enabled) => setState(() {
-                        _repsEnabled = enabled;
-                        if (enabled) _reps ??= 5;
-                      }),
-                      onDecrement: () => setState(() => _reps = ((_reps ?? 5) - 1).clamp(1, 9999)),
-                      onIncrement: () => setState(() => _reps = (_reps ?? 5) + 1),
+                      onToggle:
+                          (enabled) => setState(() {
+                            _repsEnabled = enabled;
+                            if (enabled) _reps ??= 5;
+                          }),
+                      onDecrement:
+                          () => setState(
+                            () => _reps = ((_reps ?? 5) - 1).clamp(1, 9999),
+                          ),
+                      onIncrement:
+                          () => setState(() => _reps = (_reps ?? 5) + 1),
                     ),
                   ],
                   _Divider(),
@@ -530,6 +577,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                 ),
               ),
               SizedBox(height: 32),
+              const KeyboardDismissButton(),
             ],
           ),
         ),
@@ -559,16 +607,27 @@ class _ExerciseTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<ExerciseType>(
-      segments: const [
-        ButtonSegment(value: ExerciseType.timedReps, label: Text('Timed reps')),
-        ButtonSegment(value: ExerciseType.fixedDuration, label: Text('Fixed duration')),
-        ButtonSegment(value: ExerciseType.manual, label: Text('Manual')),
-      ],
-      selected: {value},
-      onSelectionChanged: (selection) => onChanged(selection.first),
-      style: ButtonStyle(
-        visualDensity: VisualDensity.compact,
+    return SizedBox(
+      height: 40,
+      child: SegmentedButton<ExerciseType>(
+        segments: [
+          ButtonSegment(
+            value: ExerciseType.timedReps,
+            label: Text('Timed reps', style: context.bodyMedium,),
+          ),
+          ButtonSegment(
+            value: ExerciseType.fixedDuration,
+            label: Text('Fixed duration', style: context.bodyMedium,),
+          ),
+          ButtonSegment(value: ExerciseType.manual, label: Text('Manual', style: context.bodyMedium,)),
+        ],
+        selected: {value},
+        onSelectionChanged: (selection) => onChanged(selection.first),
+        showSelectedIcon: false,
+        style: ButtonStyle(
+          visualDensity: VisualDensity(horizontal: 0, vertical: -2),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
       ),
     );
   }

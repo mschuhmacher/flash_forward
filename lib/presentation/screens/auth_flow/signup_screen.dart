@@ -1,4 +1,5 @@
 import 'package:flash_forward/presentation/screens/auth_flow/email_confirmation_screen.dart';
+import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
@@ -165,6 +166,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               children: [_buildStep1(), _buildStep2(), _buildStep3()],
             ),
           ),
+          const KeyboardDismissButton(),
         ],
       ),
       bottomNavigationBar: SafeArea(
