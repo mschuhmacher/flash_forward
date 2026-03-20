@@ -22,6 +22,11 @@ class NewWorkoutScreen extends StatefulWidget {
 class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  bool get _isNew => widget.workout == null;
+
+  bool get _canEditMetadata =>
+      widget.workout == null || widget.workout!.userId != null;
+
   late Workout _workout =
       widget.workout ??
       Workout(
@@ -59,7 +64,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             SizedBox.shrink(),
-            Text(workout.title == 'title' ? 'New workout' : 'Edit workout'),
+            Text(_isNew ? 'New workout' : 'Edit workout'),
             ElevatedButton(
               onPressed: () {},
               style: ButtonStyle().copyWith(
@@ -86,7 +91,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                     flex: 3,
                     child: TextFormField(
                       controller: _titleController,
-                      // autofocus: true,
+                      enabled: _canEditMetadata,
                       maxLength: FieldLimits.workoutTitleMaxLength,
                       decoration: InputDecoration(
                         fillColor: context.colorScheme.surfaceBright,
@@ -97,23 +102,33 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: FieldValidators.workoutTitle,
+                      validator: _canEditMetadata
+                          ? FieldValidators.workoutTitle
+                          : null,
                     ),
                   ),
                   SizedBox(width: 8),
                   Expanded(
                     flex: 2,
-                    child: MyLabelDropdownButton(
-                      value:
-                          _itemLabelController.text.isNotEmpty
-                              ? _itemLabelController.text
+                    child: Opacity(
+                      opacity: _canEditMetadata ? 1.0 : 0.5,
+                      child: IgnorePointer(
+                        ignoring: !_canEditMetadata,
+                        child: MyLabelDropdownButton(
+                          value:
+                              _itemLabelController.text.isNotEmpty
+                                  ? _itemLabelController.text
+                                  : null,
+                          onChanged: (value) {
+                            setState(() {
+                              _itemLabelController.text = value ?? '';
+                            });
+                          },
+                          validator: _canEditMetadata
+                              ? FieldValidators.label
                               : null,
-                      onChanged: (value) {
-                        setState(() {
-                          _itemLabelController.text = value ?? '';
-                        });
-                      },
-                      validator: FieldValidators.label,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -124,8 +139,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _descriptionController,
-                      // autofocus: true,
-                      maxLength: FieldLimits.sessionDescriptionMaxLength,
+                      enabled: _canEditMetadata,
+                      maxLength: FieldLimits.workoutDescriptionMaxLength,
                       maxLines: null,
                       decoration: InputDecoration(
                         fillColor: context.colorScheme.surfaceBright,
@@ -136,7 +151,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: FieldValidators.sessionDescription,
+                      validator: _canEditMetadata
+                          ? FieldValidators.workoutDescription
+                          : null,
                     ),
                   ),
                   // if (widget.itemName == 'workout') ...[],

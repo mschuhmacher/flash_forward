@@ -2,10 +2,12 @@ import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 class NewExerciseScreen extends StatefulWidget {
   final Exercise? exercise;
@@ -32,9 +34,10 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
     text: widget.exercise?.muscleGroups,
   );
   late final _loadController = TextEditingController(
-    text: widget.exercise != null && widget.exercise!.load > 0
-        ? widget.exercise!.load.toString()
-        : '',
+    text:
+        widget.exercise != null && widget.exercise!.load > 0
+            ? widget.exercise!.load.toString()
+            : '',
   );
   late final _notesController = TextEditingController(
     text: widget.exercise?.notes,
@@ -59,6 +62,10 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   bool get _isNew => widget.exercise == null;
 
+  // Catalog exercises have no userId — title/label/description are locked.
+  bool get _canEditMetadata =>
+      widget.exercise == null || widget.exercise!.userId != null;
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -75,7 +82,10 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
       final exercise = Exercise(
         id: widget.exercise?.id,
         templateId: widget.exercise?.templateId,
-        userId: widget.exercise?.userId,
+        // userID is null for default exercises and has a value for user-generated ones. This is retained when editing and the user's ID is attached for new exercises.
+        userId:
+            widget.exercise?.userId ??
+            Provider.of<AuthProvider>(context, listen: false).userId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         label: _label ?? '',
@@ -117,7 +127,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
               SizedBox.shrink(),
               Text(_isNew ? 'New Exercise' : 'Edit Exercise'),
               ElevatedButton(
-                onPressed: (){}, //_save,
+                onPressed: () {}, //_save,
                 style: ButtonStyle().copyWith(
                   padding: WidgetStatePropertyAll(
                     EdgeInsets.symmetric(vertical: 0, horizontal: 16),
@@ -142,6 +152,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                     child: TextFormField(
                       controller: _titleController,
                       autofocus: _isNew,
+                      enabled: _canEditMetadata,
                       maxLength: FieldLimits.exerciseTitleMaxLength,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
@@ -153,16 +164,26 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: FieldValidators.exerciseTitle,
+                      validator:
+                          _canEditMetadata
+                              ? FieldValidators.exerciseTitle
+                              : null,
                     ),
                   ),
                   SizedBox(width: 8),
                   Expanded(
                     flex: 2,
-                    child: MyLabelDropdownButton(
-                      value: _label,
-                      onChanged: (value) => setState(() => _label = value),
-                      validator: FieldValidators.label,
+                    child: Opacity(
+                      opacity: _canEditMetadata ? 1.0 : 0.5,
+                      child: IgnorePointer(
+                        ignoring: !_canEditMetadata,
+                        child: MyLabelDropdownButton(
+                          value: _label,
+                          onChanged: (value) => setState(() => _label = value),
+                          validator:
+                              _canEditMetadata ? FieldValidators.label : null,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -172,6 +193,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
               // ── Description ────────────────────────────────────
               TextFormField(
                 controller: _descriptionController,
+                enabled: _canEditMetadata,
                 maxLength: FieldLimits.exerciseDescriptionMaxLength,
                 maxLines: null,
                 textInputAction: TextInputAction.next,
@@ -184,7 +206,10 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                     horizontal: 8,
                   ),
                 ),
-                validator: FieldValidators.exerciseDescription,
+                validator:
+                    _canEditMetadata
+                        ? FieldValidators.exerciseDescription
+                        : null,
               ),
               SizedBox(height: 20),
 
@@ -217,8 +242,10 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                     onDecrement:
                         () => setState(
                           () =>
-                              _timeBetweenSets =
-                                  (_timeBetweenSets - 5).clamp(0, 9999),
+                              _timeBetweenSets = (_timeBetweenSets - 5).clamp(
+                                0,
+                                9999,
+                              ),
                         ),
                     onIncrement: () => setState(() => _timeBetweenSets += 5),
                   ),
@@ -284,8 +311,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                                 selected: _loadUnit == unit,
                                 onSelected:
                                     (selected) => setState(
-                                      () =>
-                                          _loadUnit = selected ? unit : null,
+                                      () => _loadUnit = selected ? unit : null,
                                     ),
                               );
                             }).toList(),
@@ -358,8 +384,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                                   selected: _difficulty == d,
                                   onSelected:
                                       (selected) => setState(
-                                        () =>
-                                            _difficulty = selected ? d : null,
+                                        () => _difficulty = selected ? d : null,
                                       ),
                                 );
                               }).toList(),
@@ -470,15 +495,13 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(left: 4),
-      child: trailing != null
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title, style: context.titleMedium),
-                trailing!,
-              ],
-            )
-          : Text(title, style: context.titleMedium),
+      child:
+          trailing != null
+              ? Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [Text(title, style: context.titleMedium), trailing!],
+              )
+              : Text(title, style: context.titleMedium),
     );
   }
 }

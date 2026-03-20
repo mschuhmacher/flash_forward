@@ -75,6 +75,7 @@
   - load field is editable per set
   - add set button
   - remove set button
+- pop-up on disabled title/label/description screens that they cannot edit these because they are catalog fields. better yet, devise a more intuitive UI for displaying and editing the exercise fields
 
 
 ## LATER STAGE
