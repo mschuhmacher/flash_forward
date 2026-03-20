@@ -47,11 +47,14 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
   late String? _difficulty = widget.exercise?.difficulty;
   late String? _loadUnit = widget.exercise?.loadUnit;
 
+  late ExerciseType _exerciseType = widget.exercise?.type ?? ExerciseType.timedReps;
   late int _sets = widget.exercise?.sets ?? 3;
-  late int _reps = widget.exercise?.reps ?? 10;
+  late int? _reps = widget.exercise?.reps ?? 10; // null = no target for fixedDuration/manual
+  late bool _repsEnabled = widget.exercise?.reps != null; // only used for fixedDuration/manual
   late int _timeBetweenSets = widget.exercise?.timeBetweenSets ?? 60;
   late int _timePerRep = widget.exercise?.timePerRep ?? 3;
   late int _timeBetweenReps = widget.exercise?.timeBetweenReps ?? 0;
+  late int _activeTime = widget.exercise?.activeTime ?? 30;
   late int _rpe = widget.exercise?.rpe ?? 5;
   late bool _rpeEnabled = widget.exercise?.rpe != null;
   late bool _detailsExpanded =
@@ -98,11 +101,15 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                 ? null
                 : _muscleGroupsController.text.trim(),
         difficulty: _difficulty,
+        type: _exerciseType,
         sets: _sets,
-        reps: _reps,
+        reps: _exerciseType == ExerciseType.timedReps
+            ? (_reps ?? 10)
+            : (_repsEnabled ? _reps : null),
         timeBetweenSets: _timeBetweenSets,
         timePerRep: _timePerRep,
         timeBetweenReps: _timeBetweenReps,
+        activeTime: _activeTime,
         load: double.tryParse(_loadController.text.trim()) ?? 0.0,
         loadUnit: _loadUnit,
         rpe: _rpeEnabled ? _rpe.clamp(1, 10) : null,
@@ -127,7 +134,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
               SizedBox.shrink(),
               Text(_isNew ? 'New Exercise' : 'Edit Exercise'),
               ElevatedButton(
-                onPressed: () {}, //_save,
+                onPressed: _save,
                 style: ButtonStyle().copyWith(
                   padding: WidgetStatePropertyAll(
                     EdgeInsets.symmetric(vertical: 0, horizontal: 16),
@@ -218,6 +225,23 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
               SizedBox(height: 8),
               _SectionCard(
                 children: [
+                  // ── Exercise type selector ──
+                  _ExerciseTypeSelector(
+                    value: _exerciseType,
+                    onChanged: (type) => setState(() {
+                      _exerciseType = type;
+                      // Reset reps enablement when switching types
+                      if (type == ExerciseType.timedReps) {
+                        _repsEnabled = true;
+                        _reps ??= 10;
+                      } else {
+                        _repsEnabled = widget.exercise?.reps != null;
+                      }
+                    }),
+                  ),
+                  _Divider(),
+
+                  // ── Sets (all types) ──
                   _CounterRow(
                     label: 'Sets',
                     value: _sets,
@@ -226,47 +250,88 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                     onIncrement: () => setState(() => _sets++),
                   ),
                   SizedBox(height: 8),
-                  _CounterRow(
-                    label: 'Reps',
-                    value: _reps,
-                    minimum: 1,
-                    onDecrement: () => setState(() => _reps--),
-                    onIncrement: () => setState(() => _reps++),
-                  ),
-                  _Divider(),
-                  _CounterRow(
-                    label: 'Rest between sets',
 
-                    value: _timeBetweenSets,
-                    minimum: 0,
-                    onDecrement:
-                        () => setState(
-                          () =>
-                              _timeBetweenSets = (_timeBetweenSets - 5).clamp(
-                                0,
-                                9999,
-                              ),
-                        ),
-                    onIncrement: () => setState(() => _timeBetweenSets += 5),
-                  ),
-                  SizedBox(height: 8),
-                  _CounterRow(
-                    label: 'Time per rep',
-
-                    value: _timePerRep,
-                    minimum: 0,
-                    onDecrement: () => setState(() => _timePerRep--),
-                    onIncrement: () => setState(() => _timePerRep++),
-                  ),
-                  SizedBox(height: 8),
-                  _CounterRow(
-                    label: 'Rest between reps',
-
-                    value: _timeBetweenReps,
-                    minimum: 0,
-                    onDecrement: () => setState(() => _timeBetweenReps--),
-                    onIncrement: () => setState(() => _timeBetweenReps++),
-                  ),
+                  // ── Type-specific fields ──
+                  if (_exerciseType == ExerciseType.timedReps) ...[
+                    _CounterRow(
+                      label: 'Reps',
+                      value: _reps ?? 10,
+                      minimum: 1,
+                      onDecrement: () => setState(() => _reps = ((_reps ?? 10) - 1).clamp(1, 9999)),
+                      onIncrement: () => setState(() => _reps = (_reps ?? 10) + 1),
+                    ),
+                    _Divider(),
+                    _CounterRow(
+                      label: 'Rest between sets',
+                      value: _timeBetweenSets,
+                      minimum: 0,
+                      onDecrement: () => setState(() => _timeBetweenSets = (_timeBetweenSets - 5).clamp(0, 9999)),
+                      onIncrement: () => setState(() => _timeBetweenSets += 5),
+                    ),
+                    SizedBox(height: 8),
+                    _CounterRow(
+                      label: 'Time per rep',
+                      value: _timePerRep,
+                      minimum: 0,
+                      onDecrement: () => setState(() => _timePerRep--),
+                      onIncrement: () => setState(() => _timePerRep++),
+                    ),
+                    SizedBox(height: 8),
+                    _CounterRow(
+                      label: 'Rest between reps',
+                      value: _timeBetweenReps,
+                      minimum: 0,
+                      onDecrement: () => setState(() => _timeBetweenReps--),
+                      onIncrement: () => setState(() => _timeBetweenReps++),
+                    ),
+                  ] else if (_exerciseType == ExerciseType.fixedDuration) ...[
+                    _CounterRow(
+                      label: 'Active time (s)',
+                      value: _activeTime,
+                      minimum: 5,
+                      onDecrement: () => setState(() => _activeTime = (_activeTime - 5).clamp(5, 9999)),
+                      onIncrement: () => setState(() => _activeTime += 5),
+                    ),
+                    _Divider(),
+                    _CounterRow(
+                      label: 'Rest between sets',
+                      value: _timeBetweenSets,
+                      minimum: 0,
+                      onDecrement: () => setState(() => _timeBetweenSets = (_timeBetweenSets - 5).clamp(0, 9999)),
+                      onIncrement: () => setState(() => _timeBetweenSets += 5),
+                    ),
+                    _Divider(),
+                    _OptionalRepsRow(
+                      enabled: _repsEnabled,
+                      reps: _reps ?? 5,
+                      onToggle: (enabled) => setState(() {
+                        _repsEnabled = enabled;
+                        if (enabled) _reps ??= 5;
+                      }),
+                      onDecrement: () => setState(() => _reps = ((_reps ?? 5) - 1).clamp(1, 9999)),
+                      onIncrement: () => setState(() => _reps = (_reps ?? 5) + 1),
+                    ),
+                  ] else ...[
+                    // manual
+                    _CounterRow(
+                      label: 'Rest between sets',
+                      value: _timeBetweenSets,
+                      minimum: 0,
+                      onDecrement: () => setState(() => _timeBetweenSets = (_timeBetweenSets - 5).clamp(0, 9999)),
+                      onIncrement: () => setState(() => _timeBetweenSets += 5),
+                    ),
+                    _Divider(),
+                    _OptionalRepsRow(
+                      enabled: _repsEnabled,
+                      reps: _reps ?? 5,
+                      onToggle: (enabled) => setState(() {
+                        _repsEnabled = enabled;
+                        if (enabled) _reps ??= 5;
+                      }),
+                      onDecrement: () => setState(() => _reps = ((_reps ?? 5) - 1).clamp(1, 9999)),
+                      onIncrement: () => setState(() => _reps = (_reps ?? 5) + 1),
+                    ),
+                  ],
                   _Divider(),
 
                   // Load
@@ -485,6 +550,81 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 }
 
 // ── Private helper widgets ──────────────────────────────────────
+
+class _ExerciseTypeSelector extends StatelessWidget {
+  final ExerciseType value;
+  final ValueChanged<ExerciseType> onChanged;
+
+  const _ExerciseTypeSelector({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<ExerciseType>(
+      segments: const [
+        ButtonSegment(value: ExerciseType.timedReps, label: Text('Timed reps')),
+        ButtonSegment(value: ExerciseType.fixedDuration, label: Text('Fixed duration')),
+        ButtonSegment(value: ExerciseType.manual, label: Text('Manual')),
+      ],
+      selected: {value},
+      onSelectionChanged: (selection) => onChanged(selection.first),
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+}
+
+class _OptionalRepsRow extends StatelessWidget {
+  final bool enabled;
+  final int reps;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+
+  const _OptionalRepsRow({
+    required this.enabled,
+    required this.reps,
+    required this.onToggle,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Rep target', style: context.titleMedium),
+                Text(
+                  'Optional — shown during exercise',
+                  style: context.bodyMedium.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            Switch(value: enabled, onChanged: onToggle),
+          ],
+        ),
+        if (enabled) ...[
+          SizedBox(height: 8),
+          _CounterRow(
+            label: 'Reps',
+            value: reps,
+            minimum: 1,
+            onDecrement: onDecrement,
+            onIncrement: onIncrement,
+          ),
+        ],
+      ],
+    );
+  }
+}
 
 class _SectionHeader extends StatelessWidget {
   final String title;

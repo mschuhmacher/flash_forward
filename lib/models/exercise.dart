@@ -1,5 +1,7 @@
 import 'package:uuid/uuid.dart';
 
+enum ExerciseType { timedReps, fixedDuration, manual }
+
 class Exercise {
   final String id;
   final String? templateId;
@@ -12,11 +14,13 @@ class Exercise {
   final String? difficulty;
   final String? userId;
 
+  final ExerciseType type;
   final int sets;
-  final int reps;
+  final int? reps; // null means no rep target (only required for timedReps)
   final int timeBetweenSets;
   final int timePerRep;
   final int timeBetweenReps;
+  final int activeTime; // seconds; used only by fixedDuration
   final double load;
   final String? loadUnit;
   final int? rpe;
@@ -32,11 +36,13 @@ class Exercise {
     this.muscleGroups,
     this.difficulty,
     this.userId,
+    this.type = ExerciseType.timedReps,
     this.sets = 3,
     this.reps = 10,
     this.timeBetweenSets = 60,
     this.timePerRep = 3,
     this.timeBetweenReps = 0,
+    this.activeTime = 30,
     this.load = 0.0,
     this.loadUnit,
     this.rpe,
@@ -53,11 +59,13 @@ class Exercise {
     'muscleGroups': muscleGroups,
     'difficulty': difficulty,
     'userId': userId,
+    'type': type.name,
     'sets': sets,
     'reps': reps,
     'timeBetweenSets': timeBetweenSets,
     'timePerRep': timePerRep,
     'timeBetweenReps': timeBetweenReps,
+    'activeTime': activeTime,
     'load': load,
     'loadUnit': loadUnit,
     'rpe': rpe,
@@ -75,11 +83,13 @@ class Exercise {
     difficulty: json['difficulty'],
     userId: json['userId'],
     // Backward-compatible: handle old 'default*' keys from ExerciseTemplate/ExerciseInstance
+    type: ExerciseType.values.byName(json['type'] ?? 'timedReps'),
     sets: json['sets'] ?? json['defaultSets'] ?? 3,
-    reps: json['reps'] ?? json['defaultReps'] ?? 10,
+    reps: json['reps'] ?? json['defaultReps'],
     timeBetweenSets: json['timeBetweenSets'] ?? json['defaultTimeBetweenSets'] ?? 60,
     timePerRep: json['timePerRep'] ?? json['defaultTimePerRep'] ?? 3,
     timeBetweenReps: json['timeBetweenReps'] ?? json['defaultTimeBetweenReps'] ?? 0,
+    activeTime: json['activeTime'] ?? 30,
     load: (json['load'] ?? json['defaultLoad'] ?? 0.0) is num
         ? (json['load'] ?? json['defaultLoad'] ?? 0.0 as num).toDouble()
         : 0.0,
@@ -98,11 +108,13 @@ class Exercise {
     String? muscleGroups,
     String? difficulty,
     String? userId,
+    ExerciseType? type,
     int? sets,
-    int? reps,
+    Object? reps = _keep, // use _keep sentinel to allow explicit null
     int? timeBetweenSets,
     int? timePerRep,
     int? timeBetweenReps,
+    int? activeTime,
     double? load,
     String? loadUnit,
     int? rpe,
@@ -117,11 +129,13 @@ class Exercise {
     muscleGroups: muscleGroups ?? this.muscleGroups,
     difficulty: difficulty ?? this.difficulty,
     userId: userId ?? this.userId,
+    type: type ?? this.type,
     sets: sets ?? this.sets,
-    reps: reps ?? this.reps,
+    reps: identical(reps, _keep) ? this.reps : reps as int?,
     timeBetweenSets: timeBetweenSets ?? this.timeBetweenSets,
     timePerRep: timePerRep ?? this.timePerRep,
     timeBetweenReps: timeBetweenReps ?? this.timeBetweenReps,
+    activeTime: activeTime ?? this.activeTime,
     load: load ?? this.load,
     loadUnit: loadUnit ?? this.loadUnit,
     rpe: rpe ?? this.rpe,
@@ -139,14 +153,19 @@ class Exercise {
     muscleGroups: muscleGroups,
     difficulty: difficulty,
     userId: userId,
+    type: type,
     sets: sets,
     reps: reps,
     timeBetweenSets: timeBetweenSets,
     timePerRep: timePerRep,
     timeBetweenReps: timeBetweenReps,
+    activeTime: activeTime,
     load: load,
     loadUnit: loadUnit,
     rpe: rpe,
     notes: notes,
   );
 }
+
+// Sentinel for copyWith to distinguish "not provided" from explicit null.
+const Object _keep = Object();

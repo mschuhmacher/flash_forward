@@ -270,6 +270,25 @@ class SessionStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// For manual-type exercises: advance to the next set (with rest) or to
+  /// exerciseRest when all sets are done. No-op for other exercise types.
+  void advanceManually() {
+    if (_activeSession == null) return;
+    final exercise = _activeSession!.workouts[_progress.workoutIndex]
+        .exercises[_progress.exerciseIndex];
+    if (exercise.type != ExerciseType.manual) return;
+    if (_progress.phase != TimerPhase.rep) return;
+
+    if (_progress.currentSet < exercise.sets) {
+      _progress = _progress.copyWith(phase: TimerPhase.setRest);
+    } else {
+      _progress = _progress.copyWith(phase: TimerPhase.exerciseRest);
+    }
+    _remaining = _getDurationForPhase(_progress);
+    notifyListeners();
+    // The existing ticker picks up the timed setRest/exerciseRest countdown normally.
+  }
+
   void _startTicker() {
     // Ensure only one ticker runs at a time.
     _ticker?.cancel();
@@ -280,6 +299,15 @@ class SessionStateProvider extends ChangeNotifier {
         _remaining -= const Duration(seconds: 1);
         notifyListeners();
         return;
+      }
+
+      // Do not auto-advance manual exercises in the rep phase — wait for advanceManually().
+      if (_activeSession != null) {
+        final exercise = _activeSession!.workouts[_progress.workoutIndex]
+            .exercises[_progress.exerciseIndex];
+        if (exercise.type == ExerciseType.manual && _progress.phase == TimerPhase.rep) {
+          return;
+        }
       }
 
       final next = _calculateNextState(_progress);
@@ -296,9 +324,14 @@ class SessionStateProvider extends ChangeNotifier {
     });
   }
 
-  /// Pure transition logic: given current position + phase, determine what the
-  /// next position/phase should be. This re-reads the latest session/workout/
-  /// exercise data, so mid-session edits are respected automatically.
+  // State machine transitions by exercise type:
+  //
+  // timedReps:     getReady → rep ↔ repRest → setRest → rep (next set) → exerciseRest
+  // fixedDuration: getReady → rep → setRest → rep (next set) → exerciseRest
+  // manual:        getReady → rep [waits for advanceManually()] → setRest → rep [waits] → exerciseRest
+  //
+  // setRest → exerciseRest when currentSet == sets (all types)
+  // exerciseRest → getReady (next workout) or rep (next exercise) or null (session done)
   SessionProgress? _calculateNextState(SessionProgress p) {
     if (_activeSession == null) return null;
     final Workout workout = _activeSession!.workouts[p.workoutIndex];
@@ -306,17 +339,26 @@ class SessionStateProvider extends ChangeNotifier {
 
     switch (p.phase) {
       case TimerPhase.rep:
-        // After a rep, either go to repRest or straight into the next rep flow
-        if (exercise.timeBetweenReps > 0 && p.currentRep < exercise.reps) {
-          return p.copyWith(phase: TimerPhase.repRest);
+        switch (exercise.type) {
+          case ExerciseType.timedReps:
+            final reps = exercise.reps ?? 1;
+            if (exercise.timeBetweenReps > 0 && p.currentRep < reps) {
+              return p.copyWith(phase: TimerPhase.repRest);
+            }
+            // No inter-rep rest — skip repRest and resolve via recursion.
+            return _calculateNextState(p.copyWith(phase: TimerPhase.repRest));
+          case ExerciseType.fixedDuration:
+            // A single timed effort per set — skip repRest entirely.
+            return p.copyWith(phase: TimerPhase.setRest);
+          case ExerciseType.manual:
+            // Should never be reached via the ticker (guarded in _startTicker).
+            // Only advanceManually() drives transitions from here.
+            return null;
         }
-        // fallthrough handled by repRest case
-        return _calculateNextState(
-          p.copyWith(phase: TimerPhase.repRest),
-        );
 
       case TimerPhase.repRest:
-        if (p.currentRep < exercise.reps) {
+        final reps = exercise.reps ?? 1;
+        if (p.currentRep < reps) {
           return p.copyWith(
             currentRep: p.currentRep + 1,
             phase: TimerPhase.rep,
@@ -370,14 +412,18 @@ class SessionStateProvider extends ChangeNotifier {
   /// exercise/workout. Values are stored as seconds in the models.
   Duration _getDurationForPhase(SessionProgress p) {
     if (_activeSession == null || p.phase == TimerPhase.workoutComplete) {
-      return Duration.zero; //TODO: is this redundant or just to handle as the first thing?
+      return Duration.zero;
     }
     final workout = _activeSession!.workouts[p.workoutIndex];
     final exercise = workout.exercises[p.exerciseIndex];
 
     switch (p.phase) {
       case TimerPhase.rep:
-        return Duration(seconds: exercise.timePerRep);
+        return switch (exercise.type) {
+          ExerciseType.timedReps    => Duration(seconds: exercise.timePerRep),
+          ExerciseType.fixedDuration => Duration(seconds: exercise.activeTime),
+          ExerciseType.manual        => Duration.zero,
+        };
       case TimerPhase.repRest:
         return Duration(seconds: exercise.timeBetweenReps);
       case TimerPhase.setRest:
@@ -387,9 +433,9 @@ class SessionStateProvider extends ChangeNotifier {
       case TimerPhase.workoutComplete:
         return Duration.zero;
       case TimerPhase.paused:
-        return Duration.zero; //TODO: double check if .zero is correct usage here
+        return Duration.zero;
       case TimerPhase.getReady:
-        return Duration(seconds: 10);
+        return const Duration(seconds: 10);
     }
   }
 }

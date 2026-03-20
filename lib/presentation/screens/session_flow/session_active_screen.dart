@@ -95,6 +95,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           ];
         }
 
+        final isManualRep = activeExercise.type == ExerciseType.manual &&
+            sessionStateData.phase == TimerPhase.rep;
+
         String phaseText;
         TextStyle phaseTextStyle = context.h2.copyWith(
           color: context.colorScheme.onPrimary,
@@ -103,7 +106,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           case TimerPhase.setRest:
             phaseText = 'rest between sets';
           case TimerPhase.rep:
-            phaseText = 'rep';
+            if (activeExercise.type == ExerciseType.manual) {
+              phaseText = 'set ${progress.currentSet} of ${activeExercise.sets}';
+            } else {
+              phaseText = 'rep';
+            }
           case TimerPhase.repRest:
             phaseText = 'rest';
           case TimerPhase.exerciseRest:
@@ -121,6 +128,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
               color: context.colorScheme.secondary,
             );
         }
+
+        // Reps display text: show '-/-' when no rep target is set
+        final repsText = activeExercise.reps != null
+            ? '${progress.currentRep} / ${activeExercise.reps}   reps'
+            : '-/-   reps';
 
         return Scaffold(
           appBar: AppBar(
@@ -205,76 +217,84 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   child: Column(
                     children: [
                       Center(child: Text(phaseText, style: phaseTextStyle)),
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Center(
-                            child: Text(
-                              formatDuration(sessionStateData.remaining),
-                              style: context.h1.copyWith(
-                                color: () {
-                                  if (sessionStateData.isPaused) {
-                                    return context.colorScheme.tertiary;
-                                  } else if (sessionStateData.phase ==
-                                      TimerPhase.getReady) {
-                                    return context.colorScheme.secondary;
-                                  } else if (sessionStateData.phase ==
-                                      TimerPhase.rep) {
-                                    return context.colorScheme.onPrimary;
-                                  } else if ((sessionStateData.phase ==
-                                                  TimerPhase.repRest ||
-                                              sessionStateData.phase ==
-                                                  TimerPhase.setRest ||
-                                              sessionStateData.phase ==
-                                                  TimerPhase.exerciseRest) &&
-                                          sessionStateData.remaining <
-                                              Duration(seconds: 10)) {
-                                    return context.colorScheme.secondary;
-                                  } else {
-                                    return context.colorScheme.onPrimary;
-                                  }
-                                }(),
+                      // ── Timer or manual-advance button ──────────
+                      if (isManualRep)
+                        _ManualAdvanceButton(
+                          isLastSet: progress.currentSet >= activeExercise.sets,
+                          onPressed: () => sessionStateData.advanceManually(),
+                          color: context.colorScheme.onPrimary,
+                        )
+                      else
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Center(
+                              child: Text(
+                                formatDuration(sessionStateData.remaining),
+                                style: context.h1.copyWith(
+                                  color: () {
+                                    if (sessionStateData.isPaused) {
+                                      return context.colorScheme.tertiary;
+                                    } else if (sessionStateData.phase ==
+                                        TimerPhase.getReady) {
+                                      return context.colorScheme.secondary;
+                                    } else if (sessionStateData.phase ==
+                                        TimerPhase.rep) {
+                                      return context.colorScheme.onPrimary;
+                                    } else if ((sessionStateData.phase ==
+                                                    TimerPhase.repRest ||
+                                                sessionStateData.phase ==
+                                                    TimerPhase.setRest ||
+                                                sessionStateData.phase ==
+                                                    TimerPhase.exerciseRest) &&
+                                            sessionStateData.remaining <
+                                                Duration(seconds: 10)) {
+                                      return context.colorScheme.secondary;
+                                    } else {
+                                      return context.colorScheme.onPrimary;
+                                    }
+                                  }(),
+                                ),
+                                textScaler: TextScaler.linear(2.5),
                               ),
-                              textScaler: TextScaler.linear(2.5),
                             ),
-                          ),
-                          Positioned(
-                            right: 20,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primary,
-                                borderRadius: BorderRadius.circular(16),
-                                border: BoxBorder.all(
-                                  color: context.colorScheme.onPrimary,
-                                  width: 2,
+                            Positioned(
+                              right: 20,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: BoxBorder.all(
+                                    color: context.colorScheme.onPrimary,
+                                    width: 2,
+                                  ),
+                                ),
+                                width: 44,
+                                height: 44,
+                                child: Center(
+                                  child:
+                                      sessionStateData.isPaused
+                                          ? IconButton(
+                                            onPressed: () {
+                                              sessionStateData.resume();
+                                              WakelockPlus.enable();
+                                            },
+                                            icon: Icon(Icons.play_arrow_rounded),
+                                            color: context.colorScheme.onPrimary,
+                                          )
+                                          : IconButton(
+                                            onPressed: () {
+                                              sessionStateData.pause();
+                                              WakelockPlus.disable();
+                                            },
+                                            icon: Icon(Icons.pause_rounded),
+                                            color: context.colorScheme.onPrimary,
+                                          ),
                                 ),
                               ),
-                              width: 44,
-                              height: 44,
-                              child: Center(
-                                child:
-                                    sessionStateData.isPaused
-                                        ? IconButton(
-                                          onPressed: () {
-                                            sessionStateData.resume();
-                                            WakelockPlus.enable();
-                                          },
-                                          icon: Icon(Icons.play_arrow_rounded),
-                                          color: context.colorScheme.onPrimary,
-                                        )
-                                        : IconButton(
-                                          onPressed: () {
-                                            sessionStateData.pause();
-                                            WakelockPlus.disable();
-                                          },
-                                          icon: Icon(Icons.pause_rounded),
-                                          color: context.colorScheme.onPrimary,
-                                        ),
-                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                       SizedBox(height: 24),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -319,7 +339,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                               height: 50,
                               child: Center(
                                 child: Text(
-                                  '${progress.currentRep} / ${activeExercise.reps}   reps',
+                                  repsText,
                                   style: context.titleLarge.copyWith(
                                     color: context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
@@ -451,7 +471,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
   ) {
     // Track local edits in dialog state; apply to provider on close
     int localSets = activeExercise.sets;
-    int localReps = activeExercise.reps;
+    int? localReps = activeExercise.reps;
+    bool localRepsEnabled = activeExercise.reps != null;
 
     showDialog(
       context: context,
@@ -486,28 +507,44 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Time per rep:', style: context.titleMedium),
-                      Text(
-                        '${activeExercise.timePerRep} seconds',
-                        style: context.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Time between reps:', style: context.titleMedium),
-                      Text(
-                        '${activeExercise.timeBetweenReps} seconds',
-                        style: context.bodyMedium,
-                      ),
-                    ],
-                  ),
+                  // Only show timing details for timedReps exercises
+                  if (activeExercise.type == ExerciseType.timedReps) ...[
+                    SizedBox(height: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Time per rep:', style: context.titleMedium),
+                        Text(
+                          '${activeExercise.timePerRep} seconds',
+                          style: context.bodyMedium,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Time between reps:', style: context.titleMedium),
+                        Text(
+                          '${activeExercise.timeBetweenReps} seconds',
+                          style: context.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (activeExercise.type == ExerciseType.fixedDuration) ...[
+                    SizedBox(height: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Active time:', style: context.titleMedium),
+                        Text(
+                          '${activeExercise.activeTime} seconds',
+                          style: context.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ],
                   SizedBox(height: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,28 +589,70 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                     ],
                   ),
                   SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Number of reps',
-                          style: context.titleMedium,
+                  // Rep target: editable for timedReps (required), optional for others
+                  if (activeExercise.type == ExerciseType.timedReps)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Number of reps',
+                            style: context.titleMedium,
+                          ),
                         ),
+                        SizedBox(width: 8),
+                        IncrementDecrementNumberWidget(
+                          value: localReps ?? 1,
+                          minimum: sessionStateData.progress.currentRep,
+                          decrement: () {
+                            setDialogState(() => localReps = ((localReps ?? 1) - 1).clamp(1, 9999));
+                          },
+                          increment: () {
+                            setDialogState(() => localReps = (localReps ?? 1) + 1);
+                          },
+                        ),
+                      ],
+                    )
+                  else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Rep target', style: context.titleMedium),
+                        Switch(
+                          value: localRepsEnabled,
+                          onChanged: (enabled) {
+                            setDialogState(() {
+                              localRepsEnabled = enabled;
+                              if (enabled) localReps ??= 5;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    if (localRepsEnabled)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Number of reps',
+                              style: context.titleMedium,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          IncrementDecrementNumberWidget(
+                            value: localReps ?? 5,
+                            minimum: 1,
+                            decrement: () {
+                              setDialogState(() => localReps = ((localReps ?? 5) - 1).clamp(1, 9999));
+                            },
+                            increment: () {
+                              setDialogState(() => localReps = (localReps ?? 5) + 1);
+                            },
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 8),
-                      IncrementDecrementNumberWidget(
-                        value: localReps,
-                        minimum: sessionStateData.progress.currentRep,
-                        decrement: () {
-                          setDialogState(() => localReps--);
-                        },
-                        increment: () {
-                          setDialogState(() => localReps++);
-                        },
-                      ),
-                    ],
-                  ),
+                  ],
                 ],
               ),
               actions: [
@@ -588,7 +667,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           exerciseIndex,
                           activeExercise.copyWith(
                             sets: localSets,
-                            reps: localReps,
+                            reps: localRepsEnabled ? localReps : null,
                           ),
                         );
                         // TODO: autopause and unpause when dialog is opened
@@ -608,6 +687,44 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           },
         );
       },
+    );
+  }
+}
+
+/// Button shown instead of the countdown timer for manual-type exercises.
+class _ManualAdvanceButton extends StatelessWidget {
+  final bool isLastSet;
+  final VoidCallback onPressed;
+  final Color color;
+
+  const _ManualAdvanceButton({
+    required this.isLastSet,
+    required this.onPressed,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: context.colorScheme.onPrimary,
+          foregroundColor: context.colorScheme.primary,
+          padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text(
+          isLastSet ? 'Done' : 'Next set',
+          style: context.titleLarge.copyWith(
+            color: context.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 }

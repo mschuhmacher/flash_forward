@@ -267,7 +267,8 @@ class _ExerciseCard extends StatelessWidget {
               runSpacing: 6,
               children: [
                 _StatPill(label: 'Sets', value: '${exercise.sets}'),
-                _StatPill(label: 'Reps', value: '${exercise.reps}'),
+                if (exercise.reps != null)
+                  _StatPill(label: 'Reps', value: '${exercise.reps}'),
                 if (exercise.load > 0)
                   _StatPill(
                     label: 'Load',
@@ -281,7 +282,11 @@ class _ExerciseCard extends StatelessWidget {
                 ),
                 _StatPill(
                   label: 'Active',
-                  value: '${exercise.timePerRep * exercise.reps}s',
+                  value: switch (exercise.type) {
+                    ExerciseType.timedReps    => '${exercise.timePerRep * (exercise.reps ?? 1)}s',
+                    ExerciseType.fixedDuration => '${exercise.activeTime}s',
+                    ExerciseType.manual        => '-',
+                  },
                 ),
               ],
             ),
