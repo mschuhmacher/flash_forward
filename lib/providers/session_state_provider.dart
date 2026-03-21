@@ -288,7 +288,7 @@ class SessionStateProvider extends ChangeNotifier {
 
   void pause() {
     if (_isPaused)
-      return; // idempotent — second call would corrupt _rememberCurrentPhaseForPausing
+      {return;} // idempotent — second call would corrupt _rememberCurrentPhaseForPausing
     _isPaused = true;
     _rememberCurrentPhaseForPausing = _progress.phase;
     _progress = _progress.copyWith(phase: TimerPhase.paused);
@@ -400,6 +400,10 @@ class SessionStateProvider extends ChangeNotifier {
             return _calculateNextState(p.copyWith(phase: TimerPhase.repRest));
           case ExerciseType.fixedDuration:
             // A single timed effort per set — skip repRest entirely.
+            // Also skip setRest on the last set.
+            if (p.currentSet >= exercise.sets) {
+              return p.copyWith(phase: TimerPhase.exerciseRest);
+            }
             return p.copyWith(phase: TimerPhase.setRest);
           case ExerciseType.manual:
             // Should never be reached via the ticker (guarded in _startTicker).
@@ -414,6 +418,10 @@ class SessionStateProvider extends ChangeNotifier {
             currentRep: p.currentRep + 1,
             phase: TimerPhase.rep,
           );
+        }
+        // Last rep done — skip setRest if this was also the last set.
+        if (p.currentSet >= exercise.sets) {
+          return p.copyWith(phase: TimerPhase.exerciseRest);
         }
         return p.copyWith(phase: TimerPhase.setRest);
 
