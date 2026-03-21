@@ -241,6 +241,7 @@ class SessionStateProvider extends ChangeNotifier {
   }
 
   void pause() {
+    if (_isPaused) return; // idempotent — second call would corrupt _rememberCurrentPhaseForPausing
     _isPaused = true;
     _rememberCurrentPhaseForPausing = _progress.phase;
     _progress = _progress.copyWith(phase: TimerPhase.paused);

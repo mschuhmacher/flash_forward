@@ -3,6 +3,7 @@ import 'package:flash_forward/presentation/widgets/increment_decrement_number.da
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/utils/timer_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
@@ -32,7 +33,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             // Guard again in case the widget unmounted before the callback.
             if (!mounted || _timerInitialized) return;
-            final presetSession = presetData.presetSessions[sessionStateData.sessionIndex];
+            final presetSession =
+                presetData.presetSessions[sessionStateData.sessionIndex];
             sessionStateData.start(presetSession);
             _timerInitialized = true;
 
@@ -48,7 +50,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         final progress = sessionStateData.progress;
 
         Workout activeWorkout = activeSession.workouts[progress.workoutIndex];
-        Exercise activeExercise = activeWorkout.exercises[progress.exerciseIndex];
+        Exercise activeExercise =
+            activeWorkout.exercises[progress.exerciseIndex];
 
         List<Widget> workoutNames =
             activeSession.workouts
@@ -95,7 +98,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           ];
         }
 
-        final isManualRep = activeExercise.type == ExerciseType.manual &&
+        final isManualRep =
+            activeExercise.type == ExerciseType.manual &&
             sessionStateData.phase == TimerPhase.rep;
 
         String phaseText;
@@ -107,7 +111,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             phaseText = 'rest between sets';
           case TimerPhase.rep:
             if (activeExercise.type == ExerciseType.manual) {
-              phaseText = 'set ${progress.currentSet} of ${activeExercise.sets}';
+              phaseText =
+                  'set ${progress.currentSet} of ${activeExercise.sets}';
             } else {
               phaseText = 'rep';
             }
@@ -130,9 +135,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         }
 
         // Reps display text: show '-/-' when no rep target is set
-        final repsText = activeExercise.reps != null
-            ? '${progress.currentRep} / ${activeExercise.reps}   reps'
-            : '-/-   reps';
+        final repsText =
+            activeExercise.reps != null
+                ? '${progress.currentRep} / ${activeExercise.reps}   reps'
+                : '-/-   reps';
 
         return Scaffold(
           appBar: AppBar(
@@ -242,13 +248,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                         TimerPhase.rep) {
                                       return context.colorScheme.onPrimary;
                                     } else if ((sessionStateData.phase ==
-                                                    TimerPhase.repRest ||
-                                                sessionStateData.phase ==
-                                                    TimerPhase.setRest ||
-                                                sessionStateData.phase ==
-                                                    TimerPhase.exerciseRest) &&
-                                            sessionStateData.remaining <
-                                                Duration(seconds: 10)) {
+                                                TimerPhase.repRest ||
+                                            sessionStateData.phase ==
+                                                TimerPhase.setRest ||
+                                            sessionStateData.phase ==
+                                                TimerPhase.exerciseRest) &&
+                                        sessionStateData.remaining <
+                                            Duration(seconds: 10)) {
                                       return context.colorScheme.secondary;
                                     } else {
                                       return context.colorScheme.onPrimary;
@@ -279,8 +285,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                               sessionStateData.resume();
                                               WakelockPlus.enable();
                                             },
-                                            icon: Icon(Icons.play_arrow_rounded),
-                                            color: context.colorScheme.onPrimary,
+                                            icon: Icon(
+                                              Icons.play_arrow_rounded,
+                                            ),
+                                            color:
+                                                context.colorScheme.onPrimary,
                                           )
                                           : IconButton(
                                             onPressed: () {
@@ -288,7 +297,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                               WakelockPlus.disable();
                                             },
                                             icon: Icon(Icons.pause_rounded),
-                                            color: context.colorScheme.onPrimary,
+                                            color:
+                                                context.colorScheme.onPrimary,
                                           ),
                                 ),
                               ),
@@ -301,6 +311,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            // REPS
                             Container(
                               decoration: BoxDecoration(
                                 color: context.colorScheme.primary,
@@ -311,11 +322,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   width: 2,
                                 ),
                               ),
-                              width: 160,
+                              width: 150,
                               height: 50,
                               child: Center(
                                 child: Text(
-                                  '${progress.currentSet} / ${activeExercise.sets}   sets',
+                                  repsText,
                                   style: context.titleLarge.copyWith(
                                     color: context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
@@ -324,22 +335,22 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 ),
                               ),
                             ),
-
+                            // LOAD
                             Container(
                               decoration: BoxDecoration(
                                 color: context.colorScheme.primary,
-                                boxShadow: context.shadowMedium,
                                 borderRadius: BorderRadius.circular(16),
+                                boxShadow: context.shadowMedium,
                                 border: BoxBorder.all(
                                   color: context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
-                              width: 160,
+                              width: 180,
                               height: 50,
                               child: Center(
                                 child: Text(
-                                  repsText,
+                                  'Load: ${activeExercise.load.toString()} kg',
                                   style: context.titleLarge.copyWith(
                                     color: context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
@@ -357,21 +368,47 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            // MINUS
                             Container(
                               decoration: BoxDecoration(
                                 color: context.colorScheme.primary,
-                                borderRadius: BorderRadius.circular(16),
                                 boxShadow: context.shadowMedium,
+                                borderRadius: BorderRadius.circular(16),
                                 border: BoxBorder.all(
                                   color: context.colorScheme.onPrimary,
                                   width: 2,
                                 ),
                               ),
-                              width: 220,
+                              width: 50,
+                              height: 50,
+                              child: Center(
+                                child: IconButton(
+                                  onPressed: () {},
+                                  icon: Icon(
+                                    Icons.remove_rounded,
+                                    color: context.colorScheme.onPrimary,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            // SETS
+                            Container(
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.primary,
+                                boxShadow: context.shadowMedium,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color: context.colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 150,
                               height: 50,
                               child: Center(
                                 child: Text(
-                                  'Load: ${activeExercise.load.toString()} kg',
+                                  '${progress.currentSet} / ${activeExercise.sets}   sets',
                                   style: context.titleLarge.copyWith(
                                     color: context.colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
@@ -380,6 +417,33 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 ),
                               ),
                             ),
+                            SizedBox(width: 8),
+                            // PLUS
+                            Container(
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.primary,
+                                boxShadow: context.shadowMedium,
+                                borderRadius: BorderRadius.circular(16),
+                                border: BoxBorder.all(
+                                  color: context.colorScheme.onPrimary,
+                                  width: 2,
+                                ),
+                              ),
+                              width: 50,
+                              height: 50,
+                              child: Center(
+                                child: IconButton(
+                                  onPressed: () {},
+                                  icon: Icon(
+                                    Icons.add_rounded,
+                                    color: context.colorScheme.onPrimary,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Spacer(),
+                            //EDIT
                             Container(
                               decoration: BoxDecoration(
                                 color: context.colorScheme.primary,
@@ -406,6 +470,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   icon: Icon(
                                     Icons.edit,
                                     color: context.colorScheme.onPrimary,
+                                    size: 24,
                                   ),
                                 ),
                               ),
@@ -469,224 +534,615 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
     int workoutIndex,
     int exerciseIndex,
   ) {
-    // Track local edits in dialog state; apply to provider on close
+    // Only resume on close if the timer was running when we opened the sheet.
+    // If the user had already paused manually, don't resume for them.
+    final wasAlreadyPaused = sessionStateData.isPaused;
+    sessionStateData.pause();
+
+    // Local state — initialized once when sheet opens, applied to provider on save.
     int localSets = activeExercise.sets;
     int? localReps = activeExercise.reps;
     bool localRepsEnabled = activeExercise.reps != null;
+    int localTimeBetweenSets = activeExercise.timeBetweenSets;
+    int localTimePerRep = activeExercise.timePerRep;
+    int localTimeBetweenReps = activeExercise.timeBetweenReps;
+    int localActiveTime = activeExercise.activeTime;
+    String localLoadUnit = activeExercise.loadUnit ?? 'kg';
+    bool localRpeEnabled = activeExercise.rpe != null;
+    int localRpe = activeExercise.rpe ?? 5;
+    final loadController = TextEditingController(
+      text: activeExercise.load > 0 ? activeExercise.load.toString() : '',
+    );
+    final notesController = TextEditingController(
+      text: activeExercise.notes ?? '',
+    );
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
+        // Resume is handled via .then() below — covers save, dismiss, and drag-close.
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              insetPadding: EdgeInsets.symmetric(horizontal: 20),
-              title: Text(activeExercise.title, style: context.h2),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Description:', style: context.titleMedium),
-                      Text(
-                        activeExercise.description,
-                        style: context.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Time between sets:', style: context.titleMedium),
-                      Text(
-                        '${activeExercise.timeBetweenSets} seconds',
-                        style: context.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  // Only show timing details for timedReps exercises
-                  if (activeExercise.type == ExerciseType.timedReps) ...[
-                    SizedBox(height: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Time per rep:', style: context.titleMedium),
-                        Text(
-                          '${activeExercise.timePerRep} seconds',
-                          style: context.bodyMedium,
+            void applyAndClose() {
+              // Apply all local edits to the live session copy via the provider.
+              // Uses copyWith (not deepCopy) — keeps the same IDs, only replaces fields.
+              sessionStateData.updateActiveExercise(
+                workoutIndex,
+                exerciseIndex,
+                activeExercise.copyWith(
+                  sets: localSets,
+                  reps: localRepsEnabled ? localReps : null,
+                  timeBetweenSets: localTimeBetweenSets,
+                  timePerRep: localTimePerRep,
+                  timeBetweenReps: localTimeBetweenReps,
+                  activeTime: localActiveTime,
+                  load:
+                      double.tryParse(loadController.text.trim()) ??
+                      activeExercise.load,
+                  loadUnit: localLoadUnit,
+                  rpe: localRpeEnabled ? localRpe.clamp(1, 10) : null,
+                  notes:
+                      notesController.text.trim().isEmpty
+                          ? null
+                          : notesController.text.trim(),
+                ),
+              );
+              Navigator.pop(context);
+            }
+
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.9,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    // Drag handle
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                      ],
+                      ),
                     ),
-                    SizedBox(height: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Time between reps:', style: context.titleMedium),
-                        Text(
-                          '${activeExercise.timeBetweenReps} seconds',
-                          style: context.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (activeExercise.type == ExerciseType.fixedDuration) ...[
-                    SizedBox(height: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Active time:', style: context.titleMedium),
-                        Text(
-                          '${activeExercise.activeTime} seconds',
-                          style: context.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ],
-                  SizedBox(height: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('RPE:', style: context.titleMedium),
-                      Text('${activeExercise.rpe}', style: context.bodyMedium),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text('Load:', style: context.titleMedium),
-                      SizedBox(width: 8),
-                      // TODO: change to edit field
-                      Text(
-                        activeExercise.load.toString(),
-                        style: context.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Number of sets',
-                          style: context.titleMedium,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      IncrementDecrementNumberWidget(
-                        value: localSets,
-                        minimum: sessionStateData.progress.currentSet,
-                        decrement: () {
-                          setDialogState(() => localSets--);
-                        },
-                        increment: () {
-                          setDialogState(() => localSets++);
-                        },
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  // Rep target: editable for timedReps (required), optional for others
-                  if (activeExercise.type == ExerciseType.timedReps)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Number of reps',
-                            style: context.titleMedium,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        IncrementDecrementNumberWidget(
-                          value: localReps ?? 1,
-                          minimum: sessionStateData.progress.currentRep,
-                          decrement: () {
-                            setDialogState(() => localReps = ((localReps ?? 1) - 1).clamp(1, 9999));
-                          },
-                          increment: () {
-                            setDialogState(() => localReps = (localReps ?? 1) + 1);
-                          },
-                        ),
-                      ],
-                    )
-                  else ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Rep target', style: context.titleMedium),
-                        Switch(
-                          value: localRepsEnabled,
-                          onChanged: (enabled) {
-                            setDialogState(() {
-                              localRepsEnabled = enabled;
-                              if (enabled) localReps ??= 5;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    if (localRepsEnabled)
-                      Row(
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: Text(
-                              'Number of reps',
-                              style: context.titleMedium,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          IncrementDecrementNumberWidget(
-                            value: localReps ?? 5,
-                            minimum: 1,
-                            decrement: () {
-                              setDialogState(() => localReps = ((localReps ?? 5) - 1).clamp(1, 9999));
-                            },
-                            increment: () {
-                              setDialogState(() => localReps = (localReps ?? 5) + 1);
-                            },
+                          Text('Edit Exercise', style: context.h3),
+                          ElevatedButton(
+                            onPressed: applyAndClose,
+                            child: Text('Save'),
                           ),
                         ],
                       ),
-                  ],
-                ],
-              ),
-              actions: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        // Apply local edits to the active session copy via the provider
-                        sessionStateData.updateActiveExercise(
-                          workoutIndex,
-                          exerciseIndex,
-                          activeExercise.copyWith(
-                            sets: localSets,
-                            reps: localRepsEnabled ? localReps : null,
-                          ),
-                        );
-                        // TODO: autopause and unpause when dialog is opened
-                        Navigator.pop(context);
-                      },
-                      child: Text(
-                        'Close',
-                        style: context.titleMedium.copyWith(
-                          color: context.colorScheme.onPrimary,
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    // Scrollable content
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
                         ),
+                        children: [
+                          // ── Exercise info (read-only) ──────────────
+                          _SessionEditSectionHeader(title: 'Exercise'),
+                          const SizedBox(height: 8),
+                          _SessionEditSectionCard(
+                            children: [
+                              Text(activeExercise.title, style: context.h3),
+                              const SizedBox(height: 4),
+                              Chip(label: Text(activeExercise.label)),
+                              if (activeExercise.description.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  activeExercise.description,
+                                  style: context.bodyMedium,
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // ── Training ───────────────────────────────
+                          _SessionEditSectionHeader(title: 'Training'),
+                          const SizedBox(height: 8),
+                          _SessionEditSectionCard(
+                            children: [
+                              // Sets
+                              _SessionEditCounterRow(
+                                label: 'Sets',
+                                value: localSets,
+                                minimum: sessionStateData.progress.currentSet,
+                                onDecrement:
+                                    () => setDialogState(() => localSets--),
+                                onIncrement:
+                                    () => setDialogState(() => localSets++),
+                              ),
+                              const _SessionEditDivider(),
+
+                              // Type-specific timing + reps
+                              if (activeExercise.type ==
+                                  ExerciseType.timedReps) ...[
+                                _SessionEditCounterRow(
+                                  label: 'Reps',
+                                  value: localReps ?? 10,
+                                  minimum: sessionStateData.progress.currentRep,
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () =>
+                                            localReps = ((localReps ?? 10) - 1)
+                                                .clamp(
+                                                  sessionStateData
+                                                      .progress
+                                                      .currentRep,
+                                                  9999,
+                                                ),
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localReps = (localReps ?? 10) + 1,
+                                      ),
+                                ),
+                                const _SessionEditDivider(),
+                                _SessionEditCounterRow(
+                                  label: 'Rest between sets',
+                                  value: localTimeBetweenSets,
+                                  minimum: 0,
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () =>
+                                            localTimeBetweenSets =
+                                                (localTimeBetweenSets - 5)
+                                                    .clamp(0, 9999),
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localTimeBetweenSets += 5,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                _SessionEditCounterRow(
+                                  label: 'Time per rep',
+                                  value: localTimePerRep,
+                                  minimum: 0,
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () => localTimePerRep--,
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localTimePerRep++,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                _SessionEditCounterRow(
+                                  label: 'Rest between reps',
+                                  value: localTimeBetweenReps,
+                                  minimum: 0,
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () => localTimeBetweenReps--,
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localTimeBetweenReps++,
+                                      ),
+                                ),
+                              ] else if (activeExercise.type ==
+                                  ExerciseType.fixedDuration) ...[
+                                _SessionEditCounterRow(
+                                  label: 'Active time (s)',
+                                  value: localActiveTime,
+                                  minimum: 5,
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () =>
+                                            localActiveTime = (localActiveTime -
+                                                    5)
+                                                .clamp(5, 9999),
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localActiveTime += 5,
+                                      ),
+                                ),
+                                const _SessionEditDivider(),
+                                _SessionEditCounterRow(
+                                  label: 'Rest between sets',
+                                  value: localTimeBetweenSets,
+                                  minimum: 0,
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () =>
+                                            localTimeBetweenSets =
+                                                (localTimeBetweenSets - 5)
+                                                    .clamp(0, 9999),
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localTimeBetweenSets += 5,
+                                      ),
+                                ),
+                                const _SessionEditDivider(),
+                                _SessionEditOptionalRepsRow(
+                                  enabled: localRepsEnabled,
+                                  reps: localReps ?? 5,
+                                  onToggle:
+                                      (enabled) => setDialogState(() {
+                                        localRepsEnabled = enabled;
+                                        if (enabled) localReps ??= 5;
+                                      }),
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () =>
+                                            localReps = ((localReps ?? 5) - 1)
+                                                .clamp(1, 9999),
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localReps = (localReps ?? 5) + 1,
+                                      ),
+                                ),
+                              ] else ...[
+                                // manual
+                                _SessionEditCounterRow(
+                                  label: 'Rest between sets',
+                                  value: localTimeBetweenSets,
+                                  minimum: 0,
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () =>
+                                            localTimeBetweenSets =
+                                                (localTimeBetweenSets - 5)
+                                                    .clamp(0, 9999),
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localTimeBetweenSets += 5,
+                                      ),
+                                ),
+                                const _SessionEditDivider(),
+                                _SessionEditOptionalRepsRow(
+                                  enabled: localRepsEnabled,
+                                  reps: localReps ?? 5,
+                                  onToggle:
+                                      (enabled) => setDialogState(() {
+                                        localRepsEnabled = enabled;
+                                        if (enabled) localReps ??= 5;
+                                      }),
+                                  onDecrement:
+                                      () => setDialogState(
+                                        () =>
+                                            localReps = ((localReps ?? 5) - 1)
+                                                .clamp(1, 9999),
+                                      ),
+                                  onIncrement:
+                                      () => setDialogState(
+                                        () => localReps = (localReps ?? 5) + 1,
+                                      ),
+                                ),
+                              ],
+                              const _SessionEditDivider(),
+
+                              // Load
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: loadController,
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                      inputFormatters: [
+                                        TextInputFormatter.withFunction(
+                                          (oldValue, newValue) =>
+                                              newValue.copyWith(
+                                                text: newValue.text.replaceAll(
+                                                  ',',
+                                                  '.',
+                                                ),
+                                              ),
+                                        ),
+                                        FilteringTextInputFormatter.allow(
+                                          RegExp(r'^\d*\.?\d*'),
+                                        ),
+                                      ],
+                                      decoration: InputDecoration(
+                                        labelText: 'Load',
+                                        labelStyle: context.bodyMedium,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              vertical: 12,
+                                              horizontal: 8,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Wrap(
+                                    spacing: 6,
+                                    children:
+                                        ['kg', 'lbs'].map((unit) {
+                                          return ChoiceChip(
+                                            label: Text(unit),
+                                            selected: localLoadUnit == unit,
+                                            onSelected:
+                                                (selected) => setDialogState(
+                                                  () =>
+                                                      localLoadUnit =
+                                                          selected
+                                                              ? unit
+                                                              : localLoadUnit,
+                                                ),
+                                          );
+                                        }).toList(),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // ── Details ────────────────────────────────
+                          _SessionEditSectionHeader(title: 'Details'),
+                          const SizedBox(height: 8),
+                          _SessionEditSectionCard(
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('RPE', style: context.titleMedium),
+                                      Text(
+                                        'Rate of Perceived Exertion',
+                                        style: context.bodyMedium.copyWith(
+                                          color:
+                                              context
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Switch(
+                                    value: localRpeEnabled,
+                                    onChanged:
+                                        (value) => setDialogState(
+                                          () => localRpeEnabled = value,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              if (localRpeEnabled) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _rpeLabel(localRpe),
+                                      style: context.bodyMedium.copyWith(
+                                        color:
+                                            context
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                      ),
+                                    ),
+                                    IncrementDecrementNumberWidget(
+                                      value: localRpe.clamp(1, 10),
+                                      minimum: 1,
+                                      decrement: () {
+                                        if (localRpe > 1)
+                                          setDialogState(() => localRpe--);
+                                      },
+                                      increment: () {
+                                        if (localRpe < 10)
+                                          setDialogState(() => localRpe++);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // ── Notes ──────────────────────────────────
+                          _SessionEditSectionHeader(title: 'Notes'),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: notesController,
+                            minLines: 3,
+                            maxLines: null,
+                            textInputAction: TextInputAction.done,
+                            decoration: InputDecoration(
+                              labelText: 'Notes',
+                              labelStyle: context.bodyMedium,
+                              hintText: 'Any additional notes...',
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ],
+                );
+              },
             );
           },
         );
       },
+    ).then((_) {
+      if (!wasAlreadyPaused) sessionStateData.resume();
+    });
+  }
+
+  String _rpeLabel(int rpe) {
+    return switch (rpe) {
+      1 || 2 => 'Very light',
+      3 || 4 => 'Light',
+      5 || 6 => 'Moderate',
+      7 || 8 => 'Hard',
+      9 => 'Very hard',
+      _ => 'Maximum',
+    };
+  }
+}
+
+// ── Private helper widgets for the edit bottom sheet ────────────────────────
+
+class _SessionEditSectionHeader extends StatelessWidget {
+  final String title;
+  const _SessionEditSectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(title, style: context.titleMedium),
+    );
+  }
+}
+
+class _SessionEditSectionCard extends StatelessWidget {
+  final List<Widget> children;
+  const _SessionEditSectionCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colorScheme.surfaceBright,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _SessionEditCounterRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final int minimum;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+
+  const _SessionEditCounterRow({
+    required this.label,
+    required this.value,
+    required this.minimum,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: context.titleMedium),
+        IncrementDecrementNumberWidget(
+          value: value,
+          minimum: minimum,
+          decrement: onDecrement,
+          increment: onIncrement,
+        ),
+      ],
+    );
+  }
+}
+
+class _SessionEditOptionalRepsRow extends StatelessWidget {
+  final bool enabled;
+  final int reps;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+
+  const _SessionEditOptionalRepsRow({
+    required this.enabled,
+    required this.reps,
+    required this.onToggle,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Rep target', style: context.titleMedium),
+                Text(
+                  'Optional — shown during exercise',
+                  style: context.bodyMedium.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            Switch(value: enabled, onChanged: onToggle),
+          ],
+        ),
+        if (enabled) ...[
+          const SizedBox(height: 8),
+          _SessionEditCounterRow(
+            label: 'Reps',
+            value: reps,
+            minimum: 1,
+            onDecrement: onDecrement,
+            onIncrement: onIncrement,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SessionEditDivider extends StatelessWidget {
+  const _SessionEditDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 12),
+      child: Divider(height: 1),
     );
   }
 }

@@ -98,6 +98,10 @@ class Exercise {
     notes: json['notes'],
   );
 
+  // Nullable fields that can be explicitly cleared to null use the _keep sentinel
+  // instead of the normal `int? param` pattern. Without it, `param ?? this.param`
+  // makes null indistinguishable from "not provided", so passing null would silently
+  // keep the old value instead of clearing it.
   Exercise copyWith({
     String? id,
     String? templateId,
@@ -110,15 +114,15 @@ class Exercise {
     String? userId,
     ExerciseType? type,
     int? sets,
-    Object? reps = _keep, // use _keep sentinel to allow explicit null
+    Object? reps = _keep, // sentinel: omitted → keep old; null → clear
     int? timeBetweenSets,
     int? timePerRep,
     int? timeBetweenReps,
     int? activeTime,
     double? load,
     String? loadUnit,
-    int? rpe,
-    String? notes,
+    Object? rpe = _keep,    // sentinel: omitted → keep old; null → clear
+    Object? notes = _keep,  // sentinel: omitted → keep old; null → clear
   }) => Exercise(
     id: id ?? this.id,
     templateId: templateId ?? this.templateId,
@@ -138,8 +142,8 @@ class Exercise {
     activeTime: activeTime ?? this.activeTime,
     load: load ?? this.load,
     loadUnit: loadUnit ?? this.loadUnit,
-    rpe: rpe ?? this.rpe,
-    notes: notes ?? this.notes,
+    rpe: identical(rpe, _keep) ? this.rpe : rpe as int?,
+    notes: identical(notes, _keep) ? this.notes : notes as String?,
   );
 
   /// Creates an independent copy with a new UUID — use when adding to a workout
