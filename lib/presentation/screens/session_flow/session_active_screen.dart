@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/presentation/widgets/session_active_bottom_bar.dart';
+import 'package:flash_forward/presentation/screens/session_flow/session_active_bottom_bar.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -266,41 +266,28 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             ),
                             Positioned(
                               right: 20,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.primary,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: BoxBorder.all(
-                                    color: context.colorScheme.onPrimary,
-                                    width: 2,
-                                  ),
-                                ),
+                              child: _SessionCard(
                                 width: 44,
                                 height: 44,
-                                child: Center(
-                                  child:
-                                      sessionStateData.isPaused
-                                          ? IconButton(
-                                            onPressed: () {
-                                              sessionStateData.resume();
-                                              WakelockPlus.enable();
-                                            },
-                                            icon: Icon(
-                                              Icons.play_arrow_rounded,
-                                            ),
-                                            color:
-                                                context.colorScheme.onPrimary,
-                                          )
-                                          : IconButton(
-                                            onPressed: () {
-                                              sessionStateData.pause();
-                                              WakelockPlus.disable();
-                                            },
-                                            icon: Icon(Icons.pause_rounded),
-                                            color:
-                                                context.colorScheme.onPrimary,
-                                          ),
-                                ),
+                                shadow: false,
+                                child:
+                                    sessionStateData.isPaused
+                                        ? IconButton(
+                                          onPressed: () {
+                                            sessionStateData.resume();
+                                            WakelockPlus.enable();
+                                          },
+                                          icon: Icon(Icons.play_arrow_rounded),
+                                          color: context.colorScheme.onPrimary,
+                                        )
+                                        : IconButton(
+                                          onPressed: () {
+                                            sessionStateData.pause();
+                                            WakelockPlus.disable();
+                                          },
+                                          icon: Icon(Icons.pause_rounded),
+                                          color: context.colorScheme.onPrimary,
+                                        ),
                               ),
                             ),
                           ],
@@ -312,50 +299,26 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // REPS
-                            Container(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primary,
-                                boxShadow: context.shadowMedium,
-                                borderRadius: BorderRadius.circular(16),
-                                border: BoxBorder.all(
-                                  color: context.colorScheme.onPrimary,
-                                  width: 2,
-                                ),
-                              ),
+                            _SessionCard(
                               width: 150,
-                              height: 50,
-                              child: Center(
-                                child: Text(
-                                  repsText,
-                                  style: context.titleLarge.copyWith(
-                                    color: context.colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                              child: Text(
+                                repsText,
+                                style: context.titleLarge.copyWith(
+                                  color: context.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontStyle: FontStyle.italic,
                                 ),
                               ),
                             ),
                             // LOAD
-                            Container(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primary,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: context.shadowMedium,
-                                border: BoxBorder.all(
-                                  color: context.colorScheme.onPrimary,
-                                  width: 2,
-                                ),
-                              ),
+                            _SessionCard(
                               width: 180,
-                              height: 50,
-                              child: Center(
-                                child: Text(
-                                  'Load: ${activeExercise.load.toString()} kg',
-                                  style: context.titleLarge.copyWith(
-                                    color: context.colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                              child: Text(
+                                'Load: ${activeExercise.load.toString()} kg',
+                                style: context.titleLarge.copyWith(
+                                  color: context.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontStyle: FontStyle.italic,
                                 ),
                               ),
                             ),
@@ -369,109 +332,69 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // MINUS
-                            Container(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primary,
-                                boxShadow: context.shadowMedium,
-                                borderRadius: BorderRadius.circular(16),
-                                border: BoxBorder.all(
-                                  color: context.colorScheme.onPrimary,
-                                  width: 2,
-                                ),
-                              ),
+                            _SessionCard(
                               width: 50,
-                              height: 50,
-                              child: Center(
-                                child: IconButton(
-                                  onPressed: () {},
-                                  icon: Icon(
-                                    Icons.remove_rounded,
-                                    color: context.colorScheme.onPrimary,
-                                    size: 24,
-                                  ),
+                              child: IconButton(
+                                onPressed: () {
+                                  sessionStateData.jumpToSet(
+                                    progress.currentSet - 1,
+                                  );
+                                },
+                                icon: Icon(
+                                  Icons.remove_rounded,
+                                  color: context.colorScheme.onPrimary,
+                                  size: 24,
                                 ),
                               ),
                             ),
                             SizedBox(width: 8),
                             // SETS
-                            Container(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primary,
-                                boxShadow: context.shadowMedium,
-                                borderRadius: BorderRadius.circular(16),
-                                border: BoxBorder.all(
-                                  color: context.colorScheme.onPrimary,
-                                  width: 2,
-                                ),
-                              ),
+                            _SessionCard(
                               width: 150,
-                              height: 50,
-                              child: Center(
-                                child: Text(
-                                  '${progress.currentSet} / ${activeExercise.sets}   sets',
-                                  style: context.titleLarge.copyWith(
-                                    color: context.colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                              child: Text(
+                                '${progress.currentSet} / ${activeExercise.sets}   sets',
+                                style: context.titleLarge.copyWith(
+                                  color: context.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontStyle: FontStyle.italic,
                                 ),
                               ),
                             ),
                             SizedBox(width: 8),
                             // PLUS
-                            Container(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primary,
-                                boxShadow: context.shadowMedium,
-                                borderRadius: BorderRadius.circular(16),
-                                border: BoxBorder.all(
-                                  color: context.colorScheme.onPrimary,
-                                  width: 2,
-                                ),
-                              ),
+                            _SessionCard(
                               width: 50,
-                              height: 50,
-                              child: Center(
-                                child: IconButton(
-                                  onPressed: () {},
-                                  icon: Icon(
-                                    Icons.add_rounded,
-                                    color: context.colorScheme.onPrimary,
-                                    size: 24,
-                                  ),
+                              child: IconButton(
+                                onPressed: () {
+                                  sessionStateData.jumpToSet(
+                                    progress.currentSet + 1,
+                                  );
+                                },
+                                icon: Icon(
+                                  Icons.add_rounded,
+                                  color: context.colorScheme.onPrimary,
+                                  size: 24,
                                 ),
                               ),
                             ),
                             Spacer(),
                             //EDIT
-                            Container(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primary,
-                                boxShadow: context.shadowMedium,
-                                borderRadius: BorderRadius.circular(16),
-                                border: BoxBorder.all(
-                                  color: context.colorScheme.onPrimary,
-                                  width: 2,
-                                ),
-                              ),
+                            _SessionCard(
                               width: 50,
-                              height: 50,
-                              child: Center(
-                                child: IconButton(
-                                  onPressed: () {
-                                    _showEditExerciseDialog(
-                                      context,
-                                      activeExercise,
-                                      sessionStateData,
-                                      progress.workoutIndex,
-                                      progress.exerciseIndex,
-                                    );
-                                  },
-                                  icon: Icon(
-                                    Icons.edit,
-                                    color: context.colorScheme.onPrimary,
-                                    size: 24,
-                                  ),
+                              child: IconButton(
+                                onPressed: () {
+                                  _showEditExerciseDialog(
+                                    context,
+                                    activeExercise,
+                                    sessionStateData,
+                                    progress.workoutIndex,
+                                    progress.exerciseIndex,
+                                  );
+                                },
+                                icon: Icon(
+                                  Icons.edit,
+                                  color: context.colorScheme.onPrimary,
+                                  size: 24,
                                 ),
                               ),
                             ),
@@ -1143,6 +1066,38 @@ class _SessionEditDivider extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 12),
       child: Divider(height: 1),
+    );
+  }
+}
+
+/// A styled card used throughout the active session screen.
+/// Renders a fixed-size box with the primary color, rounded corners, a border,
+/// and an optional medium shadow. The child is automatically centered.
+class _SessionCard extends StatelessWidget {
+  const _SessionCard({
+    required this.width,
+    required this.child,
+    this.height = 50,
+    this.shadow = true,
+  });
+
+  final double width;
+  final double height;
+  final bool shadow;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: context.colorScheme.primary,
+        boxShadow: shadow ? context.shadowMedium : null,
+        borderRadius: BorderRadius.circular(16),
+        border: BoxBorder.all(color: context.colorScheme.onPrimary, width: 2),
+      ),
+      child: Center(child: child),
     );
   }
 }

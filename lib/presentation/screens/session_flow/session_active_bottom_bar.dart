@@ -193,7 +193,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                 SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () async {
-                    // Create a new session with the label, description, and completion time
+                    // Upon start, activeSession is newly created with deepCopy, call copyWith here for adding the label, description, and completion time
                     final finishedSession = activeSession.copyWith(
                       label: labelController.text,
                       description:

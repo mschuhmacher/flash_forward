@@ -165,7 +165,8 @@ class SessionStateProvider extends ChangeNotifier {
     // When at first exercise of second+ workout, go back to last exercise of previous workout
     else if (index == -1 && _workoutIndex > 0) {
       _workoutIndex--;
-      _exerciseIndex = _activeSession!.workouts[_workoutIndex].exercises.length - 1;
+      _exerciseIndex =
+          _activeSession!.workouts[_workoutIndex].exercises.length - 1;
       _progress = SessionProgress(
         workoutIndex: _workoutIndex,
         exerciseIndex: _exerciseIndex,
@@ -177,7 +178,8 @@ class SessionStateProvider extends ChangeNotifier {
       notifyListeners();
     }
     // When within range of list of exercises of workout, go to previous or next
-    else if (index >= 0 && index < _activeSession!.workouts[_workoutIndex].exercises.length) {
+    else if (index >= 0 &&
+        index < _activeSession!.workouts[_workoutIndex].exercises.length) {
       _exerciseIndex = index;
       _progress = SessionProgress(
         workoutIndex: _workoutIndex,
@@ -190,7 +192,8 @@ class SessionStateProvider extends ChangeNotifier {
       notifyListeners();
     }
     // When at the last exercise of a workout and not the final exercise of session, go to first exercise of next workout
-    else if (index == _activeSession!.workouts[_workoutIndex].exercises.length &&
+    else if (index ==
+            _activeSession!.workouts[_workoutIndex].exercises.length &&
         _workoutIndex + 1 < _activeSession!.workouts.length) {
       _workoutIndex++;
       _exerciseIndex = 0;
@@ -206,15 +209,58 @@ class SessionStateProvider extends ChangeNotifier {
     }
   }
 
+  void jumpToSet(int index) {
+    if (index < 0) {
+      return;
+    } else if (index == 0) {
+      _progress = SessionProgress(
+        workoutIndex: _workoutIndex,
+        exerciseIndex: _exerciseIndex,
+        currentSet: 1,
+        currentRep: 1,
+        phase: TimerPhase.rep,
+      );
+      _remaining = _getDurationForPhase(_progress);
+      notifyListeners();
+    } else if (index > 0 &&
+        index <=
+            _activeSession!
+                .workouts[_workoutIndex]
+                .exercises[_exerciseIndex]
+                .sets) {
+      _progress = SessionProgress(
+        workoutIndex: _workoutIndex,
+        exerciseIndex: _exerciseIndex,
+        currentSet: index,
+        currentRep: 1,
+        phase: TimerPhase.rep,
+      );
+      _remaining = _getDurationForPhase(_progress);
+      notifyListeners();
+    } else if (index >
+        _activeSession!
+            .workouts[_workoutIndex]
+            .exercises[_exerciseIndex]
+            .sets) {
+      return;
+    }
+  }
+
   /// Update a single exercise in the active session copy (e.g. mid-session load/sets edit).
   /// Uses copyWith so all fields remain immutable — the preset is never touched.
-  void updateActiveExercise(int workoutIndex, int exerciseIndex, Exercise updated) {
+  void updateActiveExercise(
+    int workoutIndex,
+    int exerciseIndex,
+    Exercise updated,
+  ) {
     if (_activeSession == null) return;
     final workout = _activeSession!.workouts[workoutIndex];
     final updatedExercises = List<Exercise>.from(workout.exercises);
     updatedExercises[exerciseIndex] = updated;
     final updatedWorkouts = List<Workout>.from(_activeSession!.workouts);
-    updatedWorkouts[workoutIndex] = workout.copyWith(exercises: updatedExercises);
+    updatedWorkouts[workoutIndex] = workout.copyWith(
+      exercises: updatedExercises,
+    );
     _activeSession = _activeSession!.copyWith(workouts: updatedWorkouts);
     notifyListeners();
   }
@@ -241,7 +287,8 @@ class SessionStateProvider extends ChangeNotifier {
   }
 
   void pause() {
-    if (_isPaused) return; // idempotent — second call would corrupt _rememberCurrentPhaseForPausing
+    if (_isPaused)
+      return; // idempotent — second call would corrupt _rememberCurrentPhaseForPausing
     _isPaused = true;
     _rememberCurrentPhaseForPausing = _progress.phase;
     _progress = _progress.copyWith(phase: TimerPhase.paused);
@@ -275,8 +322,9 @@ class SessionStateProvider extends ChangeNotifier {
   /// exerciseRest when all sets are done. No-op for other exercise types.
   void advanceManually() {
     if (_activeSession == null) return;
-    final exercise = _activeSession!.workouts[_progress.workoutIndex]
-        .exercises[_progress.exerciseIndex];
+    final exercise =
+        _activeSession!.workouts[_progress.workoutIndex].exercises[_progress
+            .exerciseIndex];
     if (exercise.type != ExerciseType.manual) return;
     if (_progress.phase != TimerPhase.rep) return;
 
@@ -304,9 +352,11 @@ class SessionStateProvider extends ChangeNotifier {
 
       // Do not auto-advance manual exercises in the rep phase — wait for advanceManually().
       if (_activeSession != null) {
-        final exercise = _activeSession!.workouts[_progress.workoutIndex]
-            .exercises[_progress.exerciseIndex];
-        if (exercise.type == ExerciseType.manual && _progress.phase == TimerPhase.rep) {
+        final exercise =
+            _activeSession!.workouts[_progress.workoutIndex].exercises[_progress
+                .exerciseIndex];
+        if (exercise.type == ExerciseType.manual &&
+            _progress.phase == TimerPhase.rep) {
           return;
         }
       }
@@ -421,9 +471,9 @@ class SessionStateProvider extends ChangeNotifier {
     switch (p.phase) {
       case TimerPhase.rep:
         return switch (exercise.type) {
-          ExerciseType.timedReps    => Duration(seconds: exercise.timePerRep),
+          ExerciseType.timedReps => Duration(seconds: exercise.timePerRep),
           ExerciseType.fixedDuration => Duration(seconds: exercise.activeTime),
-          ExerciseType.manual        => Duration.zero,
+          ExerciseType.manual => Duration.zero,
         };
       case TimerPhase.repRest:
         return Duration(seconds: exercise.timeBetweenReps);
