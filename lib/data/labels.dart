@@ -42,4 +42,5 @@ const Map<String, Label> kDefaultLabels = {
     color: Colors.redAccent,
   ),
   'Other': Label(name: 'Other', icon: Icons.more_horiz, color: Colors.grey),
+  'Max': Label(name: 'Max', icon: Icons.emoji_events_outlined, color: Colors.deepOrange),
 };

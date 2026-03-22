@@ -1,3 +1,4 @@
+import 'package:flash_forward/models/grade_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,6 +14,9 @@ class Session {
     this.userId,
     this.notes,
     this.rpe,
+    this.maxGradeClimbed,
+    this.maxGradeFlashed,
+    this.bodyWeightKg,
   }) : id = id ?? const Uuid().v4();
 
   final String id;
@@ -25,6 +29,9 @@ class Session {
   final String? userId;
   final String? notes;
   final int? rpe;
+  final GradeEntry? maxGradeClimbed;
+  final GradeEntry? maxGradeFlashed;
+  final double? bodyWeightKg;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -37,6 +44,9 @@ class Session {
     'userId': userId,
     'notes': notes,
     'rpe': rpe,
+    'maxGradeClimbed': maxGradeClimbed?.toJson(),
+    'maxGradeFlashed': maxGradeFlashed?.toJson(),
+    'bodyWeightKg': bodyWeightKg,
   };
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -56,6 +66,13 @@ class Session {
     userId: json['userId'],
     notes: json['notes'],
     rpe: json['rpe'],
+    maxGradeClimbed: json['maxGradeClimbed'] != null
+        ? GradeEntry.fromJson(json['maxGradeClimbed'] as Map<String, dynamic>)
+        : null,
+    maxGradeFlashed: json['maxGradeFlashed'] != null
+        ? GradeEntry.fromJson(json['maxGradeFlashed'] as Map<String, dynamic>)
+        : null,
+    bodyWeightKg: (json['bodyWeightKg'] as num?)?.toDouble(),
   );
 
   Session copyWith({
@@ -69,6 +86,9 @@ class Session {
     String? userId,
     String? notes,
     int? rpe,
+    Object? maxGradeClimbed = _keep,
+    Object? maxGradeFlashed = _keep,
+    Object? bodyWeightKg = _keep,
   }) => Session(
     id: id ?? this.id,
     templateId: templateId ?? this.templateId,
@@ -80,6 +100,15 @@ class Session {
     userId: userId ?? this.userId,
     notes: notes ?? this.notes,
     rpe: rpe ?? this.rpe,
+    maxGradeClimbed: identical(maxGradeClimbed, _keep)
+        ? this.maxGradeClimbed
+        : maxGradeClimbed as GradeEntry?,
+    maxGradeFlashed: identical(maxGradeFlashed, _keep)
+        ? this.maxGradeFlashed
+        : maxGradeFlashed as GradeEntry?,
+    bodyWeightKg: identical(bodyWeightKg, _keep)
+        ? this.bodyWeightKg
+        : bodyWeightKg as double?,
   );
 
   /// Creates an independent copy with a new UUID and deep-copied workouts.
@@ -91,5 +120,10 @@ class Session {
     description: description,
     workouts: workouts.map((w) => w.deepCopy()).toList(),
     userId: userId,
+    // maxGradeClimbed, maxGradeFlashed, bodyWeightKg intentionally omitted —
+    // these are set post-completion and are not part of the preset.
   );
 }
+
+// Sentinel for copyWith to distinguish "not provided" from explicit null.
+const Object _keep = Object();
