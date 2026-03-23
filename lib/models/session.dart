@@ -1,5 +1,6 @@
 import 'package:flash_forward/models/grade_entry.dart';
 import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/utils/nullable.dart';
 import 'package:uuid/uuid.dart';
 
 class Session {
@@ -75,40 +76,38 @@ class Session {
     bodyWeightKg: (json['bodyWeightKg'] as num?)?.toDouble(),
   );
 
+  // Nullable<T> parameters let callers distinguish "not provided" (omit the
+  // argument → keep the current value) from "explicitly set to null"
+  // (pass Nullable(null) → clear the field). A plain `T? param` cannot express
+  // this because `param ?? this.field` treats both cases identically.
   Session copyWith({
     String? id,
     String? templateId,
     String? title,
     String? label,
-    String? description,
-    DateTime? completedAt,
+    Nullable<String>? description,
+    Nullable<DateTime>? completedAt,
     List<Workout>? workouts,
     String? userId,
-    String? notes,
-    int? rpe,
-    Object? maxGradeClimbed = _keep,
-    Object? maxGradeFlashed = _keep,
-    Object? bodyWeightKg = _keep,
+    Nullable<String>? notes,
+    Nullable<int>? rpe,
+    Nullable<GradeEntry>? maxGradeClimbed,
+    Nullable<GradeEntry>? maxGradeFlashed,
+    Nullable<double>? bodyWeightKg,
   }) => Session(
     id: id ?? this.id,
     templateId: templateId ?? this.templateId,
     title: title ?? this.title,
     label: label ?? this.label,
-    description: description ?? this.description,
-    completedAt: completedAt ?? this.completedAt,
+    description: description == null ? this.description : description.value,
+    completedAt: completedAt == null ? this.completedAt : completedAt.value,
     workouts: workouts ?? this.workouts,
     userId: userId ?? this.userId,
-    notes: notes ?? this.notes,
-    rpe: rpe ?? this.rpe,
-    maxGradeClimbed: identical(maxGradeClimbed, _keep)
-        ? this.maxGradeClimbed
-        : maxGradeClimbed as GradeEntry?,
-    maxGradeFlashed: identical(maxGradeFlashed, _keep)
-        ? this.maxGradeFlashed
-        : maxGradeFlashed as GradeEntry?,
-    bodyWeightKg: identical(bodyWeightKg, _keep)
-        ? this.bodyWeightKg
-        : bodyWeightKg as double?,
+    notes: notes == null ? this.notes : notes.value,
+    rpe: rpe == null ? this.rpe : rpe.value,
+    maxGradeClimbed: maxGradeClimbed == null ? this.maxGradeClimbed : maxGradeClimbed.value,
+    maxGradeFlashed: maxGradeFlashed == null ? this.maxGradeFlashed : maxGradeFlashed.value,
+    bodyWeightKg: bodyWeightKg == null ? this.bodyWeightKg : bodyWeightKg.value,
   );
 
   /// Creates an independent copy with a new UUID and deep-copied workouts.
@@ -124,6 +123,3 @@ class Session {
     // these are set post-completion and are not part of the preset.
   );
 }
-
-// Sentinel for copyWith to distinguish "not provided" from explicit null.
-const Object _keep = Object();

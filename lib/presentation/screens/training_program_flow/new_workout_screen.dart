@@ -1,4 +1,5 @@
 import 'package:flash_forward/constants/field_limits.dart';
+import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
@@ -59,21 +60,16 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
   void _save() {
     if (_formKey.currentState!.validate()) {
-      final workout = Workout(
-        id: _workout.id,
-        templateId: _workout.templateId,
+      final workout = _workout.copyWith(
         title: _titleController.text.trim(),
         label: _itemLabelController.text,
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
-        exercises: _workout.exercises,
-        difficulty: _workout.difficulty,
-        equipment: _workout.equipment,
-        timeBetweenExercises: _workout.timeBetweenExercises,
+        description: Nullable(
+          _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+        ),
         userId: _workout.userId ??
             Provider.of<AuthProvider>(context, listen: false).userId,
-        notes: _workout.notes,
       );
       final presetProvider =
           Provider.of<PresetProvider>(context, listen: false);

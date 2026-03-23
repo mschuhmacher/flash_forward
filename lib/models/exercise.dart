@@ -1,3 +1,4 @@
+import 'package:flash_forward/utils/nullable.dart';
 import 'package:uuid/uuid.dart';
 
 enum ExerciseType { timedReps, fixedDuration, manual }
@@ -98,52 +99,52 @@ class Exercise {
     notes: json['notes'],
   );
 
-  // Nullable fields that can be explicitly cleared to null use the _keep sentinel
-  // instead of the normal `int? param` pattern. Without it, `param ?? this.param`
-  // makes null indistinguishable from "not provided", so passing null would silently
-  // keep the old value instead of clearing it.
+  // Nullable<T> parameters let callers distinguish "not provided" (omit the
+  // argument → keep the current value) from "explicitly set to null"
+  // (pass Nullable(null) → clear the field). A plain `T? param` cannot express
+  // this because `param ?? this.field` treats both cases identically.
   Exercise copyWith({
     String? id,
     String? templateId,
     String? title,
     String? description,
     String? label,
-    String? equipment,
-    String? muscleGroups,
-    String? difficulty,
+    Nullable<String>? equipment,
+    Nullable<String>? muscleGroups,
+    Nullable<String>? difficulty,
     String? userId,
     ExerciseType? type,
     int? sets,
-    Object? reps = _keep, // sentinel: omitted → keep old; null → clear
+    Nullable<int>? reps,
     int? timeBetweenSets,
     int? timePerRep,
     int? timeBetweenReps,
     int? activeTime,
     double? load,
-    String? loadUnit,
-    Object? rpe = _keep,    // sentinel: omitted → keep old; null → clear
-    Object? notes = _keep,  // sentinel: omitted → keep old; null → clear
+    Nullable<String>? loadUnit,
+    Nullable<int>? rpe,
+    Nullable<String>? notes,
   }) => Exercise(
     id: id ?? this.id,
     templateId: templateId ?? this.templateId,
     title: title ?? this.title,
     description: description ?? this.description,
     label: label ?? this.label,
-    equipment: equipment ?? this.equipment,
-    muscleGroups: muscleGroups ?? this.muscleGroups,
-    difficulty: difficulty ?? this.difficulty,
+    equipment: equipment == null ? this.equipment : equipment.value,
+    muscleGroups: muscleGroups == null ? this.muscleGroups : muscleGroups.value,
+    difficulty: difficulty == null ? this.difficulty : difficulty.value,
     userId: userId ?? this.userId,
     type: type ?? this.type,
     sets: sets ?? this.sets,
-    reps: identical(reps, _keep) ? this.reps : reps as int?,
+    reps: reps == null ? this.reps : reps.value,
     timeBetweenSets: timeBetweenSets ?? this.timeBetweenSets,
     timePerRep: timePerRep ?? this.timePerRep,
     timeBetweenReps: timeBetweenReps ?? this.timeBetweenReps,
     activeTime: activeTime ?? this.activeTime,
     load: load ?? this.load,
-    loadUnit: loadUnit ?? this.loadUnit,
-    rpe: identical(rpe, _keep) ? this.rpe : rpe as int?,
-    notes: identical(notes, _keep) ? this.notes : notes as String?,
+    loadUnit: loadUnit == null ? this.loadUnit : loadUnit.value,
+    rpe: rpe == null ? this.rpe : rpe.value,
+    notes: notes == null ? this.notes : notes.value,
   );
 
   /// Creates an independent copy with a new UUID — use when adding to a workout
@@ -170,6 +171,3 @@ class Exercise {
     notes: notes,
   );
 }
-
-// Sentinel for copyWith to distinguish "not provided" from explicit null.
-const Object _keep = Object();

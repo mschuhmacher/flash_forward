@@ -1,4 +1,5 @@
 import 'package:flash_forward/data/grade_scales.dart';
+import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/models/grade_entry.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
@@ -297,14 +298,15 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                         // Upon start, activeSession is newly created with deepCopy, call copyWith here for adding the label, description, and completion time
                         final finishedSession = activeSession.copyWith(
                           label: labelController.text,
-                          description:
-                              descriptionController.text.isEmpty
-                                  ? null
-                                  : descriptionController.text,
-                          completedAt: DateTime.now(),
-                          maxGradeClimbed: selectedGradeClimbed,
-                          maxGradeFlashed: selectedGradeFlashed,
-                          bodyWeightKg: bodyWeightKg,
+                          description: Nullable(
+                            descriptionController.text.isEmpty
+                                ? null
+                                : descriptionController.text,
+                          ),
+                          completedAt: Nullable(DateTime.now()),
+                          maxGradeClimbed: Nullable(selectedGradeClimbed),
+                          maxGradeFlashed: Nullable(selectedGradeFlashed),
+                          bodyWeightKg: Nullable(bodyWeightKg),
                         );
 
                         Navigator.of(dialogContext).pop();

@@ -1,4 +1,5 @@
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/utils/nullable.dart';
 import 'package:uuid/uuid.dart';
 
 class Workout {
@@ -59,30 +60,34 @@ class Workout {
     notes: json['notes'],
   );
 
+  // Nullable<T> parameters let callers distinguish "not provided" (omit the
+  // argument → keep the current value) from "explicitly set to null"
+  // (pass Nullable(null) → clear the field). A plain `T? param` cannot express
+  // this because `param ?? this.field` treats both cases identically.
   Workout copyWith({
     String? id,
     String? templateId,
     String? title,
     String? label,
-    String? description,
+    Nullable<String>? description,
     List<Exercise>? exercises,
-    String? difficulty,
-    String? equipment,
+    Nullable<String>? difficulty,
+    Nullable<String>? equipment,
     int? timeBetweenExercises,
     String? userId,
-    String? notes,
+    Nullable<String>? notes,
   }) => Workout(
     id: id ?? this.id,
     templateId: templateId ?? this.templateId,
     title: title ?? this.title,
     label: label ?? this.label,
-    description: description ?? this.description,
+    description: description == null ? this.description : description.value,
     exercises: exercises ?? this.exercises,
-    difficulty: difficulty ?? this.difficulty,
-    equipment: equipment ?? this.equipment,
+    difficulty: difficulty == null ? this.difficulty : difficulty.value,
+    equipment: equipment == null ? this.equipment : equipment.value,
     timeBetweenExercises: timeBetweenExercises ?? this.timeBetweenExercises,
     userId: userId ?? this.userId,
-    notes: notes ?? this.notes,
+    notes: notes == null ? this.notes : notes.value,
   );
 
   /// Creates an independent copy with a new UUID and deep-copied exercises.

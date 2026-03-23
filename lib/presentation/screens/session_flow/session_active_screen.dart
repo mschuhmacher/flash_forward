@@ -1,4 +1,5 @@
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/utils/timer_utils.dart';
@@ -499,7 +500,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                 exerciseIndex,
                 activeExercise.copyWith(
                   sets: localSets,
-                  reps: localRepsEnabled ? localReps : null,
+                  reps: Nullable(localRepsEnabled ? localReps : null),
                   timeBetweenSets: localTimeBetweenSets,
                   timePerRep: localTimePerRep,
                   timeBetweenReps: localTimeBetweenReps,
@@ -507,12 +508,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   load:
                       double.tryParse(loadController.text.trim()) ??
                       activeExercise.load,
-                  loadUnit: localLoadUnit,
-                  rpe: localRpeEnabled ? localRpe.clamp(1, 10) : null,
-                  notes:
-                      notesController.text.trim().isEmpty
-                          ? null
-                          : notesController.text.trim(),
+                  loadUnit: Nullable(localLoadUnit),
+                  rpe: Nullable(localRpeEnabled ? localRpe.clamp(1, 10) : null),
+                  notes: Nullable(
+                    notesController.text.trim().isEmpty
+                        ? null
+                        : notesController.text.trim(),
+                  ),
                 ),
               );
               Navigator.pop(context);
