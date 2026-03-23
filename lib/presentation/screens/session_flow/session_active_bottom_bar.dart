@@ -135,8 +135,6 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
     final gradeSystemName = prefs.getString('pref_grade_system') ?? 'fontainebleau';
     final gradeSystem = GradeSystem.values.byName(gradeSystemName);
     final weightUnit = prefs.getString('pref_weight_unit') ?? 'kg';
-    final hasMaxExercise =
-        ProgressExtractor.sessionHasMaxExercise(activeSession);
     final lastBodyWeightKg = ProgressExtractor.lastKnownBodyWeight(
       sessionLogData.loggedSessions,
     );
@@ -157,6 +155,39 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
     final bodyWeightController = TextEditingController(
       text: bodyWeightPreFill ?? '',
     );
+
+    // Collect unique Max exercises so the user can enter the load achieved.
+    // Deduplication by templateId ?? title mirrors the key used in ProgressExtractor.
+    final seenKeys = <String>{};
+    final maxExercisesForLoad = <({
+      String key,
+      String title,
+      TextEditingController controller,
+    })>[];
+    for (final workout in activeSession.workouts) {
+      for (final exercise in workout.exercises) {
+        if (!ProgressExtractor.isMaxExercise(exercise)) continue;
+        final key = exercise.templateId ?? exercise.title;
+        if (seenKeys.contains(key)) continue;
+        seenKeys.add(key);
+        // Pre-fill if the user already set a load via the in-session edit dialog.
+        // Normalize stored value (exercise.loadUnit) to the display unit.
+        String prefill = '';
+        if (exercise.load > 0) {
+          final loadKg = (exercise.loadUnit?.toLowerCase() == 'lbs')
+              ? exercise.load / 2.20462
+              : exercise.load;
+          final displayLoad = weightUnit == 'lbs' ? loadKg * 2.20462 : loadKg;
+          prefill = displayLoad.toStringAsFixed(1);
+        }
+        maxExercisesForLoad.add((
+          key: key,
+          title: exercise.title,
+          controller: TextEditingController(text: prefill),
+        ));
+      }
+    }
+    final hasMaxExercise = maxExercisesForLoad.isNotEmpty;
 
     showDialog(
       context: context,
@@ -240,12 +271,57 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           setDialogState(() => selectedGradeFlashed = entry),
                     ),
 
+                    // ── Max exercise loads (shown when session has Max exercises) ──
+                    if (hasMaxExercise) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'Max exercise loads',
+                        style: dialogContext.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Enter the load you achieved for each test ($weightUnit)',
+                        style: dialogContext.bodyMedium.copyWith(
+                          color: dialogContext.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...maxExercisesForLoad.map(
+                        (info) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: TextField(
+                            controller: info.controller,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d*'),
+                              ),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: info.title,
+                              hintText: weightUnit == 'lbs' ? 'e.g. 154.3' : 'e.g. 70.0',
+                              border: const OutlineInputBorder(),
+                              suffixText: weightUnit,
+                            ),
+                            style: dialogContext.bodyMedium,
+                          ),
+                        ),
+                      ),
+                    ],
+
                     // ── Body weight (only shown when session has Max exercises) ──
                     if (hasMaxExercise) ...[
                       const SizedBox(height: 20),
                       Text(
                         'Body weight (optional)',
                         style: dialogContext.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Your session included a 'Max' exercise. Want to log your bodyweight for accurate ratios?",
+                        style: dialogContext.bodyMedium,
                       ),
                       const SizedBox(height: 8),
                       TextField(
@@ -295,8 +371,41 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           }
                         }
 
+                        // Build a map from exercise key → load in kg from the user's inputs.
+                        // Only non-zero, parseable values are included; blank/zero fields are ignored
+                        // so exercises that weren't tested today are left with their existing load.
+                        final loadKgMap = <String, double>{};
+                        for (final info in maxExercisesForLoad) {
+                          final text = info.controller.text.trim();
+                          final parsed = double.tryParse(text);
+                          if (parsed != null && parsed > 0) {
+                            loadKgMap[info.key] =
+                                weightUnit == 'lbs' ? parsed / 2.20462 : parsed;
+                          }
+                        }
+
+                        // Apply entered loads to the session copy. Exercises not in loadKgMap
+                        // are returned unchanged. Loads are stored in kg with loadUnit 'kg' for
+                        // consistent normalization in ProgressExtractor._normalizeToKg.
+                        final updatedWorkouts = loadKgMap.isEmpty
+                            ? activeSession.workouts
+                            : activeSession.workouts.map((workout) {
+                                final updatedExercises = workout.exercises.map((exercise) {
+                                  if (!ProgressExtractor.isMaxExercise(exercise)) return exercise;
+                                  final key = exercise.templateId ?? exercise.title;
+                                  final loadKg = loadKgMap[key];
+                                  if (loadKg == null) return exercise;
+                                  return exercise.copyWith(
+                                    load: loadKg,
+                                    loadUnit: Nullable('kg'),
+                                  );
+                                }).toList();
+                                return workout.copyWith(exercises: updatedExercises);
+                              }).toList();
+
                         // Upon start, activeSession is newly created with deepCopy, call copyWith here for adding the label, description, and completion time
                         final finishedSession = activeSession.copyWith(
+                          workouts: updatedWorkouts,
                           label: labelController.text,
                           description: Nullable(
                             descriptionController.text.isEmpty
