@@ -136,6 +136,24 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updatePresetSession(Session session) async {
+    final index = _userSessions.indexWhere((s) => s.id == session.id);
+    if (index == -1) return;
+    _userSessions[index] = session;
+    await PresetLogger.savePresetToFile(
+      'user_preset_sessions.json',
+      _userSessions,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadSession(session);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
   // Remove user added preset session
   Future<void> deleteUserPresetSession(int index) async {
     //TODO: update to use IDs instead of index?

@@ -6,10 +6,14 @@ import 'package:flash_forward/presentation/screens/training_program_flow/add_ite
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
+import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/utils/nullable.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class NewSessionScreen extends StatefulWidget {
   final Session? session;
@@ -22,6 +26,8 @@ class NewSessionScreen extends StatefulWidget {
 
 class _NewSessionScreenState extends State<NewSessionScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  bool get _isNew => widget.session == null;
 
   // Title, label, workouts are required fields, so session must be initialized with them
   late Session _session =
@@ -45,6 +51,30 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
     super.dispose();
   }
 
+  void _save() {
+    if (_formKey.currentState!.validate()) {
+      final session = _session.copyWith(
+        title: _titleController.text.trim(),
+        label: _itemLabelController.text,
+        description: Nullable(
+          _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+        ),
+        userId: _session.userId ??
+            Provider.of<AuthProvider>(context, listen: false).userId,
+      );
+      final presetProvider =
+          Provider.of<PresetProvider>(context, listen: false);
+      if (_isNew) {
+        presetProvider.addPresetSession(session);
+      } else {
+        presetProvider.updatePresetSession(session);
+      }
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = _session;
@@ -54,9 +84,9 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             SizedBox.shrink(),
-            Text(session.title == 'title' ? 'New Session' : 'Edit session'),
+            Text(_isNew ? 'New session' : 'Edit session'),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: _save,
               style: ButtonStyle().copyWith(
                 padding: WidgetStatePropertyAll(
                   EdgeInsets.symmetric(vertical: 0, horizontal: 16),
