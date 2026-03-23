@@ -219,6 +219,24 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updatePresetWorkout(Workout workout) async {
+    final index = _userWorkouts.indexWhere((w) => w.id == workout.id);
+    if (index == -1) return;
+    _userWorkouts[index] = workout;
+    await PresetLogger.savePresetToFile(
+      'user_preset_workouts.json',
+      _userWorkouts,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadWorkout(workout);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
   Future<void> addPresetExercise(Exercise exercise) async {
     _userExercises.add(exercise);
     await PresetLogger.savePresetToFile(

@@ -5,10 +5,13 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class NewWorkoutScreen extends StatefulWidget {
   final Workout? workout;
@@ -54,6 +57,35 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     super.dispose();
   }
 
+  void _save() {
+    if (_formKey.currentState!.validate()) {
+      final workout = Workout(
+        id: _workout.id,
+        templateId: _workout.templateId,
+        title: _titleController.text.trim(),
+        label: _itemLabelController.text,
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        exercises: _workout.exercises,
+        difficulty: _workout.difficulty,
+        equipment: _workout.equipment,
+        timeBetweenExercises: _workout.timeBetweenExercises,
+        userId: _workout.userId ??
+            Provider.of<AuthProvider>(context, listen: false).userId,
+        notes: _workout.notes,
+      );
+      final presetProvider =
+          Provider.of<PresetProvider>(context, listen: false);
+      if (_isNew) {
+        presetProvider.addPresetWorkout(workout);
+      } else {
+        presetProvider.updatePresetWorkout(workout);
+      }
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final workout = _workout;
@@ -66,7 +98,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             SizedBox.shrink(),
             Text(_isNew ? 'New workout' : 'Edit workout'),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: _save,
               style: ButtonStyle().copyWith(
                 padding: WidgetStatePropertyAll(
                   EdgeInsets.symmetric(vertical: 0, horizontal: 16),
