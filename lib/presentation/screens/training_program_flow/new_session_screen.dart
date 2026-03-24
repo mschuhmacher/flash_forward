@@ -51,7 +51,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
       final session = _session.copyWith(
         title: _titleController.text.trim(),
@@ -67,11 +67,11 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       final presetProvider =
           Provider.of<PresetProvider>(context, listen: false);
       if (_isNew) {
-        presetProvider.addPresetSession(session);
+        await presetProvider.addPresetSession(session);
       } else {
-        presetProvider.updatePresetSession(session);
+        await presetProvider.updatePresetSession(session);
       }
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     }
   }
 

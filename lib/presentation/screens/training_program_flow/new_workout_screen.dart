@@ -58,7 +58,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
       final workout = _workout.copyWith(
         title: _titleController.text.trim(),
@@ -74,11 +74,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       final presetProvider =
           Provider.of<PresetProvider>(context, listen: false);
       if (_isNew) {
-        presetProvider.addPresetWorkout(workout);
+        await presetProvider.addPresetWorkout(workout);
       } else {
-        presetProvider.updatePresetWorkout(workout);
+        await presetProvider.updatePresetWorkout(workout);
       }
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     }
   }
 
