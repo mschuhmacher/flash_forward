@@ -1,3 +1,5 @@
+import 'dart:math' show pi;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flash_forward/data/grade_scales.dart';
 import 'package:flash_forward/services/progress_extractor.dart';
@@ -5,6 +7,60 @@ import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+// ── X-axis scale helpers ──────────────────────────────────────────────────────
+
+enum _XScale { weekly, monthly, quarterly, yearly }
+
+/// Selects the tick scale from the chart's total time range in milliseconds.
+/// Scale is computed from the ORIGINAL rangeMs before any single-point padding.
+_XScale _xScaleFor(double rangeMs) {
+  const day = 86400000.0;
+  if (rangeMs <= 42 * day) return _XScale.weekly;
+  if (rangeMs <= 274 * day) return _XScale.monthly;
+  if (rangeMs <= 730 * day) return _XScale.quarterly;
+  return _XScale.yearly;
+}
+
+/// Returns true when [utcDate] is a tick position for [scale].
+bool _isTickDate(DateTime utcDate, _XScale scale) => switch (scale) {
+      _XScale.weekly => utcDate.weekday == DateTime.monday,
+      _XScale.monthly => utcDate.day == 1,
+      _XScale.quarterly =>
+        utcDate.day == 1 && [1, 4, 7, 10].contains(utcDate.month),
+      _XScale.yearly => utcDate.day == 1 && utcDate.month == 1,
+    };
+
+/// Returns the label string for a tick date.
+/// On monthly and quarterly scales, January shows the 4-digit year number
+/// instead of "Jan" so the year boundary is unambiguous.
+String _tickLabel(DateTime utcDate, _XScale scale) {
+  if (utcDate.month == 1 && (scale == _XScale.monthly || scale == _XScale.quarterly)) {
+    return utcDate.year.toString();
+  }
+  return switch (scale) {
+    _XScale.weekly => DateFormat('d MMM').format(utcDate),
+    _XScale.monthly => DateFormat('MMM').format(utcDate),
+    _XScale.quarterly => DateFormat('MMM').format(utcDate),
+    _XScale.yearly => utcDate.year.toString(),
+  };
+}
+
+/// Bottom-axis label widget for a given x-value (milliseconds since epoch).
+/// Returns [SizedBox.shrink] for non-tick positions.
+/// Labels are rotated 55° counter-clockwise ("8 to 2 on a clock face").
+Widget _buildXLabel(double xMs, _XScale scale, BuildContext context) {
+  final utcDate =
+      DateTime.fromMillisecondsSinceEpoch(xMs.toInt(), isUtc: true);
+  if (!_isTickDate(utcDate, scale)) return const SizedBox.shrink();
+  return Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Transform.rotate(
+      angle: -pi * 55 / 180,
+      child: Text(_tickLabel(utcDate, scale), style: context.bodyMedium),
+    ),
+  );
+}
 
 /// Line chart for strength progress (load over time), with optional ratio line.
 class StrengthProgressChart extends StatelessWidget {
@@ -41,8 +97,14 @@ class StrengthProgressChart extends StatelessWidget {
       );
     }).toList();
 
-    final minX = points.first.date.millisecondsSinceEpoch.toDouble();
-    final maxX = points.last.date.millisecondsSinceEpoch.toDouble();
+    var minX = points.first.date.millisecondsSinceEpoch.toDouble();
+    var maxX = points.last.date.millisecondsSinceEpoch.toDouble();
+    final rangeMs = maxX - minX;
+    final scale = _xScaleFor(rangeMs); // compute BEFORE padding
+    if (rangeMs == 0) {
+      minX -= 3 * 86400000;
+      maxX += 3 * 86400000;
+    }
     final allLoads = displayPoints.map((p) => p.loadDisplay);
     final minY = (allLoads.reduce((a, b) => a < b ? a : b) * 0.9);
     final maxY = (allLoads.reduce((a, b) => a > b ? a : b) * 1.1);
@@ -105,29 +167,24 @@ class StrengthProgressChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 44,
-                getTitlesWidget: (value, meta) => Text(
-                  value.toStringAsFixed(1),
-                  style: context.bodyMedium,
-                ),
+                getTitlesWidget: (value, meta) {
+                  if (value == meta.min || value == meta.max) {
+                    return const SizedBox.shrink();
+                  }
+                  return Text(
+                    value.toStringAsFixed(1),
+                    style: context.bodyMedium,
+                  );
+                },
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 28,
-                interval: _xInterval(minX, maxX),
-                getTitlesWidget: (value, meta) {
-                  final date = DateTime.fromMillisecondsSinceEpoch(
-                    value.toInt(),
-                  );
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      DateFormat('MMM yy').format(date),
-                      style: context.bodyMedium,
-                    ),
-                  );
-                },
+                reservedSize: 50,
+                interval: 86400000,
+                getTitlesWidget: (value, meta) =>
+                    _buildXLabel(value, scale, context),
               ),
             ),
             topTitles: const AxisTitles(
@@ -167,13 +224,6 @@ class StrengthProgressChart extends StatelessWidget {
       ),
     );
   }
-
-  double _xInterval(double minX, double maxX) {
-    final rangeMs = maxX - minX;
-    if (rangeMs <= 0) return 1;
-    // Show ~4 labels
-    return (rangeMs / 4).ceilToDouble();
-  }
 }
 
 /// Line chart for grade progress with two lines: max grade climbed and flashed.
@@ -206,8 +256,14 @@ class GradeProgressChart extends StatelessWidget {
     final allPoints = [...climbed, ...flashed];
     final allDates = allPoints.map((p) => p.date.millisecondsSinceEpoch.toDouble());
     final allIndices = allPoints.map((p) => p.grade.gradeIndex.toDouble()).toList();
-    final minX = allDates.reduce((a, b) => a < b ? a : b);
-    final maxX = allDates.reduce((a, b) => a > b ? a : b);
+    var minX = allDates.reduce((a, b) => a < b ? a : b);
+    var maxX = allDates.reduce((a, b) => a > b ? a : b);
+    final rangeMs = maxX - minX;
+    final scale = _xScaleFor(rangeMs); // compute BEFORE padding
+    if (rangeMs == 0) {
+      minX -= 3 * 86400000;
+      maxX += 3 * 86400000;
+    }
     final minY = (allIndices.reduce((a, b) => a < b ? a : b) - 1).clamp(0, double.infinity).toDouble();
     final maxY = allIndices.reduce((a, b) => a > b ? a : b) + 1;
 
@@ -275,6 +331,9 @@ class GradeProgressChart extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 52,
                     getTitlesWidget: (value, meta) {
+                      if (value == meta.min || value == meta.max) {
+                        return const SizedBox.shrink();
+                      }
                       final label = indexToLabel[value.round()];
                       if (label == null) return const SizedBox.shrink();
                       return Text(label, style: context.bodyMedium);
@@ -284,18 +343,10 @@ class GradeProgressChart extends StatelessWidget {
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 28,
-                    interval: _xInterval(minX, maxX),
-                    getTitlesWidget: (value, meta) {
-                      final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          DateFormat('MMM yy').format(date),
-                          style: context.bodyMedium,
-                        ),
-                      );
-                    },
+                    reservedSize: 50,
+                    interval: 86400000,
+                    getTitlesWidget: (value, meta) =>
+                        _buildXLabel(value, scale, context),
                   ),
                 ),
                 topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -331,12 +382,6 @@ class GradeProgressChart extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  double _xInterval(double minX, double maxX) {
-    final rangeMs = maxX - minX;
-    if (rangeMs <= 0) return 1;
-    return (rangeMs / 4).ceilToDouble();
   }
 }
 
@@ -376,8 +421,14 @@ class BodyWeightChart extends StatelessWidget {
       return (date: p.date, weight: displayWeight);
     }).toList();
 
-    final minX = points.first.date.millisecondsSinceEpoch.toDouble();
-    final maxX = points.last.date.millisecondsSinceEpoch.toDouble();
+    var minX = points.first.date.millisecondsSinceEpoch.toDouble();
+    var maxX = points.last.date.millisecondsSinceEpoch.toDouble();
+    final rangeMs = maxX - minX;
+    final scale = _xScaleFor(rangeMs); // compute BEFORE padding
+    if (rangeMs == 0) {
+      minX -= 3 * 86400000;
+      maxX += 3 * 86400000;
+    }
     final allWeights = displayPoints.map((p) => p.weight);
     final minY = allWeights.reduce((a, b) => a < b ? a : b) * 0.9;
     final maxY = allWeights.reduce((a, b) => a > b ? a : b) * 1.1;
@@ -415,27 +466,24 @@ class BodyWeightChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 44,
-                getTitlesWidget: (value, meta) => Text(
-                  value.toStringAsFixed(1),
-                  style: context.bodyMedium,
-                ),
+                getTitlesWidget: (value, meta) {
+                  if (value == meta.min || value == meta.max) {
+                    return const SizedBox.shrink();
+                  }
+                  return Text(
+                    value.toStringAsFixed(1),
+                    style: context.bodyMedium,
+                  );
+                },
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 28,
-                interval: _xInterval(minX, maxX),
-                getTitlesWidget: (value, meta) {
-                  final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      DateFormat('MMM yy').format(date),
-                      style: context.bodyMedium,
-                    ),
-                  );
-                },
+                reservedSize: 50,
+                interval: 86400000,
+                getTitlesWidget: (value, meta) =>
+                    _buildXLabel(value, scale, context),
               ),
             ),
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -464,12 +512,6 @@ class BodyWeightChart extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  double _xInterval(double minX, double maxX) {
-    final rangeMs = maxX - minX;
-    if (rangeMs <= 0) return 1;
-    return (rangeMs / 4).ceilToDouble();
   }
 }
 
