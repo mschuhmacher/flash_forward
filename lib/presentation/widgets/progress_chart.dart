@@ -2,6 +2,7 @@ import 'dart:math' show pi;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flash_forward/data/grade_scales.dart';
+import 'package:flash_forward/models/grade_entry.dart';
 import 'package:flash_forward/services/progress_extractor.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -245,28 +246,48 @@ class GradeProgressChart extends StatelessWidget {
     super.key,
     required this.climbed,
     required this.flashed,
+    required this.gradeSystem,
   });
 
   final List<GradePoint> climbed;
   final List<GradePoint> flashed;
+  final GradeSystem gradeSystem;
 
   @override
   Widget build(BuildContext context) {
-    if (climbed.isEmpty && flashed.isEmpty) {
+    // Filter to only points stored in the active grade system so Font and
+    // V indices are never mixed on the same axis.
+    final filteredClimbed =
+        climbed.where((p) => p.grade.system == gradeSystem).toList();
+    final filteredFlashed =
+        flashed.where((p) => p.grade.system == gradeSystem).toList();
+
+    if (filteredClimbed.isEmpty && filteredFlashed.isEmpty) {
       return _EmptyState(message: 'No grades logged yet');
     }
 
-    // Build a lookup from gradeIndex → display label using the stored system.
-    // If two entries share an index but have different systems, last write wins —
-    // acceptable edge case; the tooltip always shows the correct per-entry label.
-    final indexToLabel = <int, String>{};
-    for (final p in [...climbed, ...flashed]) {
-      indexToLabel[p.grade.gradeIndex] = gradeLabel(p.grade);
-    }
+    // Full ordered label list for the active system.
+    final scaleLabels = gradeSystem == GradeSystem.fontainebleau
+        ? kFontScale                           // indices 0-21
+        : List.generate(18, (i) => 'V$i');     // V0-V17
 
-    final allPoints = [...climbed, ...flashed];
+    final allPoints = [...filteredClimbed, ...filteredFlashed];
     final allDates = allPoints.map((p) => p.date.millisecondsSinceEpoch.toDouble());
-    final allIndices = allPoints.map((p) => p.grade.gradeIndex.toDouble()).toList();
+    final minIdx = allPoints
+        .map((p) => p.grade.gradeIndex)
+        .reduce((a, b) => a < b ? a : b);
+    final maxIdx = allPoints
+        .map((p) => p.grade.gradeIndex)
+        .reduce((a, b) => a > b ? a : b);
+
+    // Build indexToLabel for every grade in [minIdx, maxIdx] so every y
+    // position in the visible range has a label and spacing is uniform,
+    // regardless of which specific grades were actually logged.
+    final indexToLabel = <int, String>{
+      for (int i = minIdx; i <= maxIdx; i++)
+        if (i >= 0 && i < scaleLabels.length) i: scaleLabels[i],
+    };
+
     var minX = allDates.reduce((a, b) => a < b ? a : b);
     var maxX = allDates.reduce((a, b) => a > b ? a : b);
     final rangeMs = maxX - minX;
@@ -280,8 +301,8 @@ class GradeProgressChart extends StatelessWidget {
       minX -= rangeMs * 0.04;
       maxX += rangeMs * 0.04;
     }
-    final minY = (allIndices.reduce((a, b) => a < b ? a : b) - 1).clamp(0, double.infinity).toDouble();
-    final maxY = allIndices.reduce((a, b) => a > b ? a : b) + 1;
+    final minY = (minIdx - 1).clamp(0, scaleLabels.length - 1).toDouble();
+    final maxY = (maxIdx + 1).clamp(0, scaleLabels.length - 1).toDouble();
 
     FlSpot toSpot(GradePoint p) => FlSpot(
           p.date.millisecondsSinceEpoch.toDouble(),
@@ -289,26 +310,26 @@ class GradeProgressChart extends StatelessWidget {
         );
 
     final lineBarsData = [
-      if (climbed.isNotEmpty)
+      if (filteredClimbed.isNotEmpty)
         LineChartBarData(
-          spots: climbed.map(toSpot).toList(),
+          spots: filteredClimbed.map(toSpot).toList(),
           isCurved: true,
           color: context.colorScheme.primary,
           barWidth: 2.5,
-          dotData: FlDotData(show: climbed.length <= 12),
+          dotData: FlDotData(show: filteredClimbed.length <= 12),
           belowBarData: BarAreaData(
             show: true,
             color: context.colorScheme.primary.withValues(alpha: 0.08),
           ),
         ),
-      if (flashed.isNotEmpty)
+      if (filteredFlashed.isNotEmpty)
         LineChartBarData(
-          spots: flashed.map(toSpot).toList(),
+          spots: filteredFlashed.map(toSpot).toList(),
           isCurved: true,
           color: context.colorScheme.secondary,
           barWidth: 2,
           dashArray: [6, 3],
-          dotData: FlDotData(show: flashed.length <= 12),
+          dotData: FlDotData(show: filteredFlashed.length <= 12),
         ),
     ];
 
@@ -318,13 +339,13 @@ class GradeProgressChart extends StatelessWidget {
         // Legend
         Row(
           children: [
-            if (climbed.isNotEmpty) ...[
+            if (filteredClimbed.isNotEmpty) ...[
               _LegendDot(color: context.colorScheme.primary),
               const SizedBox(width: 4),
               Text('Climbed', style: context.bodyMedium),
               const SizedBox(width: 16),
             ],
-            if (flashed.isNotEmpty) ...[
+            if (filteredFlashed.isNotEmpty) ...[
               _LegendDot(color: context.colorScheme.secondary),
               const SizedBox(width: 4),
               Text('Flashed', style: context.bodyMedium),

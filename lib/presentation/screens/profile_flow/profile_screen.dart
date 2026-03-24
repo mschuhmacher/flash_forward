@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flash_forward/data/grade_scales.dart';
+import 'package:flash_forward/models/grade_entry.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -136,6 +137,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     GradeProgressChart(
                       climbed: gradeClimbed,
                       flashed: gradeFlashed,
+                      gradeSystem: _gradeSystem == 'fontainebleau'
+                          ? GradeSystem.fontainebleau
+                          : GradeSystem.vscale,
                     ),
                     const SizedBox(height: 8),
                     _GradeReferenceSection(),
