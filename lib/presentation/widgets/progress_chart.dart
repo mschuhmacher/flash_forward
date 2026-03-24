@@ -10,13 +10,14 @@ import 'package:intl/intl.dart';
 
 // ── X-axis scale helpers ──────────────────────────────────────────────────────
 
-enum _XScale { weekly, monthly, quarterly, yearly }
+enum _XScale { daily, weekly, monthly, quarterly, yearly }
 
 /// Selects the tick scale from the chart's total time range in milliseconds.
 /// Scale is computed from the ORIGINAL rangeMs before any single-point padding.
 _XScale _xScaleFor(double rangeMs) {
   const day = 86400000.0;
-  if (rangeMs <= 42 * day) return _XScale.weekly;
+  if (rangeMs <= 6 * day)   return _XScale.daily;
+  if (rangeMs <= 42 * day)  return _XScale.weekly;
   if (rangeMs <= 274 * day) return _XScale.monthly;
   if (rangeMs <= 730 * day) return _XScale.quarterly;
   return _XScale.yearly;
@@ -24,11 +25,11 @@ _XScale _xScaleFor(double rangeMs) {
 
 /// Returns true when [utcDate] is a tick position for [scale].
 bool _isTickDate(DateTime utcDate, _XScale scale) => switch (scale) {
-      _XScale.weekly => utcDate.weekday == DateTime.monday,
-      _XScale.monthly => utcDate.day == 1,
-      _XScale.quarterly =>
-        utcDate.day == 1 && [1, 4, 7, 10].contains(utcDate.month),
-      _XScale.yearly => utcDate.day == 1 && utcDate.month == 1,
+      _XScale.daily     => true,
+      _XScale.weekly    => utcDate.weekday == DateTime.monday,
+      _XScale.monthly   => utcDate.day == 1,
+      _XScale.quarterly => utcDate.day == 1 && [1, 4, 7, 10].contains(utcDate.month),
+      _XScale.yearly    => utcDate.day == 1 && utcDate.month == 1,
     };
 
 /// Returns the label string for a tick date.
@@ -39,10 +40,11 @@ String _tickLabel(DateTime utcDate, _XScale scale) {
     return utcDate.year.toString();
   }
   return switch (scale) {
-    _XScale.weekly => DateFormat('d MMM').format(utcDate),
-    _XScale.monthly => DateFormat('MMM').format(utcDate),
+    _XScale.daily     => DateFormat('d MMM').format(utcDate),
+    _XScale.weekly    => DateFormat('d MMM').format(utcDate),
+    _XScale.monthly   => DateFormat('MMM').format(utcDate),
     _XScale.quarterly => DateFormat('MMM').format(utcDate),
-    _XScale.yearly => utcDate.year.toString(),
+    _XScale.yearly    => utcDate.year.toString(),
   };
 }
 
@@ -54,7 +56,7 @@ Widget _buildXLabel(double xMs, _XScale scale, BuildContext context) {
       DateTime.fromMillisecondsSinceEpoch(xMs.toInt(), isUtc: true);
   if (!_isTickDate(utcDate, scale)) return const SizedBox.shrink();
   return Padding(
-    padding: const EdgeInsets.only(top: 4),
+    padding: const EdgeInsets.only(top: 10),
     child: Transform.rotate(
       angle: -pi * 55 / 180,
       child: Text(_tickLabel(utcDate, scale), style: context.bodyMedium),
@@ -104,6 +106,9 @@ class StrengthProgressChart extends StatelessWidget {
     if (rangeMs == 0) {
       minX -= 3 * 86400000;
       maxX += 3 * 86400000;
+    } else {
+      minX -= 86400000;
+      maxX += 86400000;
     }
     final allLoads = displayPoints.map((p) => p.loadDisplay);
     final minY = (allLoads.reduce((a, b) => a < b ? a : b) * 0.9);
@@ -181,7 +186,7 @@ class StrengthProgressChart extends StatelessWidget {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 50,
+                reservedSize: 56,
                 interval: 86400000,
                 getTitlesWidget: (value, meta) =>
                     _buildXLabel(value, scale, context),
@@ -263,6 +268,9 @@ class GradeProgressChart extends StatelessWidget {
     if (rangeMs == 0) {
       minX -= 3 * 86400000;
       maxX += 3 * 86400000;
+    } else {
+      minX -= 86400000;
+      maxX += 86400000;
     }
     final minY = (allIndices.reduce((a, b) => a < b ? a : b) - 1).clamp(0, double.infinity).toDouble();
     final maxY = allIndices.reduce((a, b) => a > b ? a : b) + 1;
@@ -330,6 +338,7 @@ class GradeProgressChart extends StatelessWidget {
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 52,
+                    interval: 1,
                     getTitlesWidget: (value, meta) {
                       if (value == meta.min || value == meta.max) {
                         return const SizedBox.shrink();
@@ -343,7 +352,7 @@ class GradeProgressChart extends StatelessWidget {
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 50,
+                    reservedSize: 56,
                     interval: 86400000,
                     getTitlesWidget: (value, meta) =>
                         _buildXLabel(value, scale, context),
@@ -428,6 +437,9 @@ class BodyWeightChart extends StatelessWidget {
     if (rangeMs == 0) {
       minX -= 3 * 86400000;
       maxX += 3 * 86400000;
+    } else {
+      minX -= 86400000;
+      maxX += 86400000;
     }
     final allWeights = displayPoints.map((p) => p.weight);
     final minY = allWeights.reduce((a, b) => a < b ? a : b) * 0.9;
@@ -480,7 +492,7 @@ class BodyWeightChart extends StatelessWidget {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 50,
+                reservedSize: 56,
                 interval: 86400000,
                 getTitlesWidget: (value, meta) =>
                     _buildXLabel(value, scale, context),
