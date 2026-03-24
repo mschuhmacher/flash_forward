@@ -107,8 +107,10 @@ class StrengthProgressChart extends StatelessWidget {
       minX -= 3 * 86400000;
       maxX += 3 * 86400000;
     } else {
-      minX -= 86400000;
-      maxX += 86400000;
+      // 4% of range ≈ 8–9 pt inset on each side on a typical phone chart width
+      // (~220 pt usable), keeping the first and last data points off the edges.
+      minX -= rangeMs * 0.04;
+      maxX += rangeMs * 0.04;
     }
     final allLoads = displayPoints.map((p) => p.loadDisplay);
     final minY = (allLoads.reduce((a, b) => a < b ? a : b) * 0.9);
@@ -188,8 +190,12 @@ class StrengthProgressChart extends StatelessWidget {
                 showTitles: true,
                 reservedSize: 56,
                 interval: 86400000,
-                getTitlesWidget: (value, meta) =>
-                    _buildXLabel(value, scale, context),
+                getTitlesWidget: (value, meta) {
+                  if (value == meta.min || value == meta.max) {
+                    return const SizedBox.shrink();
+                  }
+                  return _buildXLabel(value, scale, context);
+                },
               ),
             ),
             topTitles: const AxisTitles(
@@ -269,8 +275,10 @@ class GradeProgressChart extends StatelessWidget {
       minX -= 3 * 86400000;
       maxX += 3 * 86400000;
     } else {
-      minX -= 86400000;
-      maxX += 86400000;
+      // 4% of range ≈ 8–9 pt inset on each side on a typical phone chart width
+      // (~220 pt usable), keeping the first and last data points off the edges.
+      minX -= rangeMs * 0.04;
+      maxX += rangeMs * 0.04;
     }
     final minY = (allIndices.reduce((a, b) => a < b ? a : b) - 1).clamp(0, double.infinity).toDouble();
     final maxY = allIndices.reduce((a, b) => a > b ? a : b) + 1;
@@ -354,8 +362,12 @@ class GradeProgressChart extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 56,
                     interval: 86400000,
-                    getTitlesWidget: (value, meta) =>
-                        _buildXLabel(value, scale, context),
+                    getTitlesWidget: (value, meta) {
+                      if (value == meta.min || value == meta.max) {
+                        return const SizedBox.shrink();
+                      }
+                      return _buildXLabel(value, scale, context);
+                    },
                   ),
                 ),
                 topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -364,6 +376,8 @@ class GradeProgressChart extends StatelessWidget {
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
+                checkToShowHorizontalLine: (value) =>
+                    indexToLabel.containsKey(value.round()),
                 getDrawingHorizontalLine: (value) => FlLine(
                   color: context.colorScheme.outline.withValues(alpha: 0.3),
                   strokeWidth: 1,
@@ -438,8 +452,10 @@ class BodyWeightChart extends StatelessWidget {
       minX -= 3 * 86400000;
       maxX += 3 * 86400000;
     } else {
-      minX -= 86400000;
-      maxX += 86400000;
+      // 4% of range ≈ 8–9 pt inset on each side on a typical phone chart width
+      // (~220 pt usable), keeping the first and last data points off the edges.
+      minX -= rangeMs * 0.04;
+      maxX += rangeMs * 0.04;
     }
     final allWeights = displayPoints.map((p) => p.weight);
     final minY = allWeights.reduce((a, b) => a < b ? a : b) * 0.9;
@@ -494,8 +510,12 @@ class BodyWeightChart extends StatelessWidget {
                 showTitles: true,
                 reservedSize: 56,
                 interval: 86400000,
-                getTitlesWidget: (value, meta) =>
-                    _buildXLabel(value, scale, context),
+                getTitlesWidget: (value, meta) {
+                  if (value == meta.min || value == meta.max) {
+                    return const SizedBox.shrink();
+                  }
+                  return _buildXLabel(value, scale, context);
+                },
               ),
             ),
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
