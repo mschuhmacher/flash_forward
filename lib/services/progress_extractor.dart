@@ -76,7 +76,22 @@ class ProgressExtractor {
       }
     }
     points.sort((a, b) => a.date.compareTo(b.date));
-    return points;
+    // Group by UTC calendar day; keep the point with the highest loadKg.
+    // Normalise the surviving date to UTC midnight so fl_chart tick positions align.
+    final byDay = <String, StrengthPoint>{};
+    for (final point in points) {
+      final utc = point.date.toUtc();
+      final key = '${utc.year}-${utc.month}-${utc.day}';
+      final existing = byDay[key];
+      if (existing == null || point.loadKg > existing.loadKg) {
+        byDay[key] = (
+          date: DateTime.utc(utc.year, utc.month, utc.day),
+          loadKg: point.loadKg,
+          bodyWeightKg: point.bodyWeightKg,
+        );
+      }
+    }
+    return byDay.values.toList()..sort((a, b) => a.date.compareTo(b.date));
   }
 
   /// Returns all grade data points for [metric] across [sessions],
@@ -95,7 +110,20 @@ class ProgressExtractor {
       points.add((date: session.completedAt!, grade: grade));
     }
     points.sort((a, b) => a.date.compareTo(b.date));
-    return points;
+    // Group by UTC calendar day; keep the point with the highest gradeIndex.
+    final byDay = <String, GradePoint>{};
+    for (final point in points) {
+      final utc = point.date.toUtc();
+      final key = '${utc.year}-${utc.month}-${utc.day}';
+      final existing = byDay[key];
+      if (existing == null || point.grade.gradeIndex > existing.grade.gradeIndex) {
+        byDay[key] = (
+          date: DateTime.utc(utc.year, utc.month, utc.day),
+          grade: point.grade,
+        );
+      }
+    }
+    return byDay.values.toList()..sort((a, b) => a.date.compareTo(b.date));
   }
 
   /// Returns body weight data points from sessions where [bodyWeightKg] was
@@ -113,7 +141,20 @@ class ProgressExtractor {
       ));
     }
     points.sort((a, b) => a.date.compareTo(b.date));
-    return points;
+    // Group by UTC calendar day; keep the highest bodyWeightKg per day.
+    final byDay = <String, ({DateTime date, double bodyWeightKg})>{};
+    for (final point in points) {
+      final utc = point.date.toUtc();
+      final key = '${utc.year}-${utc.month}-${utc.day}';
+      final existing = byDay[key];
+      if (existing == null || point.bodyWeightKg > existing.bodyWeightKg) {
+        byDay[key] = (
+          date: DateTime.utc(utc.year, utc.month, utc.day),
+          bodyWeightKg: point.bodyWeightKg,
+        );
+      }
+    }
+    return byDay.values.toList()..sort((a, b) => a.date.compareTo(b.date));
   }
 
   /// Scans [sessions] in reverse and returns the most recent non-null
