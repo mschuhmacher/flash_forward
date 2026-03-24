@@ -20,7 +20,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String _weightUnit = 'kg';
   String _gradeSystem = 'fontainebleau';
-  bool _showRatio = false;
+  StrengthDisplayMode _strengthMode = StrengthDisplayMode.load;
   String? _selectedTemplateId;
 
   @override
@@ -174,20 +174,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             setState(() => _selectedTemplateId = v),
                       ),
                       const SizedBox(height: 12),
-                      if (strengthPoints.any((p) => p.bodyWeightKg != null))
-                        SwitchListTile(
-                          title: Text(
-                            'Show load / body weight ratio',
-                            style: context.bodyMedium,
-                          ),
-                          value: _showRatio,
-                          onChanged: (v) => setState(() => _showRatio = v),
-                          contentPadding: EdgeInsets.zero,
+                      if (strengthPoints.any((p) => p.bodyWeightKg != null)) ...[
+                        SegmentedButton<StrengthDisplayMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: StrengthDisplayMode.load,
+                              label: Text('Load'),
+                            ),
+                            ButtonSegment(
+                              value: StrengthDisplayMode.ratio,
+                              label: Text('Ratio'),
+                            ),
+                          ],
+                          selected: {_strengthMode},
+                          onSelectionChanged: (s) =>
+                              setState(() => _strengthMode = s.first),
                         ),
+                        const SizedBox(height: 12),
+                      ],
                       StrengthProgressChart(
                         points: strengthPoints,
                         unit: _weightUnit,
-                        showRatio: _showRatio,
+                        displayMode: _strengthMode,
                       ),
                     ],
                   ],
