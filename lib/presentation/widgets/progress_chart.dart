@@ -67,6 +67,15 @@ Widget _buildXLabel(double xMs, _XScale scale, BuildContext context) {
   );
 }
 
+/// Returns a y-axis tick interval for ratio charts (loadKg / bodyWeightKg)
+/// that targets ~4 visible ticks for typical ratio ranges (0.0–2.0).
+double _niceRatioInterval(double maxY) {
+  if (maxY <= 0.5) return 0.1;
+  if (maxY <= 1.2) return 0.2;
+  if (maxY <= 2.5) return 0.5;
+  return 1.0;
+}
+
 /// Line chart for strength progress (load over time), with optional ratio line.
 class StrengthProgressChart extends StatelessWidget {
   const StrengthProgressChart({
@@ -137,6 +146,10 @@ class StrengthProgressChart extends StatelessWidget {
       maxY = ratios.reduce((a, b) => a > b ? a : b) * 1.1;
     }
 
+    final double? yInterval = displayMode == StrengthDisplayMode.ratio
+        ? _niceRatioInterval(maxY)
+        : null; // null = fl_chart auto-interval (works well for load)
+
     final spots = displayMode == StrengthDisplayMode.load
         ? displayPoints
               .map((p) => FlSpot(
@@ -183,6 +196,7 @@ class StrengthProgressChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 44,
+                interval: yInterval,
                 getTitlesWidget: (value, meta) {
                   if (value == meta.min || value == meta.max) {
                     return const SizedBox.shrink();
