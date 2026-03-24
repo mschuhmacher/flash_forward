@@ -13,6 +13,8 @@ import 'package:intl/intl.dart';
 
 enum _XScale { daily, weekly, monthly, quarterly, yearly }
 
+enum StrengthDisplayMode { load, ratio }
+
 /// Selects the tick scale from the chart's total time range in milliseconds.
 /// Scale is computed from the ORIGINAL rangeMs before any single-point padding.
 _XScale _xScaleFor(double rangeMs) {
@@ -71,7 +73,7 @@ class StrengthProgressChart extends StatelessWidget {
     super.key,
     required this.points,
     required this.unit,
-    this.showRatio = false,
+    this.displayMode = StrengthDisplayMode.load,
   });
 
   final List<StrengthPoint> points;
@@ -79,9 +81,8 @@ class StrengthProgressChart extends StatelessWidget {
   /// Display unit: 'kg' or 'lbs'. Values are converted from stored kg before rendering.
   final String unit;
 
-  /// When true, renders a second line for loadKg / bodyWeightKg ratio
-  /// on sessions where bodyWeightKg is available.
-  final bool showRatio;
+  /// Whether to show the raw load line or the load/body-weight ratio line.
+  final StrengthDisplayMode displayMode;
 
   @override
   Widget build(BuildContext context) {
@@ -100,6 +101,15 @@ class StrengthProgressChart extends StatelessWidget {
       );
     }).toList();
 
+    // For ratio mode, only points that have body weight are usable.
+    final ratioPoints = displayMode == StrengthDisplayMode.ratio
+        ? displayPoints.where((p) => p.ratio != null).toList()
+        : <({DateTime date, double loadDisplay, double? ratio})>[];
+
+    if (displayMode == StrengthDisplayMode.ratio && ratioPoints.isEmpty) {
+      return _EmptyState(message: 'No body weight data logged yet');
+    }
+
     var minX = points.first.date.millisecondsSinceEpoch.toDouble();
     var maxX = points.last.date.millisecondsSinceEpoch.toDouble();
     final rangeMs = maxX - minX;
@@ -113,52 +123,50 @@ class StrengthProgressChart extends StatelessWidget {
       minX -= rangeMs * 0.04;
       maxX += rangeMs * 0.04;
     }
-    final allLoads = displayPoints.map((p) => p.loadDisplay);
-    final minY = (allLoads.reduce((a, b) => a < b ? a : b) * 0.9);
-    final maxY = (allLoads.reduce((a, b) => a > b ? a : b) * 1.1);
 
-    final loadSpots = displayPoints
-        .map(
-          (p) => FlSpot(
-            p.date.millisecondsSinceEpoch.toDouble(),
-            double.parse(p.loadDisplay.toStringAsFixed(1)),
-          ),
-        )
-        .toList();
+    // Y-axis bounds scaled to the active mode's data range.
+    final double minY;
+    final double maxY;
+    if (displayMode == StrengthDisplayMode.load) {
+      final loads = displayPoints.map((p) => p.loadDisplay);
+      minY = loads.reduce((a, b) => a < b ? a : b) * 0.9;
+      maxY = loads.reduce((a, b) => a > b ? a : b) * 1.1;
+    } else {
+      final ratios = ratioPoints.map((p) => p.ratio!);
+      minY = 0;
+      maxY = ratios.reduce((a, b) => a > b ? a : b) * 1.1;
+    }
 
-    final ratioSpots = showRatio
+    final spots = displayMode == StrengthDisplayMode.load
         ? displayPoints
-              .where((p) => p.ratio != null)
-              .map(
-                (p) => FlSpot(
-                  p.date.millisecondsSinceEpoch.toDouble(),
-                  double.parse(p.ratio!.toStringAsFixed(2)),
-                ),
-              )
+              .map((p) => FlSpot(
+                    p.date.millisecondsSinceEpoch.toDouble(),
+                    double.parse(p.loadDisplay.toStringAsFixed(1)),
+                  ))
               .toList()
-        : <FlSpot>[];
+        : ratioPoints
+              .map((p) => FlSpot(
+                    p.date.millisecondsSinceEpoch.toDouble(),
+                    double.parse(p.ratio!.toStringAsFixed(2)),
+                  ))
+              .toList();
+
+    final lineColor = displayMode == StrengthDisplayMode.load
+        ? context.colorScheme.primary
+        : context.colorScheme.secondary;
 
     final lineBarsData = [
       LineChartBarData(
-        spots: loadSpots,
+        spots: spots,
         isCurved: true,
-        color: context.colorScheme.primary,
+        color: lineColor,
         barWidth: 2.5,
         dotData: FlDotData(show: points.length <= 12),
         belowBarData: BarAreaData(
           show: true,
-          color: context.colorScheme.primary.withValues(alpha: 0.08),
+          color: lineColor.withValues(alpha: 0.08),
         ),
       ),
-      if (showRatio && ratioSpots.isNotEmpty)
-        LineChartBarData(
-          spots: ratioSpots,
-          isCurved: true,
-          color: context.colorScheme.tertiary,
-          barWidth: 2,
-          dashArray: [6, 3],
-          dotData: FlDotData(show: false),
-        ),
     ];
 
     return SizedBox(
@@ -221,8 +229,7 @@ class StrengthProgressChart extends StatelessWidget {
                 final date = DateTime.fromMillisecondsSinceEpoch(
                   spot.x.toInt(),
                 );
-                final isRatio = spot.barIndex == 1;
-                final label = isRatio
+                final label = displayMode == StrengthDisplayMode.ratio
                     ? '${spot.y.toStringAsFixed(2)}×BW'
                     : '${spot.y.toStringAsFixed(1)} $unit';
                 return LineTooltipItem(
