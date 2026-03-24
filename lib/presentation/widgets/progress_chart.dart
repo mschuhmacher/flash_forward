@@ -231,6 +231,7 @@ class StrengthProgressChart extends StatelessWidget {
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
+            horizontalInterval: yInterval,
             getDrawingHorizontalLine: (value) => FlLine(
               color: context.colorScheme.outline.withValues(alpha: 0.3),
               strokeWidth: 1,
