@@ -13,6 +13,7 @@ import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 class NewWorkoutScreen extends StatefulWidget {
   final Workout? workout;
@@ -220,7 +221,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                         final exercise = workout.exercises[index];
                         return _ExerciseCard(
                           exercise: exercise,
-                          key: ValueKey('$index-${exercise.id}'), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
+                          key: ValueKey(
+                            '$index-${exercise.id}',
+                          ), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
                           onTap:
                               () => Navigator.push(
                                 context,
@@ -288,67 +291,88 @@ class _ExerciseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: context.colorScheme.surfaceBright,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: context.colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
-          boxShadow: context.shadowSmall,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Slidable(
+        key: ValueKey(exercise.id),
+        endActionPane: ActionPane(
+          motion: ScrollMotion(),
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(exercise.title, style: context.titleMedium),
-                _LabelBadge(labelKey: exercise.label),
-              ],
-            ),
-            if (exercise.description.isNotEmpty) ...[
-              SizedBox(height: 2),
-              Text(
-                exercise.description,
-                style: context.bodyMedium.copyWith(
-                  color: context.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            SizedBox(height: 10),
-            Divider(height: 1),
-            SizedBox(height: 8),
-            Wrap(
-              spacing: 16,
-              runSpacing: 6,
-              children: [
-                _StatPill(label: 'Sets', value: '${exercise.sets}'),
-                if (exercise.reps != null)
-                  _StatPill(label: 'Reps', value: '${exercise.reps}'),
-                if (exercise.load > 0)
-                  _StatPill(
-                    label: 'Load',
-                    value:
-                        exercise.loadUnit != null
-                            ? '${exercise.load} ${exercise.loadUnit}'
-                            : '${exercise.load}',
-                  ),
-                _StatPill(label: 'Rest', value: '${exercise.timeBetweenSets}s'),
-                _StatPill(
-                  label: 'Active',
-                  value: switch (exercise.type) {
-                    ExerciseType.timedReps =>
-                      '${exercise.timePerRep * (exercise.reps ?? 1)}s',
-                    ExerciseType.fixedDuration => '${exercise.activeTime}s',
-                    ExerciseType.manual => '-',
-                  },
-                ),
-              ],
+            SizedBox(width: 8),
+            SlidableAction(
+              borderRadius: BorderRadius.circular(12),
+              onPressed: (context) {}, //TODO: hookup to delete function
+              backgroundColor: context.colorScheme.error,
+              foregroundColor: context.colorScheme.onError,
+              icon: Icons.delete_rounded,
+              label: 'Delete',
             ),
           ],
+        ),
+
+        child: Container(
+          margin: EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: context.colorScheme.surfaceBright,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.08),
+            ),
+            boxShadow: context.shadowSmall,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(exercise.title, style: context.titleMedium),
+                  _LabelBadge(labelKey: exercise.label),
+                ],
+              ),
+              if (exercise.description.isNotEmpty) ...[
+                SizedBox(height: 2),
+                Text(
+                  exercise.description,
+                  style: context.bodyMedium.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              SizedBox(height: 10),
+              Divider(height: 1),
+              SizedBox(height: 8),
+              Wrap(
+                spacing: 16,
+                runSpacing: 6,
+                children: [
+                  _StatPill(label: 'Sets', value: '${exercise.sets}'),
+                  if (exercise.reps != null)
+                    _StatPill(label: 'Reps', value: '${exercise.reps}'),
+                  if (exercise.load > 0)
+                    _StatPill(
+                      label: 'Load',
+                      value:
+                          exercise.loadUnit != null
+                              ? '${exercise.load} ${exercise.loadUnit}'
+                              : '${exercise.load}',
+                    ),
+                  _StatPill(
+                    label: 'Rest',
+                    value: '${exercise.timeBetweenSets}s',
+                  ),
+                  _StatPill(
+                    label: 'Active',
+                    value: switch (exercise.type) {
+                      ExerciseType.timedReps =>
+                        '${exercise.timePerRep * (exercise.reps ?? 1)}s',
+                      ExerciseType.fixedDuration => '${exercise.activeTime}s',
+                      ExerciseType.manual => '-',
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

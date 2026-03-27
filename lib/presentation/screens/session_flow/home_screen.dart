@@ -361,6 +361,7 @@ class _HomeScreenState extends State<HomeScreen> {
               SlidableAction(
                 // An action can be bigger than the others.
                 flex: 3,
+                borderRadius: BorderRadius.circular(12),
                 onPressed: (context) {}, //TODO: hook up to edit screen
                 backgroundColor: context.colorScheme.secondary,
                 foregroundColor: context.colorScheme.onError,

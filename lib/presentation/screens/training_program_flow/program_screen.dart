@@ -8,6 +8,7 @@ import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 
 enum ItemType { sessions, workouts, exercises }
@@ -137,103 +138,101 @@ class ProgramListviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 8.0),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(width: 0.5, color: context.colorScheme.onSurface),
-          color: context.colorScheme.surfaceBright,
-          boxShadow: context.shadowSmall,
-        ),
-        child: ListTile(
-          contentPadding: EdgeInsets.fromLTRB(6, 0, 16, 0),
-          minVerticalPadding: 6,
-          minTileHeight: 90,
+      child: GestureDetector(
+        onTap: () {
+          switch (itemType) {
+            case ItemType.sessions:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => NewSessionScreen(session: filteredListItem),
+                ),
+              );
 
-          horizontalTitleGap: 4,
-          leading: SizedBox(
-            width: 32,
-            height: 32,
-            child: Icon(
-              kDefaultLabels[filteredListItem.label]?.icon,
-              color: kDefaultLabels[filteredListItem.label]?.color,
-              size: 24,
-            ),
-          ),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            case ItemType.workouts:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => NewWorkoutScreen(workout: filteredListItem),
+                ),
+              );
+            case ItemType.exercises:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) =>
+                          NewExerciseScreen(exercise: filteredListItem),
+                ),
+              );
+          }
+        },
+        child: Slidable(
+          key: ValueKey(filteredListItem.id),
+          endActionPane: ActionPane(
+            motion: ScrollMotion(),
             children: [
-              Text(
-                filteredListItem.title,
-                style: context.titleMedium,
-                overflow: TextOverflow.ellipsis,
+              SizedBox(width: 8),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (context) {}, //TODO: hookup to delete function
+                backgroundColor: context.colorScheme.error,
+                foregroundColor: context.colorScheme.onError,
+                icon: Icons.delete_rounded,
+                label: 'Delete',
               ),
-              // Icon(Icons.circle),
             ],
           ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              filteredListItem.description != null
-                  ? Text(
-                    filteredListItem.description!,
-                    style: context.bodyMedium,
-                  )
-                  : SizedBox.shrink(),
-            ],
-          ),
-          trailing: SizedBox(
-            width: 40,
-            height: 40,
-            child: PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded),
-              iconSize: 24,
+          child: Container(
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(25),
-              color: context.colorScheme.surface,
-              onSelected: (value) {
-                if (value == 'edit') {
-                  switch (itemType) {
-                    case ItemType.sessions:
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) =>
-                                  NewSessionScreen(session: filteredListItem),
-                        ),
-                      );
+              border: Border.all(
+                width: 0.5,
+                color: context.colorScheme.onSurface,
+              ),
+              color: context.colorScheme.surfaceBright,
+              boxShadow: context.shadowSmall,
+            ),
+            child: ListTile(
+              contentPadding: EdgeInsets.fromLTRB(6, 0, 16, 0),
+              minVerticalPadding: 6,
+              minTileHeight: 90,
 
-                    case ItemType.workouts:
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) =>
-                                  NewWorkoutScreen(workout: filteredListItem),
-                        ),
-                      );
-                    case ItemType.exercises:
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) =>
-                                  NewExerciseScreen(exercise: filteredListItem),
-                        ),
-                      );
-                  }
-                }
-              },
-              itemBuilder:
-                  (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Edit', style: context.bodyLarge),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete', style: context.bodyLarge),
-                    ),
-                  ],
+              horizontalTitleGap: 4,
+              leading: SizedBox(
+                width: 32,
+                height: 32,
+                child: Icon(
+                  kDefaultLabels[filteredListItem.label]?.icon,
+                  color: kDefaultLabels[filteredListItem.label]?.color,
+                  size: 24,
+                ),
+              ),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    filteredListItem.title,
+                    style: context.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  // Icon(Icons.circle),
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  filteredListItem.description != null
+                      ? Text(
+                        filteredListItem.description!,
+                        style: context.bodyMedium,
+                      )
+                      : SizedBox.shrink(),
+                ],
+              ),
+              
             ),
           ),
         ),
