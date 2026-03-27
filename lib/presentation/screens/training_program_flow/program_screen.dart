@@ -177,6 +177,15 @@ class ProgramListviewCard extends StatelessWidget {
               SizedBox(width: 8),
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
+                onPressed: (context) {}, //TODO: hookup to copy function
+                backgroundColor: context.colorScheme.secondary,
+                foregroundColor: context.colorScheme.onError,
+                icon: Icons.copy_rounded,
+                label: 'Copy',
+              ),
+              SizedBox(width: 8),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
                 onPressed: (context) {}, //TODO: hookup to delete function
                 backgroundColor: context.colorScheme.error,
                 foregroundColor: context.colorScheme.onError,
