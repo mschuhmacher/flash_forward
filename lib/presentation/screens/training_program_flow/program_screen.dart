@@ -12,6 +12,7 @@ import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:flash_forward/services/supabase_config.dart';
 import 'package:provider/provider.dart';
 
 enum ItemType { sessions, workouts, exercises }
@@ -54,16 +55,17 @@ class _ProgramListviewState extends State<ProgramListview> {
 
   Future<void> _copyItem(dynamic item) async {
     final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    final userId = supabase.auth.currentUser?.id;
     switch (widget.itemType) {
       case ItemType.sessions:
         final copy = (item as Session).deepCopy();
-        await presetProvider.addPresetSession(copy.copyWith(title: '${copy.title} - copy'));
+        await presetProvider.addPresetSession(copy.copyWith(title: '${copy.title} - copy', userId: userId));
       case ItemType.workouts:
         final copy = (item as Workout).deepCopy();
-        await presetProvider.addPresetWorkout(copy.copyWith(title: '${copy.title} - copy'));
+        await presetProvider.addPresetWorkout(copy.copyWith(title: '${copy.title} - copy', userId: userId));
       case ItemType.exercises:
         final copy = (item as Exercise).deepCopy();
-        await presetProvider.addPresetExercise(copy.copyWith(title: '${copy.title} - copy'));
+        await presetProvider.addPresetExercise(copy.copyWith(title: '${copy.title} - copy', userId: userId));
     }
   }
 
