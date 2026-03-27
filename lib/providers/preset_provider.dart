@@ -42,6 +42,8 @@ class PresetProvider extends ChangeNotifier {
       _userWorkouts.map((w) => w.id).toSet();
   Set<String> get presetUserExerciseIDs =>
       _userExercises.map((e) => e.id).toSet();
+  Set<String> get presetUserSessionIDs =>
+      _userSessions.map((s) => s.id).toSet();
 
   bool _isInitialized = false;
   bool _isLoading = false;
@@ -155,20 +157,17 @@ class PresetProvider extends ChangeNotifier {
   }
 
   // Remove user added preset session
-  Future<void> deleteUserPresetSession(int index) async {
-    //TODO: update to use IDs instead of index?
-    final sessionToDelete = _userSessions[index];
-    _userSessions.removeAt(index);
+  Future<void> deleteUserPresetSession(String id) async {
+    _userSessions.removeWhere((s) => s.id == id);
 
     await PresetLogger.savePresetToFile(
       'user_preset_sessions.json',
       _userSessions,
     );
 
-    // Delete from cloud if available
     if (_syncService != null) {
       try {
-        await _syncService!.deleteSession(sessionToDelete.id);
+        await _syncService!.deleteSession(id);
       } catch (e, stackTrace) {
         Sentry.captureException(e, stackTrace: stackTrace);
       }

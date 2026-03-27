@@ -1,4 +1,7 @@
 import 'package:flash_forward/data/labels.dart';
+import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
@@ -48,6 +51,34 @@ class ProgramListview extends StatefulWidget {
 class _ProgramListviewState extends State<ProgramListview> {
   String _query = '';
   String _filterLabel = '';
+
+  Future<void> _copyItem(dynamic item) async {
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    switch (widget.itemType) {
+      case ItemType.sessions:
+        final copy = (item as Session).deepCopy();
+        await presetProvider.addPresetSession(copy.copyWith(title: '${copy.title} - copy'));
+      case ItemType.workouts:
+        final copy = (item as Workout).deepCopy();
+        await presetProvider.addPresetWorkout(copy.copyWith(title: '${copy.title} - copy'));
+      case ItemType.exercises:
+        final copy = (item as Exercise).deepCopy();
+        await presetProvider.addPresetExercise(copy.copyWith(title: '${copy.title} - copy'));
+    }
+  }
+
+  Future<void> _deleteItem(dynamic item) async {
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    switch (widget.itemType) {
+      case ItemType.sessions:
+        await presetProvider.deleteUserPresetSession((item as Session).id);
+      case ItemType.workouts:
+        await presetProvider.deleteUserPresetWorkout((item as Workout).id);
+      case ItemType.exercises:
+        await presetProvider.deleteUserPresetExercise((item as Exercise).id);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -104,12 +135,23 @@ class _ProgramListviewState extends State<ProgramListview> {
                   itemCount: filteredListItems.length,
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   itemBuilder: (BuildContext context, int index) {
-                    // final isUserDefined = userIDs.contains(listItems[index].id);
+                    final item = filteredListItems[index];
+
+                    final bool isUserDefined;
+                    switch (widget.itemType) {
+                      case ItemType.sessions:
+                        isUserDefined = presetData.presetUserSessionIDs.contains(item.id);
+                      case ItemType.workouts:
+                        isUserDefined = presetData.presetUserWorkoutsIDs.contains(item.id);
+                      case ItemType.exercises:
+                        isUserDefined = presetData.presetUserExerciseIDs.contains(item.id);
+                    }
 
                     return ProgramListviewCard(
-                      filteredListItem: filteredListItems[index],
-                      // index: index,
+                      filteredListItem: item,
                       itemType: widget.itemType,
+                      onCopy: () => _copyItem(item),
+                      onDelete: isUserDefined ? () => _deleteItem(item) : null,
                     );
                   },
                 ),
@@ -126,13 +168,15 @@ class ProgramListviewCard extends StatelessWidget {
   const ProgramListviewCard({
     super.key,
     required this.filteredListItem,
-    // required this.index,
     required this.itemType,
+    required this.onCopy,
+    this.onDelete,
   });
 
   final dynamic filteredListItem;
-  // final int index;
   final ItemType itemType;
+  final VoidCallback onCopy;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -177,21 +221,23 @@ class ProgramListviewCard extends StatelessWidget {
               SizedBox(width: 8),
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
-                onPressed: (context) {}, //TODO: hookup to copy function
+                onPressed: (_) => onCopy(), 
                 backgroundColor: context.colorScheme.secondary,
                 foregroundColor: context.colorScheme.onError,
                 icon: Icons.copy_rounded,
                 label: 'Copy',
               ),
-              SizedBox(width: 8),
-              SlidableAction(
-                borderRadius: BorderRadius.circular(12),
-                onPressed: (context) {}, //TODO: hookup to delete function
-                backgroundColor: context.colorScheme.error,
-                foregroundColor: context.colorScheme.onError,
-                icon: Icons.delete_rounded,
-                label: 'Delete',
-              ),
+              if (onDelete != null) ...[
+                SizedBox(width: 8),
+                SlidableAction(
+                  borderRadius: BorderRadius.circular(12),
+                  onPressed: (_) => onDelete!(),
+                  backgroundColor: context.colorScheme.error,
+                  foregroundColor: context.colorScheme.onError,
+                  icon: Icons.delete_rounded,
+                  label: 'Delete',
+                ),
+              ],
             ],
           ),
           child: Container(
@@ -241,7 +287,6 @@ class ProgramListviewCard extends StatelessWidget {
                       : SizedBox.shrink(),
                 ],
               ),
-              
             ),
           ),
         ),
