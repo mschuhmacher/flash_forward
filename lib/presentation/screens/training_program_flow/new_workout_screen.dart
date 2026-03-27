@@ -68,11 +68,14 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
               ? null
               : _descriptionController.text.trim(),
         ),
-        userId: _workout.userId ??
+        userId:
+            _workout.userId ??
             Provider.of<AuthProvider>(context, listen: false).userId,
       );
-      final presetProvider =
-          Provider.of<PresetProvider>(context, listen: false);
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
       if (_isNew) {
         await presetProvider.addPresetWorkout(workout);
       } else {
@@ -85,6 +88,14 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     final workout = _workout;
+
+    final Set<String> existingExerciseIds = {};
+
+    if (workout.exercises.isNotEmpty) {
+      for (var i = 0; i < workout.exercises.length; i++) {
+        existingExerciseIds.add(workout.exercises[i].id);
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -130,9 +141,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: _canEditMetadata
-                          ? FieldValidators.workoutTitle
-                          : null,
+                      validator:
+                          _canEditMetadata
+                              ? FieldValidators.workoutTitle
+                              : null,
                     ),
                   ),
                   SizedBox(width: 8),
@@ -152,9 +164,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                               _itemLabelController.text = value ?? '';
                             });
                           },
-                          validator: _canEditMetadata
-                              ? FieldValidators.label
-                              : null,
+                          validator:
+                              _canEditMetadata ? FieldValidators.label : null,
                         ),
                       ),
                     ),
@@ -179,9 +190,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: _canEditMetadata
-                          ? FieldValidators.workoutDescription
-                          : null,
+                      validator:
+                          _canEditMetadata
+                              ? FieldValidators.workoutDescription
+                              : null,
                     ),
                   ),
                   // if (widget.itemName == 'workout') ...[],
@@ -201,21 +213,36 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                     ),
                   )
                   : Expanded(
-                    child: ListView.builder(
+                    child: ReorderableListView.builder(
                       padding: EdgeInsets.only(top: 4, bottom: 16),
                       itemCount: workout.exercises.length,
                       itemBuilder: (BuildContext context, int index) {
                         final exercise = workout.exercises[index];
                         return _ExerciseCard(
                           exercise: exercise,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  NewExerciseScreen(exercise: exercise),
-                            ),
-                          ),
+                          key: ValueKey('$index-${exercise.id}'), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
+                          onTap:
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          NewExerciseScreen(exercise: exercise),
+                                ),
+                              ),
                         );
+                      },
+                      onReorder: (int oldIndex, int newIndex) {
+                        setState(() {
+                          if (oldIndex < newIndex) {
+                            newIndex -=
+                                1; // Since the widget if removed from its old index
+                          }
+                          final Exercise exercise = workout.exercises.removeAt(
+                            oldIndex,
+                          );
+                          workout.exercises.insert(newIndex, exercise);
+                        });
                       },
                     ),
                   ),
@@ -228,7 +255,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           List<Exercise>? addedExercises = await Navigator.push(
             context,
             MaterialPageRoute<List<Exercise>>(
-              builder: (context) => AddItemScreen(itemType: ItemType.exercises),
+              builder:
+                  (context) => AddItemScreen(
+                    itemType: ItemType.exercises,
+                    existingItemIds: existingExerciseIds,
+                  ),
             ),
           );
 
@@ -251,7 +282,7 @@ class _ExerciseCard extends StatelessWidget {
   final Exercise exercise;
   final VoidCallback onTap;
 
-  const _ExerciseCard({required this.exercise, required this.onTap});
+  const _ExerciseCard({super.key, required this.exercise, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -300,20 +331,19 @@ class _ExerciseCard extends StatelessWidget {
                 if (exercise.load > 0)
                   _StatPill(
                     label: 'Load',
-                    value: exercise.loadUnit != null
-                        ? '${exercise.load} ${exercise.loadUnit}'
-                        : '${exercise.load}',
+                    value:
+                        exercise.loadUnit != null
+                            ? '${exercise.load} ${exercise.loadUnit}'
+                            : '${exercise.load}',
                   ),
-                _StatPill(
-                  label: 'Rest',
-                  value: '${exercise.timeBetweenSets}s',
-                ),
+                _StatPill(label: 'Rest', value: '${exercise.timeBetweenSets}s'),
                 _StatPill(
                   label: 'Active',
                   value: switch (exercise.type) {
-                    ExerciseType.timedReps    => '${exercise.timePerRep * (exercise.reps ?? 1)}s',
+                    ExerciseType.timedReps =>
+                      '${exercise.timePerRep * (exercise.reps ?? 1)}s',
                     ExerciseType.fixedDuration => '${exercise.activeTime}s',
-                    ExerciseType.manual        => '-',
+                    ExerciseType.manual => '-',
                   },
                 ),
               ],
@@ -369,7 +399,10 @@ class _LabelBadge extends StatelessWidget {
           SizedBox(width: 4),
           Text(
             label.name,
-            style: context.bodyMedium.copyWith(color: label.color, fontSize: 12),
+            style: context.bodyMedium.copyWith(
+              color: label.color,
+              fontSize: 12,
+            ),
           ),
         ],
       ),

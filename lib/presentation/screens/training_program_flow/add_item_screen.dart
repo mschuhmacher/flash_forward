@@ -10,8 +10,13 @@ enum ItemType { workouts, exercises }
 
 class AddItemScreen extends StatefulWidget {
   final ItemType itemType;
+  final Set<String> existingItemIds;
 
-  const AddItemScreen({super.key, required this.itemType});
+  const AddItemScreen({
+    super.key,
+    required this.itemType,
+    required this.existingItemIds,
+  });
 
   @override
   State<AddItemScreen> createState() => _AddItemScreenState();
@@ -20,6 +25,7 @@ class AddItemScreen extends StatefulWidget {
 class _AddItemScreenState extends State<AddItemScreen> {
   final Set<String> _selectedItemIds = {};
   final Set<String> _expandedItemIds = {};
+  late final Set<String> _existingItemIds = widget.existingItemIds;
 
   String _query = '';
   String _filterLabel = '';
@@ -123,6 +129,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                           return widget.itemType == ItemType.workouts
                               ? WorkoutCard(
                                 workout: filteredListItems[index],
+                                isExisting: _existingItemIds.contains(id),
                                 isSelected: _selectedItemIds.contains(id),
                                 onTap: () => _toggleSelected(id),
                                 isExpanded: _expandedItemIds.contains(id),
@@ -130,6 +137,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                               )
                               : ExerciseCard(
                                 exercise: filteredListItems[index],
+                                isExisting: _existingItemIds.contains(id),
                                 isSelected: _selectedItemIds.contains(id),
                                 onTap: () => _toggleSelected(id),
                                 isExpanded: _expandedItemIds.contains(id),
@@ -168,6 +176,7 @@ class WorkoutCard extends StatelessWidget {
   const WorkoutCard({
     super.key,
     required this.workout,
+    required this.isExisting,
     required this.isSelected,
     required this.isExpanded,
     required this.onTap,
@@ -175,6 +184,7 @@ class WorkoutCard extends StatelessWidget {
   });
 
   final Workout workout;
+  final bool isExisting;
   final bool isSelected;
   final bool isExpanded;
   final VoidCallback onTap;
@@ -191,8 +201,13 @@ class WorkoutCard extends StatelessWidget {
           side: BorderSide(
             width: isSelected ? 2.5 : 1.5,
             color:
+                // nested ternary: if isSelected is not true, then grey if isExisting and secondary if none
                 isSelected
                     ? context.colorScheme.primary
+                    : isExisting
+                    ? context.colorScheme.onSurface.withValues(
+                      alpha: 0.25,
+                    ) // grey
                     : context.colorScheme.secondary,
           ),
         ),
@@ -245,6 +260,7 @@ class ExerciseCard extends StatelessWidget {
   const ExerciseCard({
     super.key,
     required this.exercise,
+    required this.isExisting,
     required this.isSelected,
     required this.isExpanded,
     required this.onTap,
@@ -252,6 +268,7 @@ class ExerciseCard extends StatelessWidget {
   });
 
   final Exercise exercise;
+  final bool isExisting;
   final bool isSelected;
   final bool isExpanded;
   final VoidCallback onTap;
@@ -268,8 +285,13 @@ class ExerciseCard extends StatelessWidget {
           side: BorderSide(
             width: isSelected ? 2.5 : 1.5,
             color:
+                // nested ternary: if isSelected is not true, then grey if isExisting and secondary if none
                 isSelected
                     ? context.colorScheme.primary
+                    : isExisting
+                    ? context.colorScheme.onSurface.withValues(
+                      alpha: 0.25,
+                    ) // grey
                     : context.colorScheme.secondary,
           ),
         ),
@@ -285,7 +307,7 @@ class ExerciseCard extends StatelessWidget {
               ),
               Row(
                 children: [
-                  Expanded(child: Text(exercise.description!)),
+                  Expanded(child: Text(exercise.description)),
                   Align(
                     alignment: Alignment.centerRight,
                     child: IconButton(

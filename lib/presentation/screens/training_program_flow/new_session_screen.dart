@@ -61,11 +61,14 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
               ? null
               : _descriptionController.text.trim(),
         ),
-        userId: _session.userId ??
+        userId:
+            _session.userId ??
             Provider.of<AuthProvider>(context, listen: false).userId,
       );
-      final presetProvider =
-          Provider.of<PresetProvider>(context, listen: false);
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
       if (_isNew) {
         await presetProvider.addPresetSession(session);
       } else {
@@ -78,6 +81,14 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final session = _session;
+    final Set<String> existingWorkoutIds = {};
+
+    if (session.workouts.isNotEmpty) {
+      for (var i = 0; i < session.workouts.length; i++) {
+        existingWorkoutIds.add(session.workouts[i].id);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -180,21 +191,38 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                     ),
                   )
                   : Expanded(
-                    child: ListView.builder(
+                    child: ReorderableListView.builder(
                       padding: EdgeInsets.only(top: 4, bottom: 16),
                       itemCount: session.workouts.length,
                       itemBuilder: (BuildContext context, int index) {
                         final workout = session.workouts[index];
                         return _WorkoutCard(
                           workout: workout,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  NewWorkoutScreen(workout: workout),
-                            ),
-                          ),
+                          key: ValueKey(
+                            '$index-${workout.id}',
+                          ), // prefix index to workout.id to allow multiple instances of same workout in the reorderable list
+                          onTap:
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          NewWorkoutScreen(workout: workout),
+                                ),
+                              ),
                         );
+                      },
+                      onReorder: (int oldIndex, int newIndex) {
+                        setState(() {
+                          if (oldIndex < newIndex) {
+                            newIndex -=
+                                1; // Since the widget if removed from its old index
+                          }
+                          final Workout workout = session.workouts.removeAt(
+                            oldIndex,
+                          );
+                          session.workouts.insert(newIndex, workout);
+                        });
                       },
                     ),
                   ),
@@ -207,7 +235,11 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
           List<Workout>? addedWorkouts = await Navigator.push(
             context,
             MaterialPageRoute<List<Workout>>(
-              builder: (context) => AddItemScreen(itemType: ItemType.workouts),
+              builder:
+                  (context) => AddItemScreen(
+                    itemType: ItemType.workouts,
+                    existingItemIds: existingWorkoutIds,
+                  ),
             ),
           );
 
@@ -229,7 +261,7 @@ class _WorkoutCard extends StatelessWidget {
   final Workout workout;
   final VoidCallback onTap;
 
-  const _WorkoutCard({required this.workout, required this.onTap});
+  const _WorkoutCard({super.key, required this.workout, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -378,7 +410,10 @@ class _LabelBadge extends StatelessWidget {
           SizedBox(width: 4),
           Text(
             label.name,
-            style: context.bodyMedium.copyWith(color: label.color, fontSize: 12),
+            style: context.bodyMedium.copyWith(
+              color: label.color,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
