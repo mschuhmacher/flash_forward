@@ -86,6 +86,21 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     }
   }
 
+  _copyExercise(Exercise exercise) {
+    final newExercise = exercise.copyWith();
+    setState(() {
+      final index = _workout.exercises.indexOf(exercise);
+      _workout.exercises.insert(index + 1, newExercise);
+    });
+  }
+
+  _deleteExercise(Exercise exercise) {
+    setState(() {
+      final index = _workout.exercises.indexOf(exercise);
+      _workout.exercises.removeAt(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final workout = _workout;
@@ -224,6 +239,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           key: ValueKey(
                             '$index-${exercise.id}',
                           ), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
+                          onCopy: () => _copyExercise(exercise),
+                          onDelete: () => _deleteExercise(exercise),
                           onTap:
                               () => Navigator.push(
                                 context,
@@ -284,8 +301,16 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 class _ExerciseCard extends StatelessWidget {
   final Exercise exercise;
   final VoidCallback onTap;
+  final VoidCallback onCopy;
+  final VoidCallback onDelete;
 
-  const _ExerciseCard({super.key, required this.exercise, required this.onTap});
+  const _ExerciseCard({
+    super.key,
+    required this.exercise,
+    required this.onTap,
+    required this.onCopy,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +324,7 @@ class _ExerciseCard extends StatelessWidget {
             SizedBox(width: 8),
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
-                onPressed: (context) {}, //TODO: hookup to copy function
+                onPressed: (_) => onCopy(),
                 backgroundColor: context.colorScheme.secondary,
                 foregroundColor: context.colorScheme.onError,
                 icon: Icons.copy_rounded,
@@ -308,7 +333,7 @@ class _ExerciseCard extends StatelessWidget {
             SizedBox(width: 8),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),
-              onPressed: (context) {}, //TODO: hookup to delete function
+              onPressed: (_) => onDelete(),
               backgroundColor: context.colorScheme.error,
               foregroundColor: context.colorScheme.onError,
               icon: Icons.delete_rounded,

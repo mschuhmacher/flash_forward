@@ -79,6 +79,22 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
     }
   }
 
+  _copyWorkout(Workout workout) {
+    final newWorkout = workout.copyWith();
+    setState(() {
+      final index = _session.workouts.indexOf(workout);
+      _session.workouts.insert(index + 1, newWorkout);
+    });
+  }
+
+  _deleteWorkout(Workout workout) {
+    // TODO: add in confirmation dialog or snackbar with undo function
+    setState(() {
+      final index = _session.workouts.indexOf(workout);
+      _session.workouts.removeAt(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = _session;
@@ -202,6 +218,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           key: ValueKey(
                             '$index-${workout.id}',
                           ), // prefix index to workout.id to allow multiple instances of same workout in the reorderable list
+                          onCopy: () => _copyWorkout(workout),
+                          onDelete: () => _deleteWorkout(workout),
                           onTap:
                               () => Navigator.push(
                                 context,
@@ -261,8 +279,16 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
 class _WorkoutCard extends StatelessWidget {
   final Workout workout;
   final VoidCallback onTap;
+  final VoidCallback onCopy;
+  final VoidCallback onDelete;
 
-  const _WorkoutCard({super.key, required this.workout, required this.onTap});
+  const _WorkoutCard({
+    super.key,
+    required this.workout,
+    required this.onTap,
+    required this.onCopy,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -274,18 +300,18 @@ class _WorkoutCard extends StatelessWidget {
           motion: ScrollMotion(),
           children: [
             SizedBox(width: 8),
-              SlidableAction(
-                borderRadius: BorderRadius.circular(12),
-                onPressed: (context) {}, //TODO: hookup to copy function
-                backgroundColor: context.colorScheme.secondary,
-                foregroundColor: context.colorScheme.onError,
-                icon: Icons.copy_rounded,
-                label: 'Copy',
-              ),
+            SlidableAction(
+              borderRadius: BorderRadius.circular(12),
+              onPressed: (_) => onCopy(),
+              backgroundColor: context.colorScheme.secondary,
+              foregroundColor: context.colorScheme.onError,
+              icon: Icons.copy_rounded,
+              label: 'Copy',
+            ),
             SizedBox(width: 8),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),
-              onPressed: (context) {}, //TODO: hookup to delete function
+              onPressed: (_) => onDelete(),
               backgroundColor: context.colorScheme.error,
               foregroundColor: context.colorScheme.onError,
               icon: Icons.delete_rounded,
