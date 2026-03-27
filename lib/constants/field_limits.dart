@@ -13,21 +13,29 @@ class FieldLimits {
 
 /// Reusable validators for text fields
 class FieldValidators {
-  static String? sessionTitle(String? value) {
+  static String? sessionTitle(String? value,
+      {List<String>? existingTitles, String? ownTitle}) {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
     }
     if (value == 'title') {
       return "Session cannot be named 'title'";
     }
-
     if (value.length > FieldLimits.sessionTitleMaxLength) {
       return 'Title must be ${FieldLimits.sessionTitleMaxLength} characters or less';
+    }
+    if (existingTitles != null) {
+      final trimmed = value.trim().toLowerCase();
+      final isDuplicate = existingTitles
+          .where((t) => t.toLowerCase() != (ownTitle?.toLowerCase() ?? ''))
+          .any((t) => t.toLowerCase() == trimmed);
+      if (isDuplicate) return 'A session with this title already exists';
     }
     return null;
   }
 
-  static String? workoutTitle(String? value) {
+  static String? workoutTitle(String? value,
+      {List<String>? existingTitles, String? ownTitle}) {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
     }
@@ -37,10 +45,18 @@ class FieldValidators {
     if (value.length > FieldLimits.workoutTitleMaxLength) {
       return 'Title must be ${FieldLimits.workoutTitleMaxLength} characters or less';
     }
+    if (existingTitles != null) {
+      final trimmed = value.trim().toLowerCase();
+      final isDuplicate = existingTitles
+          .where((t) => t.toLowerCase() != (ownTitle?.toLowerCase() ?? ''))
+          .any((t) => t.toLowerCase() == trimmed);
+      if (isDuplicate) return 'A workout with this title already exists';
+    }
     return null;
   }
 
-  static String? exerciseTitle(String? value) {
+  static String? exerciseTitle(String? value,
+      {List<String>? existingTitles, String? ownTitle}) {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
     }
@@ -49,6 +65,13 @@ class FieldValidators {
     }
     if (value.length > FieldLimits.exerciseTitleMaxLength) {
       return 'Title must be ${FieldLimits.exerciseTitleMaxLength} characters or less';
+    }
+    if (existingTitles != null) {
+      final trimmed = value.trim().toLowerCase();
+      final isDuplicate = existingTitles
+          .where((t) => t.toLowerCase() != (ownTitle?.toLowerCase() ?? ''))
+          .any((t) => t.toLowerCase() == trimmed);
+      if (isDuplicate) return 'An exercise with this title already exists';
     }
     return null;
   }

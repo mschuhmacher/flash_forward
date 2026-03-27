@@ -4,6 +4,7 @@ import 'package:flash_forward/presentation/widgets/increment_decrement_number.da
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
@@ -129,6 +130,10 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    final existingExerciseTitles =
+        presetProvider.presetExercises.map((e) => e.title).toList();
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -178,10 +183,13 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator:
-                          _canEditMetadata
-                              ? FieldValidators.exerciseTitle
-                              : null,
+                      validator: _canEditMetadata
+                          ? (v) => FieldValidators.exerciseTitle(
+                              v,
+                              existingTitles: existingExerciseTitles,
+                              ownTitle: widget.exercise?.title,
+                            )
+                          : null,
                     ),
                   ),
                   SizedBox(width: 8),

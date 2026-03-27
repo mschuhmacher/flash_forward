@@ -104,6 +104,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     final workout = _workout;
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    final existingWorkoutTitles =
+        presetProvider.presetWorkouts.map((w) => w.title).toList();
 
     final Set<String> existingExerciseIds = {};
 
@@ -157,10 +160,13 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator:
-                          _canEditMetadata
-                              ? FieldValidators.workoutTitle
-                              : null,
+                      validator: _canEditMetadata
+                          ? (v) => FieldValidators.workoutTitle(
+                              v,
+                              existingTitles: existingWorkoutTitles,
+                              ownTitle: widget.workout?.title,
+                            )
+                          : null,
                     ),
                   ),
                   SizedBox(width: 8),

@@ -98,6 +98,9 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final session = _session;
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    final existingSessionTitles =
+        presetProvider.presetSessions.map((s) => s.title).toList();
     final Set<String> existingWorkoutIds = {};
 
     if (session.workouts.isNotEmpty) {
@@ -149,7 +152,11 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: FieldValidators.sessionTitle,
+                      validator: (v) => FieldValidators.sessionTitle(
+                        v,
+                        existingTitles: existingSessionTitles,
+                        ownTitle: widget.session?.title,
+                      ),
                     ),
                   ),
                   SizedBox(width: 8),
