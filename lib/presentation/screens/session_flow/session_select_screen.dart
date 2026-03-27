@@ -57,22 +57,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Center(
-                    child: Text('Today\'s session', style: context.h4),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    _editSessionModalSheet(context);
-                  },
-                  icon: Icon(Icons.edit),
-                ), //TODO: remove this button
-              ],
-            ),
+            title: Text('Today\'s session', style: context.h4),
             centerTitle: true,
           ),
           body: Column(
@@ -141,84 +126,4 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
     );
   }
 
-  Future<dynamic> _editSessionModalSheet(BuildContext context) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (BuildContext builder) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.95, // open at 80% of the screen height
-          minChildSize: 0.7,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) {
-            return SingleChildScrollView(
-              controller: scrollController,
-              child: Consumer2<PresetProvider, SessionStateProvider>(
-                builder: (context, presetData, sessionStateData, child) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: Text('Default sessions', style: context.h4),
-                      ),
-                      SizedBox(height: 8),
-                      SessionSelectListView(
-                        item: presetData.presetDefaultSessions,
-                        scrollMode: false,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child:
-                            presetData.presetUserSessions.isNotEmpty
-                                ? Row(
-                                  children: [
-                                    Text('Your sessions', style: context.h4),
-                                    Spacer(),
-                                    ElevatedButton(
-                                      style: ButtonStyle().copyWith(
-                                        backgroundColor:
-                                            WidgetStateProperty.all<Color>(
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.errorContainer,
-                                            ),
-                                        foregroundColor:
-                                            WidgetStateProperty.all(
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.onErrorContainer,
-                                            ),
-                                      ),
-                                      onPressed: () {
-                                        presetData
-                                            .deleteAllUserPresetSessions();
-                                        sessionStateData.setSessionIndex(0);
-                                        Navigator.pop(context);
-                                      },
-                                      child: Text('Remove all'),
-                                    ),
-                                  ],
-                                )
-                                : SizedBox.shrink(),
-                      ),
-                      SizedBox(height: 8),
-                      SessionSelectListView(
-                        item: presetData.presetUserSessions,
-                        editMode: true,
-                        scrollMode: false,
-                      ),
-                    ],
-                  );
-                },
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 }
