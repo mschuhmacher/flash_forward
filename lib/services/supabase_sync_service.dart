@@ -341,7 +341,7 @@ class SupabaseSyncService {
             await uploadSession(session, isRetry: true);
             break;
           case 'deleteSession':
-            await deleteSession(operation.data['sessionId'], isRetry: true);
+            await deleteSession(operation.data['sessionId'] as String, isRetry: true);
             break;
           case 'logSession':
             final session = Session.fromJson(operation.data['session']);
