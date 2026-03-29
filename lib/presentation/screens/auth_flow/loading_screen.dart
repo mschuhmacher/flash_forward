@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -66,6 +67,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
     // Initialize auth first
     await authProvider.init();
+
+    if (!mounted) return;
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    await settingsProvider.init();
 
     // If user is authenticated, load their data
     if (authProvider.isAuthenticated) {

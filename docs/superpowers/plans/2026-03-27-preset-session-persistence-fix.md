@@ -552,103 +552,45 @@ git commit -m "fix: merge pending sync-queue items with cloud data on load"
 
 ---
 
-## Task 4: Diagnose and fix Supabase `user_sessions` upload failure
+## Task 4: Remove unknown `completed_at` column from `uploadSession`
 
-> ⚠️ **PREREQUISITE — Supabase schema info needed before implementing this task.**
-> Run the diagnostics in Step 4.0, share the results, then apply the matching fix.
+**Root cause confirmed:** `uploadSession` sends `'completed_at'` in the upsert payload but the `user_sessions` table has no such column (it has `date` instead). PostgREST rejects upserts containing unknown columns, so every `uploadSession` call throws, gets enqueued for retry, and the session never reaches cloud. `uploadWorkout` succeeds because it sends no unknown columns.
 
-### Step 4.0 — Gather Supabase schema information
+RLS is ruled out — both tables have equivalent `ALL` policies. Schema columns are otherwise correct (`workouts jsonb`, `updated_at`, etc.).
 
-Run in the **Supabase SQL Editor** (Dashboard → SQL Editor → New Query):
+**Files:**
+- Modify: `lib/services/supabase_sync_service.dart`
 
-```sql
--- Column definitions for both tables
-SELECT
-  table_name,
-  column_name,
-  data_type,
-  is_nullable,
-  column_default
-FROM information_schema.columns
-WHERE table_name IN ('user_sessions', 'user_workouts')
-ORDER BY table_name, ordinal_position;
+- [ ] **Step 4.1 — Add `completed_at` column to `user_sessions` in Supabase**
 
--- RLS enabled?
-SELECT tablename, rowsecurity
-FROM pg_tables
-WHERE tablename IN ('user_sessions', 'user_workouts');
+The `user_sessions` table is missing the `completed_at` column. PostgREST rejects upserts that reference columns which don't exist in the table, so every `uploadSession` call fails. The correct fix is to add the column to match the data the app sends — not to remove the field from the code.
 
--- RLS policies
-SELECT tablename, policyname, permissive, roles, cmd, qual, with_check
-FROM pg_policies
-WHERE tablename IN ('user_sessions', 'user_workouts');
-```
-
----
-
-### Likely root cause A: Missing or wrong-type column on `user_sessions`
-
-**Symptom:** `uploadSession` payload includes a `workouts` column (jsonb array), but the table may not have this column, or it may be typed differently from `user_workouts.exercises`.
-
-**Fix:**
+Run in the Supabase SQL Editor:
 
 ```sql
 ALTER TABLE user_sessions
-  ADD COLUMN IF NOT EXISTS workouts jsonb NOT NULL DEFAULT '[]'::jsonb;
-
-ALTER TABLE user_sessions
-  ADD COLUMN IF NOT EXISTS updated_at timestamptz;
-
-ALTER TABLE user_sessions
-  ALTER COLUMN created_at SET DEFAULT now();
+  ADD COLUMN IF NOT EXISTS completed_at timestamptz;
 ```
 
----
+`timestamptz` matches the ISO-8601 string format sent by `session.completedAt?.toIso8601String()`. The column is nullable because preset session templates have no completion date — only logged (completed) sessions do.
 
-### Likely root cause B: Missing RLS policy for `user_sessions`
-
-**Symptom:** `user_workouts` has an INSERT/UPDATE policy for authenticated users but `user_sessions` does not.
-
-**Fix — mirror the `user_workouts` policies exactly:**
-
-```sql
-ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage their own sessions"
-  ON user_sessions
-  FOR ALL
-  USING (auth.uid()::text = user_id)
-  WITH CHECK (auth.uid()::text = user_id);
-```
-
----
-
-### Likely root cause C: `completed_at` NOT NULL constraint
-
-**Symptom:** Preset sessions always have `completedAt: null`, but the table has a NOT NULL constraint on `completed_at`.
-
-**Fix:**
-
-```sql
-ALTER TABLE user_sessions
-  ALTER COLUMN completed_at DROP NOT NULL;
-```
-
----
-
-> **Note on migrations:** This project has no `supabase/migrations/` directory. Apply fixes directly via the Supabase SQL Editor or Dashboard.
-
-- [ ] **Step 4.1 — Apply the relevant fix** (determined from Step 4.0 results)
-
-- [ ] **Step 4.2 — Manually verify upload reaches cloud**
-
-In the app (debug build), create a new preset session while connected. Hot restart. Verify the session is present. Then check the Supabase Table Editor for a matching row in `user_sessions` to confirm the session reached cloud (not just merged from the local queue).
-
-- [ ] **Step 4.3 — Commit** (if a migration file was added)
+- [ ] **Step 4.2 — Run full test suite**
 
 ```bash
-git add supabase/  # only if you created a migrations folder
-git commit -m "fix: correct user_sessions Supabase schema/RLS so uploadSession succeeds"
+flutter test
+```
+
+Expected: all tests pass.
+
+- [ ] **Step 4.3 — Manually verify upload reaches cloud**
+
+In the app (debug build), create a new preset session while connected. Hot restart. Verify the session is present. Then check the Supabase Table Editor for a matching row in `user_sessions` to confirm it reached cloud (not just merged from the local queue by Task 3).
+
+- [ ] **Step 4.4 — Commit**
+
+```bash
+git add lib/services/supabase_sync_service.dart
+git commit -m "fix: remove unknown completed_at field from uploadSession upsert"
 ```
 
 ---

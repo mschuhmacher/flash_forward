@@ -10,6 +10,7 @@ import 'package:flash_forward/services/supabase_config.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/themes/app_theme.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -46,6 +47,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => SessionLogProvider()),
         ChangeNotifierProvider(create: (context) => PresetProvider()),
         ChangeNotifierProvider(create: (context) => SessionStateProvider()),
+        ChangeNotifierProvider(create: (context) => SettingsProvider()),
       ],
       child: const MyApp(),
     ),

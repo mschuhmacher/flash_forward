@@ -6,7 +6,7 @@ import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/data/grade_scales.dart';
 import 'package:flash_forward/models/grade_entry.dart';
 
@@ -18,42 +18,14 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String _weightUnit = 'kg';
-  String _gradeSystem = 'fontainebleau';
   StrengthDisplayMode _strengthMode = StrengthDisplayMode.load;
   String? _selectedTemplateId;
 
   @override
-  void initState() {
-    super.initState();
-    _loadPrefs();
-  }
-
-  Future<void> _loadPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _weightUnit = prefs.getString('pref_weight_unit') ?? 'kg';
-      _gradeSystem = prefs.getString('pref_grade_system') ?? 'fontainebleau';
-    });
-  }
-
-  Future<void> _setWeightUnit(String unit) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('pref_weight_unit', unit);
-    if (!mounted) return;
-    setState(() => _weightUnit = unit);
-  }
-
-  Future<void> _setGradeSystem(String system) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('pref_grade_system', system);
-    if (!mounted) return;
-    setState(() => _gradeSystem = system);
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Read from SettingsProvider so chart display updates when the user changes
+    // preferences in the SettingsDrawer (which lives outside this widget tree).
+    final settings = context.watch<SettingsProvider>();
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) => SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 32),
@@ -62,6 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             // ── User header ─────────────────────────────────────────────────
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
                   radius: 40,
@@ -96,6 +69,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.settings_rounded),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => Scaffold.of(context).openEndDrawer(),
                 ),
               ],
             ),
@@ -137,7 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     GradeProgressChart(
                       climbed: gradeClimbed,
                       flashed: gradeFlashed,
-                      gradeSystem: _gradeSystem == 'fontainebleau'
+                      gradeSystem: settings.gradeSystem == 'fontainebleau'
                           ? GradeSystem.fontainebleau
                           : GradeSystem.vscale,
                     ),
@@ -194,52 +173,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                       StrengthProgressChart(
                         points: strengthPoints,
-                        unit: _weightUnit,
+                        unit: settings.weightUnit,
                         displayMode: _strengthMode,
                       ),
                     ],
                   ],
                 );
               },
-            ),
-
-            // ── Preferences ───────────────────────────────────────────────────
-            const SizedBox(height: 32),
-            Text('Preferences', style: context.h3),
-            const SizedBox(height: 16),
-
-            Text('Weight unit', style: context.titleMedium),
-            const SizedBox(height: 8),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'kg', label: Text('kg')),
-                ButtonSegment(value: 'lbs', label: Text('lbs')),
-              ],
-              selected: {_weightUnit},
-              onSelectionChanged: (s) => _setWeightUnit(s.first),
-            ),
-
-            const SizedBox(height: 20),
-
-            Text('Grade system', style: context.titleMedium),
-            const SizedBox(height: 8),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'fontainebleau',
-                  label: Text('Fontainebleau'),
-                ),
-                ButtonSegment(value: 'vscale', label: Text('V-scale')),
-              ],
-              selected: {_gradeSystem},
-              onSelectionChanged: (s) => _setGradeSystem(s.first),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Past entries use their stored system and will still display correctly.',
-              style: context.bodyMedium.copyWith(
-                color: context.colorScheme.onSurfaceVariant,
-              ),
             ),
 
             const SizedBox(height: 32),

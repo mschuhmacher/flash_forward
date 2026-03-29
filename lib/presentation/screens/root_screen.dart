@@ -1,4 +1,5 @@
 import 'package:flash_forward/presentation/screens/training_program_flow/_OLD_add_item_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/session_flow/home_screen.dart';
 import 'package:flash_forward/presentation/screens/profile_flow/profile_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
@@ -6,6 +7,9 @@ import 'package:flash_forward/presentation/screens/training_program_flow/new_ses
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/program_screen.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/settings_provider.dart';
+import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -74,29 +78,24 @@ class _RootScreenState extends State<RootScreen>
                     case 0:
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => NewSessionScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => NewSessionScreen()),
                       );
                     case 1:
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => NewWorkoutScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => NewWorkoutScreen()),
                       );
                     case 2:
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => NewExerciseScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => NewExerciseScreen()),
                       );
                   }
                 },
                 child: Icon(Icons.add),
               )
               : null,
+      endDrawer: _selectedScreenIndex == 2 ? SettingsDrawer() : null,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: context.colorScheme.surface,
@@ -116,10 +115,7 @@ class _RootScreenState extends State<RootScreen>
                     // rippleColor: context.colorScheme.primary.withAlpha(50),
                     gap: 8,
                     iconSize: 24,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     duration: Duration(milliseconds: 400),
                     activeColor: context.colorScheme.primary,
                     color: context.colorScheme.primary,
@@ -133,10 +129,7 @@ class _RootScreenState extends State<RootScreen>
                     ),
                     tabs: [
                       GButton(icon: Icons.home_rounded, text: 'Home'),
-                      GButton(
-                        icon: Icons.event_note_rounded,
-                        text: 'Program',
-                      ),
+                      GButton(icon: Icons.event_note_rounded, text: 'Program'),
                       GButton(
                         icon: Icons.person_rounded,
                         text:
@@ -157,6 +150,283 @@ class _RootScreenState extends State<RootScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class SettingsDrawer extends StatelessWidget {
+  const SettingsDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: context.colorScheme.surfaceBright,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Text('Preferences', style: context.titleMedium),
+            ),
+            Consumer<SettingsProvider>(
+              builder:
+                  (context, settings, _) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Weight unit', style: context.bodyMedium),
+                        const SizedBox(height: 8),
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(value: 'kg', label: Text('kg')),
+                            ButtonSegment(value: 'lbs', label: Text('lbs')),
+                          ],
+                          selected: {settings.weightUnit},
+                          onSelectionChanged:
+                              (s) => settings.setWeightUnit(s.first),
+                        ),
+                        const SizedBox(height: 20),
+                        Text('Grade system', style: context.bodyMedium),
+                        const SizedBox(height: 8),
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(
+                              value: 'fontainebleau',
+                              label: Text('Fontainebleau'),
+                            ),
+                            ButtonSegment(
+                              value: 'vscale',
+                              label: Text('V-scale'),
+                            ),
+                          ],
+                          selected: {settings.gradeSystem},
+                          onSelectionChanged:
+                              (s) => settings.setGradeSystem(s.first),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Past entries use their stored system and will still display correctly.',
+                          style: context.bodyMedium.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Text('Data', style: context.titleMedium),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_sweep_rounded),
+              title: Text('Clear logs', style: context.bodyMedium),
+              onTap: () => _showClearLogsPopUp(context),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Text('Account', style: context.titleMedium),
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: Text('Sign out', style: context.bodyMedium),
+              onTap: () => _signOut(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_rounded),
+              title: Text('Delete account', style: context.bodyMedium),
+              onTap: () => _deleteAccount(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _signOut(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Sign out?', style: context.h3),
+          content: Text(
+            'Are you sure you want to sign out?',
+            style: context.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Sign out'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && context.mounted) {
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
+
+      await sessionLogProvider.reset();
+      presetProvider.reset();
+      await authProvider.signOut();
+
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final deleteController = TextEditingController();
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete account?', style: context.h3),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Are you sure you want to delete your account? This is irreversible.',
+                style: context.bodyMedium,
+              ),
+              SizedBox(height: 16),
+              Text('Type \'delete\' to confirm.', style: context.bodyMedium),
+              SizedBox(height: 8),
+              TextField(controller: deleteController),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: deleteController,
+              builder: (context, value, child) {
+                return ElevatedButton(
+                  onPressed:
+                      value.text == 'delete'
+                          ? () => Navigator.of(context).pop(true)
+                          : null,
+                  child: Text('Delete account'),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && context.mounted) {
+      final sessionLogProvider = Provider.of<SessionLogProvider>(
+        context,
+        listen: false,
+      );
+      final presetProvider = Provider.of<PresetProvider>(
+        context,
+        listen: false,
+      );
+
+      await sessionLogProvider.reset();
+      presetProvider.reset();
+      await authProvider.deleteUser();
+
+      if (!context.mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 48,
+                    color: context.colorScheme.primary,
+                  ),
+                  SizedBox(height: 16),
+                  Text('Account deleted', style: context.h3),
+                  SizedBox(height: 8),
+                  Text(
+                    'Your account has been permanently deleted.',
+                    style: context.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+      );
+
+      await Future.delayed(const Duration(seconds: 3));
+
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
+  void _showClearLogsPopUp(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('Clear logs', style: dialogContext.h3),
+          content: Text(
+            'Are you sure you want to clear your logs?',
+            style: dialogContext.bodyMedium,
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text('Cancel'),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    Provider.of<SessionLogProvider>(
+                      context,
+                      listen: false,
+                    ).clearAllLoggedSessions();
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text('Clear logs'),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 }
