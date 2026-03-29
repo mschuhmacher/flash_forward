@@ -27,7 +27,7 @@ void main() {
     await queue.loadQueue();
   });
 
-  tearDown(() => tmpDir.delete(recursive: true));
+  tearDown(() async => tmpDir.delete(recursive: true));
 
   group('SyncQueueService.dequeue', () {
     test('removes only the matching (id, type) pair', () async {
