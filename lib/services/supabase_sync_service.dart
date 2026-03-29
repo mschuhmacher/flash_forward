@@ -216,12 +216,25 @@ class SupabaseSyncService {
   }
 
   /// Delete a custom workout from user's library
-  Future<void> deleteWorkout(String workoutId) async {
-    await supabase
-        .from('user_workouts')
-        .delete()
-        .eq('id', workoutId)
-        .eq('user_id', userId);
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteWorkout(String workoutId, {bool isRetry = false}) async {
+    try {
+      await supabase
+          .from('user_workouts')
+          .delete()
+          .eq('id', workoutId)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: workoutId,
+          type: 'deleteWorkout',
+          data: {'workoutId': workoutId},
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
   }
 
   // ========== Exercise Presets Sync ==========
@@ -294,12 +307,25 @@ class SupabaseSyncService {
   }
 
   /// Delete a custom exercise from user's library
-  Future<void> deleteExercise(String exerciseId) async {
-    await supabase
-        .from('user_exercises')
-        .delete()
-        .eq('id', exerciseId)
-        .eq('user_id', userId);
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteExercise(String exerciseId, {bool isRetry = false}) async {
+    try {
+      await supabase
+          .from('user_exercises')
+          .delete()
+          .eq('id', exerciseId)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: exerciseId,
+          type: 'deleteExercise',
+          data: {'exerciseId': exerciseId},
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
   }
 
   // ========== Queue Processing ==========
@@ -334,6 +360,14 @@ class SupabaseSyncService {
           case 'uploadExercise':
             final exercise = Exercise.fromJson(operation.data);
             await uploadExercise(exercise, isRetry: true);
+            break;
+          case 'deleteWorkout':
+            await deleteWorkout(
+                operation.data['workoutId'] as String, isRetry: true);
+            break;
+          case 'deleteExercise':
+            await deleteExercise(
+                operation.data['exerciseId'] as String, isRetry: true);
             break;
           default:
             Sentry.captureMessage('Unknown sync operation type: ${operation.type}');
