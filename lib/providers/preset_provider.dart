@@ -6,6 +6,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/services/preset_logger.dart';
 import 'package:flash_forward/services/supabase_sync_service.dart';
+import 'package:flash_forward/services/sync_queue_service.dart';
 import '../models/session.dart';
 import '../data/default_session_data.dart';
 
@@ -65,6 +66,7 @@ class PresetProvider extends ChangeNotifier {
     // If user is logged in, load their cloud data
     if (userId != null) {
       _syncService = SupabaseSyncService(userId: userId);
+      await _syncService!.syncQueue.loadQueue(); // ensure queue loaded before merge
       await _loadUserPresetDataFromCloud();
     } else {
       // Load from local storage (fallback for offline/unauthenticated)
@@ -80,9 +82,35 @@ class PresetProvider extends ChangeNotifier {
     if (_syncService == null) return;
 
     try {
-      _userSessions = await _syncService!.fetchUserSessions();
-      _userWorkouts = await _syncService!.fetchUserWorkouts();
-      _userExercises = await _syncService!.fetchUserExercises();
+      final cloudSessions = await _syncService!.fetchUserSessions();
+      final cloudWorkouts = await _syncService!.fetchUserWorkouts();
+      final cloudExercises = await _syncService!.fetchUserExercises();
+      final pending = _syncService!.syncQueue.pendingOperations;
+
+      _userSessions = mergeWithPendingOps(
+        cloudItems: cloudSessions,
+        getId: (s) => s.id,
+        operationType: 'uploadSession',
+        deleteOperationType: 'deleteSession',
+        fromJson: Session.fromJson,
+        pendingOps: pending,
+      );
+      _userWorkouts = mergeWithPendingOps(
+        cloudItems: cloudWorkouts,
+        getId: (w) => w.id,
+        operationType: 'uploadWorkout',
+        deleteOperationType: 'deleteWorkout',
+        fromJson: Workout.fromJson,
+        pendingOps: pending,
+      );
+      _userExercises = mergeWithPendingOps(
+        cloudItems: cloudExercises,
+        getId: (e) => e.id,
+        operationType: 'uploadExercise',
+        deleteOperationType: 'deleteExercise',
+        fromJson: Exercise.fromJson,
+        pendingOps: pending,
+      );
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
       await _loadUserPresetDataFromLocal();
@@ -94,6 +122,39 @@ class PresetProvider extends ChangeNotifier {
     _userSessions = (await PresetLogger.readUserPresetSessions()).toList();
     _userWorkouts = (await PresetLogger.readUserPresetWorkouts()).toList();
     _userExercises = (await PresetLogger.readUserPresetExercises()).toList();
+  }
+
+  /// Merges [cloudItems] with items from [pendingOps] that have not yet been
+  /// uploaded (i.e. their id is absent from cloud results).
+  ///
+  /// Only operations matching [operationType] are considered.
+  /// Items with a pending [deleteOperationType] op are excluded — they were
+  /// deleted locally and must not be re-surfaced.
+  /// Cloud always wins when the same id appears in both cloud and upload queue.
+  ///
+  /// Note: [fromJson] receives data serialised by the model's own toJson()
+  /// (camelCase keys from the local queue), not the Supabase column mapping
+  /// used in fetchUser*. Do not swap these callsites.
+  static List<T> mergeWithPendingOps<T>({
+    required List<T> cloudItems,
+    required String Function(T) getId,
+    required String operationType,
+    required String deleteOperationType,
+    required T Function(Map<String, dynamic>) fromJson,
+    required List<SyncOperation> pendingOps,
+  }) {
+    final cloudIds = cloudItems.map(getId).toSet();
+    final deletedIds = pendingOps
+        .where((op) => op.type == deleteOperationType)
+        .map((op) => op.id)
+        .toSet();
+    final unsynced = pendingOps
+        .where((op) =>
+            op.type == operationType &&
+            !cloudIds.contains(op.id) &&
+            !deletedIds.contains(op.id))
+        .map((op) => fromJson(op.data));
+    return [...cloudItems, ...unsynced];
   }
 
   Future<void> deleteAllUserPresets() async {
