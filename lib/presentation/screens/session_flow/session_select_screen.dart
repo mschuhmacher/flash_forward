@@ -108,15 +108,8 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                   backgroundColor: context.colorScheme.secondary,
                   foregroundColor: context.colorScheme.onSecondary,
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => AddItemScreen(itemName: 'session'),
-                      ),
-                    );
                   },
-                  child: Icon(Icons.add),
+                  child: Icon(Icons.more_horiz_rounded),
                 ),
               ],
             ),
