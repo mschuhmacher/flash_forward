@@ -7,13 +7,15 @@ import 'package:flash_forward/models/workout.dart';
 
 /// Handles syncing local data with Supabase cloud storage
 /// This allows migration from local-only to cloud-backed storage
+///
+/// IMPORTANT: After construction, call `await syncQueue.loadQueue()` before
+/// reading [syncQueue.pendingOperations]. The queue is loaded from disk
+/// asynchronously; skipping the await will return an empty list.
 class SupabaseSyncService {
   final String userId;
   final SyncQueueService _syncQueue = SyncQueueService();
 
-  SupabaseSyncService({required this.userId}) {
-    _syncQueue.loadQueue();
-  }
+  SupabaseSyncService({required this.userId});
 
   /// Get the sync queue for external access
   SyncQueueService get syncQueue => _syncQueue;

@@ -154,7 +154,8 @@ class PresetProvider extends ChangeNotifier {
             !cloudIds.contains(op.id) &&
             !deletedIds.contains(op.id))
         .map((op) => fromJson(op.data));
-    return [...cloudItems, ...unsynced];
+    final filteredCloud = cloudItems.where((item) => !deletedIds.contains(getId(item))).toList();
+    return [...filteredCloud, ...unsynced];
   }
 
   Future<void> deleteAllUserPresets() async {

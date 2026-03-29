@@ -100,5 +100,18 @@ void main() {
       );
       expect(result, isEmpty);
     });
+
+    test('filters out cloud item when a pending delete op exists for its id', () {
+      final s = _session('cloud-del-1');
+      final result = PresetProvider.mergeWithPendingOps<Session>(
+        cloudItems: [s],
+        getId: (s) => s.id,
+        operationType: 'uploadSession',
+        deleteOperationType: 'deleteSession',
+        fromJson: Session.fromJson,
+        pendingOps: [_deleteOp(s.id)],
+      );
+      expect(result, isEmpty);
+    });
   });
 }
