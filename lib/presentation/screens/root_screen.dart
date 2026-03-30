@@ -1,3 +1,4 @@
+import 'package:flash_forward/constants/urls.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/_OLD_add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/session_flow/home_screen.dart';
@@ -16,6 +17,7 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RootScreen extends StatefulWidget {
   const RootScreen({super.key});
@@ -234,8 +236,17 @@ class SettingsDrawer extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.file_open_outlined),
+              title: Text('Terms of service', style: context.bodyMedium),
+              onTap: () async {
+                await launchUrl(URL.termsOfService);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_open_outlined),
               title: Text('Privacy statement', style: context.bodyMedium),
-              onTap: () => _signOut(context),
+              onTap: () async {
+                await launchUrl(URL.privacyPolicy);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.logout),
