@@ -233,6 +233,11 @@ class SettingsDrawer extends StatelessWidget {
               child: Text('Account', style: context.titleMedium),
             ),
             ListTile(
+              leading: const Icon(Icons.file_open_outlined),
+              title: Text('Privacy statement', style: context.bodyMedium),
+              onTap: () => _signOut(context),
+            ),
+            ListTile(
               leading: const Icon(Icons.logout),
               title: Text('Sign out', style: context.bodyMedium),
               onTap: () => _signOut(context),

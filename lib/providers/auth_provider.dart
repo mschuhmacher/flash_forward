@@ -33,6 +33,16 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _userProfile = await _authService.getCurrentUserProfile();
+
+      // Self-heal: metadata was never applied (e.g. confirmed late or from another device)
+      if (_userProfile?.firstName == null) {
+        final meta = _authService.getUserMetadata();
+        if (meta != null && meta['first_name'] != null) {
+          await _authService.applyMetadataToProfile();
+          _userProfile = await _authService.getCurrentUserProfile();
+        }
+      }
+
       _errorMessage = null;
     } catch (e, stackTrace) {
       _errorMessage = e.toString();

@@ -192,6 +192,10 @@ class AuthService {
     return supabase.auth.currentUser?.emailConfirmedAt != null;
   }
 
+  Map<String, dynamic>? getUserMetadata() {
+    return supabase.auth.currentUser?.userMetadata;
+  }
+
   Future<bool> deleteUser() async {
     try {
       await supabase.rpc('delete_current_user');
