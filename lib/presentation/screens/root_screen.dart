@@ -169,7 +169,7 @@ class SettingsDrawer extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: Text('Preferences', style: context.titleMedium),
+              child: Text('Preferences', style: context.titleLargePrimary),
             ),
             Consumer<SettingsProvider>(
               builder:
@@ -178,34 +178,61 @@ class SettingsDrawer extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Weight unit', style: context.bodyMedium),
+                        Text('Weight unit', style: context.titleMedium),
                         const SizedBox(height: 8),
-                        SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment(value: 'kg', label: Text('kg')),
-                            ButtonSegment(value: 'lbs', label: Text('lbs')),
-                          ],
-                          selected: {settings.weightUnit},
-                          onSelectionChanged:
-                              (s) => settings.setWeightUnit(s.first),
+                        SizedBox(
+                          width: double.infinity,
+                          // height: 40,
+                          child: SegmentedButton<String>(
+                            style: SegmentedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            segments: [
+                              ButtonSegment(
+                                value: 'kg',
+                                label: Text('kg', style: context.bodyMedium),
+                              ),
+                              ButtonSegment(
+                                value: 'lbs',
+                                label: Text('lbs', style: context.bodyMedium),
+                              ),
+                            ],
+                            showSelectedIcon: false,
+                            selected: {settings.weightUnit},
+                            onSelectionChanged:
+                                (s) => settings.setWeightUnit(s.first),
+                          ),
                         ),
                         const SizedBox(height: 20),
-                        Text('Grade system', style: context.bodyMedium),
+                        Text('Grade system', style: context.titleMedium),
                         const SizedBox(height: 8),
-                        SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment(
-                              value: 'fontainebleau',
-                              label: Text('Fontainebleau'),
+                        SizedBox(
+                          width: double.infinity,
+                          child: SegmentedButton<String>(
+                            style: SegmentedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
                             ),
-                            ButtonSegment(
-                              value: 'vscale',
-                              label: Text('V-scale'),
-                            ),
-                          ],
-                          selected: {settings.gradeSystem},
-                          onSelectionChanged:
-                              (s) => settings.setGradeSystem(s.first),
+                            segments: [
+                              ButtonSegment(
+                                value: 'fontainebleau',
+                                label: Text(
+                                  'Fontainebleau',
+                                  style: context.bodyMedium,
+                                ),
+                              ),
+                              ButtonSegment(
+                                value: 'vscale',
+                                label: Text(
+                                  'V-scale',
+                                  style: context.bodyMedium,
+                                ),
+                              ),
+                            ],
+                            showSelectedIcon: false,
+                            selected: {settings.gradeSystem},
+                            onSelectionChanged:
+                                (s) => settings.setGradeSystem(s.first),
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -222,40 +249,40 @@ class SettingsDrawer extends StatelessWidget {
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Text('Data', style: context.titleMedium),
+              child: Text('Data', style: context.titleLargePrimary),
             ),
             ListTile(
               leading: const Icon(Icons.delete_sweep_rounded),
-              title: Text('Clear logs', style: context.bodyMedium),
+              title: Text('Clear logs', style: context.bodyLarge),
               onTap: () => _showClearLogsPopUp(context),
             ),
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Text('Account', style: context.titleMedium),
+              child: Text('Account', style: context.titleLargePrimary),
             ),
             ListTile(
               leading: const Icon(Icons.file_open_outlined),
-              title: Text('Terms of service', style: context.bodyMedium),
+              title: Text('Terms of service', style: context.bodyLarge),
               onTap: () async {
                 await launchUrl(URL.termsOfService);
               },
             ),
             ListTile(
               leading: const Icon(Icons.file_open_outlined),
-              title: Text('Privacy statement', style: context.bodyMedium),
+              title: Text('Privacy statement', style: context.bodyLarge),
               onTap: () async {
                 await launchUrl(URL.privacyPolicy);
               },
             ),
             ListTile(
               leading: const Icon(Icons.logout),
-              title: Text('Sign out', style: context.bodyMedium),
+              title: Text('Sign out', style: context.bodyLarge),
               onTap: () => _signOut(context),
             ),
             ListTile(
               leading: const Icon(Icons.delete_rounded),
-              title: Text('Delete account', style: context.bodyMedium),
+              title: Text('Delete account', style: context.bodyLarge),
               onTap: () => _deleteAccount(context),
             ),
           ],

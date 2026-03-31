@@ -69,6 +69,10 @@ extension AppText on BuildContext {
     this,
   ).textTheme.titleLarge!.copyWith(color: Theme.of(this).colorScheme.onSurface);
 
+  TextStyle get titleLargePrimary => Theme.of(
+    this,
+  ).textTheme.titleLarge!.copyWith(color: Theme.of(this).colorScheme.primary);
+
   TextStyle get titleMedium => Theme.of(this).textTheme.titleMedium!.copyWith(
     color: Theme.of(this).colorScheme.onSurface,
   );

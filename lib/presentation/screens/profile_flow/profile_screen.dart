@@ -154,20 +154,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 12),
                       if (strengthPoints.any((p) => p.bodyWeightKg != null)) ...[
-                        SegmentedButton<StrengthDisplayMode>(
-                          segments: const [
-                            ButtonSegment(
-                              value: StrengthDisplayMode.load,
-                              label: Text('Load'),
+                        SizedBox(
+                          width: double.infinity,
+                          child: SegmentedButton<StrengthDisplayMode>(
+                            style: SegmentedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
                             ),
-                            ButtonSegment(
-                              value: StrengthDisplayMode.ratio,
-                              label: Text('Ratio'),
-                            ),
-                          ],
-                          selected: {_strengthMode},
-                          onSelectionChanged: (s) =>
-                              setState(() => _strengthMode = s.first),
+                            segments: [
+                              ButtonSegment(
+                                value: StrengthDisplayMode.load,
+                                label: Text('Load', style: context.bodyMedium),
+                              ),
+                              ButtonSegment(
+                                value: StrengthDisplayMode.ratio,
+                                label: Text('Ratio', style: context.bodyMedium,),
+                              ),
+                            ],
+                            showSelectedIcon: false,
+                            selected: {_strengthMode},
+                            onSelectionChanged: (s) =>
+                                setState(() => _strengthMode = s.first),
+                          ),
                         ),
                         const SizedBox(height: 12),
                       ],
