@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/_OLD_add_item_screen.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/widgets/session_select_row.dart';
 import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
@@ -165,12 +166,97 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                 FloatingActionButton(
                   backgroundColor: context.colorScheme.secondary,
                   foregroundColor: context.colorScheme.onSecondary,
-                  onPressed: () {},
+                  onPressed: () {
+                    if (selectedId == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: context.colorScheme.error,
+                          duration: Duration(seconds: 2),
+                          content: Text(
+                            'Please select a session first',
+                            style: context.bodyLarge.copyWith(
+                              color: context.colorScheme.onError,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    final session = currentSessionList.firstWhere(
+                      (s) => s.id == selectedId,
+                    );
+
+                    _editSessionPopUp(session);
+                  },
                   child: Icon(Icons.more_horiz_rounded),
                 ),
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _editSessionPopUp(Session session) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(
+            "Do you want to edit this session before starting it?",
+            style: dialogContext.h3,
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(session.title, style: dialogContext.titleLarge),
+                if (session.description != null) ...[
+                  Text(session.description!, style: dialogContext.bodyMedium),
+                  SizedBox(height: 16),
+                ],
+                Text('Workouts:', style: dialogContext.titleMedium),
+                SizedBox(height: 8),
+                ...session.workouts.map(
+                  (workout) => Padding(
+                    padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
+                    child: Text(
+                      '• ${workout.title}',
+                      style: dialogContext.bodyMedium,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text('Cancel'),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => NewSessionScreen(session: session),
+                      ),
+                    );
+                  },
+                  child: Text('Edit'),
+                ),
+              ],
+            ),
+          ],
         );
       },
     );

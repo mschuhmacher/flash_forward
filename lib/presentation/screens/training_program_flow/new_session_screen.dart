@@ -345,7 +345,7 @@ class _WorkoutCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(workout.title, style: context.titleMedium),
+                  Expanded(child: Text(workout.title, style: context.titleMedium, maxLines: 2,)),
                   LabelBadge(labelKey: workout.label),
                 ],
               ),

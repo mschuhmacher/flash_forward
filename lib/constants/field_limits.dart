@@ -9,12 +9,21 @@ class FieldLimits {
   static const int sessionDescriptionMaxLength = 100;
   static const int workoutDescriptionMaxLength = 100;
   static const int exerciseDescriptionMaxLength = 100;
+
+  // Sets, reps, load, timers
+  static const int setLimit = 999;
+  static const int repLimit = 999;
+  static const int loadLimit = 9999;
+  static const int timeLimit = 9999;
 }
 
 /// Reusable validators for text fields
 class FieldValidators {
-  static String? sessionTitle(String? value,
-      {List<String>? existingTitles, String? ownTitle}) {
+  static String? sessionTitle(
+    String? value, {
+    List<String>? existingTitles,
+    String? ownTitle,
+  }) {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
     }
@@ -34,8 +43,11 @@ class FieldValidators {
     return null;
   }
 
-  static String? workoutTitle(String? value,
-      {List<String>? existingTitles, String? ownTitle}) {
+  static String? workoutTitle(
+    String? value, {
+    List<String>? existingTitles,
+    String? ownTitle,
+  }) {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
     }
@@ -55,8 +67,11 @@ class FieldValidators {
     return null;
   }
 
-  static String? exerciseTitle(String? value,
-      {List<String>? existingTitles, String? ownTitle}) {
+  static String? exerciseTitle(
+    String? value, {
+    List<String>? existingTitles,
+    String? ownTitle,
+  }) {
     if (value == null || value.isEmpty) {
       return 'Please enter a title';
     }
