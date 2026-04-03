@@ -2,6 +2,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
+import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_badge.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flutter/material.dart';
@@ -27,25 +28,67 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
   int index = 0;
   Set<String> isExpandedIds = {};
   String? selectedId;
+  String _query = '';
+  bool _isSearching = false;
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final AppBar myAppBar = AppBar(
-      title: Row(
-        children: [
-          SizedBox.shrink(),
-          Spacer(),
-          Text('Flash Forward', style: context.h3),
-          Spacer(),
-          IconButton(onPressed: () {}, icon: Icon(Icons.search_rounded)),
-        ],
-      ),
+      title: _isSearching
+          ? TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                hintStyle: context.bodyMedium,
+                fillColor: context.colorScheme.surfaceBright,
+                isDense: true,
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      _searchController.clear();
+                      _query = '';
+                      _isSearching = false;
+                      FocusScope.of(context).unfocus();
+                    });
+                  },
+                ),
+              ),
+              onChanged: (value) => setState(() => _query = value),
+            )
+          : Row(
+              children: [
+                SizedBox.shrink(),
+                Spacer(),
+                Text('Flash Forward', style: context.h3),
+                Spacer(),
+                IconButton(
+                  onPressed: () => setState(() => _isSearching = true),
+                  icon: Icon(Icons.search_rounded),
+                ),
+              ],
+            ),
       centerTitle: true,
     );
 
     return Consumer2<PresetProvider, SessionStateProvider>(
       builder: (context, presetData, sessionStateData, child) {
         final currentSessionList = presetData.presetSessions;
+
+        final filteredSessionList = currentSessionList.where((session) {
+          return session.title.toLowerCase().contains(
+            _query.toLowerCase().trim(),
+          );
+        }).toList();
 
         // Guard clause: show loading indicator if sessions are loading
         if (presetData.isLoading) {
@@ -71,6 +114,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const KeyboardDismissButton(),
                 SizedBox(height: 8),
                 Text("Select your", style: context.h1),
                 SizedBox(height: 8),
@@ -86,7 +130,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemBuilder: (context, index) {
-                      final session = currentSessionList[index];
+                      final session = filteredSessionList[index];
                       return GestureDetector(
                         onTap: () {
                           setState(() {
@@ -111,7 +155,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                       );
                     },
                     separatorBuilder: (context, index) => SizedBox(height: 12),
-                    itemCount: currentSessionList.length,
+                    itemCount: filteredSessionList.length,
                   ),
                 ),
                 SizedBox(
