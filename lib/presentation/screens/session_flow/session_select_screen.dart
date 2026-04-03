@@ -41,54 +41,56 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
   @override
   Widget build(BuildContext context) {
     final AppBar myAppBar = AppBar(
-      title: _isSearching
-          ? TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                hintStyle: context.bodyMedium,
-                fillColor: context.colorScheme.surfaceBright,
-                isDense: true,
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _searchController.clear();
-                      _query = '';
-                      _isSearching = false;
-                      FocusScope.of(context).unfocus();
-                    });
-                  },
+      title:
+          _isSearching
+              ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search...',
+                  hintStyle: context.bodyMedium,
+                  fillColor: context.colorScheme.surfaceBright,
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _searchController.clear();
+                        _query = '';
+                        _isSearching = false;
+                        FocusScope.of(context).unfocus();
+                      });
+                    },
+                  ),
                 ),
+                onChanged: (value) => setState(() => _query = value),
+              )
+              : Row(
+                children: [
+                  SizedBox.shrink(),
+                  Spacer(),
+                  Text('Flash Forward', style: context.h3),
+                  Spacer(),
+                  IconButton(
+                    onPressed: () => setState(() => _isSearching = true),
+                    icon: Icon(Icons.search_rounded),
+                  ),
+                ],
               ),
-              onChanged: (value) => setState(() => _query = value),
-            )
-          : Row(
-              children: [
-                SizedBox.shrink(),
-                Spacer(),
-                Text('Flash Forward', style: context.h3),
-                Spacer(),
-                IconButton(
-                  onPressed: () => setState(() => _isSearching = true),
-                  icon: Icon(Icons.search_rounded),
-                ),
-              ],
-            ),
       centerTitle: true,
     );
 
-    return Consumer2<PresetProvider, SessionStateProvider>(
-      builder: (context, presetData, sessionStateData, child) {
+    return Consumer<PresetProvider>(
+      builder: (context, presetData, child) {
         final currentSessionList = presetData.presetSessions;
 
-        final filteredSessionList = currentSessionList.where((session) {
-          return session.title.toLowerCase().contains(
-            _query.toLowerCase().trim(),
-          );
-        }).toList();
+        final filteredSessionList =
+            currentSessionList.where((session) {
+              return session.title.toLowerCase().contains(
+                _query.toLowerCase().trim(),
+              );
+            }).toList();
 
         // Guard clause: show loading indicator if sessions are loading
         if (presetData.isLoading) {
@@ -108,6 +110,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
         }
 
         return Scaffold(
+          resizeToAvoidBottomInset: false,
           appBar: myAppBar,
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -289,7 +292,10 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                       context,
                       MaterialPageRoute(
                         builder:
-                            (context) => NewSessionScreen(session: session, startAfterSave: true),
+                            (context) => NewSessionScreen(
+                              session: session,
+                              startAfterSave: true,
+                            ),
                       ),
                     );
                   },
