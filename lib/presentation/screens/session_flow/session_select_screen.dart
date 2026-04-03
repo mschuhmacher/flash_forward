@@ -1,6 +1,7 @@
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_badge.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flutter/material.dart';
@@ -65,10 +66,6 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
           );
         }
 
-        final sessionLabel =
-            kDefaultLabels[currentSessionList[sessionStateData.sessionIndex]
-                .label];
-
         return Scaffold(
           appBar: myAppBar,
           body: Padding(
@@ -132,7 +129,21 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                 Expanded(
                   child: SizedBox(
                     height: 56,
-                    child: StartSessionButton(routeName: 'workout_screen'),
+                    child: StartSessionButton(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => ActiveSessionScreen(
+                                  session: currentSessionList.firstWhere(
+                                    (s) => s.id == selectedId,
+                                  ),
+                                ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 FloatingActionButton(
@@ -172,7 +183,7 @@ class _SessionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(40),
         border:
             isSelected
-                ? Border.all(width: 3, color: context.colorScheme.primary)
+                ? Border.all(width: 2.5, color: context.colorScheme.primary)
                 : null,
         color: context.colorScheme.surfaceBright,
         boxShadow: context.shadowSmall,
@@ -197,7 +208,11 @@ class _SessionCard extends StatelessWidget {
           Text(session.title, style: context.h2),
           SizedBox(height: 4),
           if (session.description != null) ...[
-            Text(session.description!, style: context.bodyMedium, overflow: TextOverflow.ellipsis,),
+            Text(
+              session.description!,
+              style: context.bodyMedium,
+              overflow: TextOverflow.ellipsis,
+            ),
             SizedBox(height: 12),
           ],
           if (isExpanded)

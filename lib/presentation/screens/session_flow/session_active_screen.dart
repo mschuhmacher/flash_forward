@@ -1,4 +1,5 @@
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
@@ -15,7 +16,9 @@ import 'package:flash_forward/themes/app_colors.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class ActiveSessionScreen extends StatefulWidget {
-  const ActiveSessionScreen({super.key});
+  final Session session;
+
+  const ActiveSessionScreen({super.key, required this.session});
 
   @override
   State<ActiveSessionScreen> createState() => _ActiveSessionScreenState();
@@ -29,14 +32,12 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
     return Consumer2<PresetProvider, SessionStateProvider>(
       builder: (context, presetData, sessionStateData, child) {
         // Initialize the timer & keep screen awake once when the screen first builds.
-        // Passes the preset session to start(), which deep-copies it internally.
+        // Passes the session to start(), which deep-copies it internally.
         if (!_timerInitialized) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             // Guard again in case the widget unmounted before the callback.
             if (!mounted || _timerInitialized) return;
-            final presetSession =
-                presetData.presetSessions[sessionStateData.sessionIndex];
-            sessionStateData.start(presetSession);
+            sessionStateData.start(widget.session);
             _timerInitialized = true;
 
             // Start keeping screen awake

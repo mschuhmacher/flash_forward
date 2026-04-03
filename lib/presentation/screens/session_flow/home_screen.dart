@@ -1,3 +1,4 @@
+import 'package:flash_forward/presentation/screens/session_flow/session_select_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -54,7 +55,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             SizedBox(height: 32),
-            StartSessionButton(routeName: 'session_select_screen'),
+            StartSessionButton(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SessionSelectScreen(),
+                  ),
+                );
+              },
+            ),
             SizedBox(height: 32),
             MyCalendar(),
             SizedBox(height: 16),
