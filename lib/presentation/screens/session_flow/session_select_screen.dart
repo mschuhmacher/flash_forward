@@ -49,6 +49,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
       builder: (context, presetData, sessionStateData, child) {
         final currentSessionList = presetData.presetSessions;
 
+
         // Guard clause: show loading indicator if sessions are loading
         if (presetData.isLoading) {
           return Scaffold(
@@ -131,15 +132,23 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                     height: 56,
                     child: StartSessionButton(
                       onTap: () {
+                        if (selectedId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Please select a session first'),
+                            ),
+                          );
+                          return;
+                        }
+                        final session = currentSessionList.firstWhere(
+                          (s) => s.id == selectedId,
+                        );
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder:
-                                (context) => ActiveSessionScreen(
-                                  session: currentSessionList.firstWhere(
-                                    (s) => s.id == selectedId,
-                                  ),
-                                ),
+                            builder: (context) => ActiveSessionScreen(
+                              session: session,
+                            ),
                           ),
                         );
                       },

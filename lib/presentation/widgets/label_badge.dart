@@ -13,7 +13,7 @@ class LabelBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: label.color.withValues(alpha: 0.12),
+        color: label.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -22,10 +22,11 @@ class LabelBadge extends StatelessWidget {
           Icon(label.icon, size: 12, color: label.color),
           SizedBox(width: 4),
           Text(
-            label.name,
+            label.name.toUpperCase(),
             style: context.bodyMedium.copyWith(
               color: label.color,
-              fontSize: 12,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
