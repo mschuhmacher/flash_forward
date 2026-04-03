@@ -1,5 +1,4 @@
 import 'package:flash_forward/constants/urls.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/_OLD_add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/session_flow/home_screen.dart';
 import 'package:flash_forward/presentation/screens/profile_flow/profile_screen.dart';
