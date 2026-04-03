@@ -10,7 +10,7 @@ final TextTheme appTextTheme = TextTheme(
   ),
   displayMedium: TextStyle(
     // Section titles
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: FontWeight.w600,
     height: 1.3,
   ),
