@@ -12,6 +12,7 @@ import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,8 +20,9 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 
 class NewSessionScreen extends StatefulWidget {
   final Session? session;
+  final bool startAfterSave;
 
-  const NewSessionScreen({super.key, this.session});
+  const NewSessionScreen({super.key, this.session, this.startAfterSave = false});
 
   @override
   State<NewSessionScreen> createState() => _NewSessionScreenState();
@@ -67,6 +69,20 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
             _session.userId ??
             Provider.of<AuthProvider>(context, listen: false).userId,
       );
+
+      if (widget.startAfterSave) {
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ActiveSessionScreen(session: session),
+            ),
+            (route) => route.isFirst,
+          );
+        }
+        return;
+      }
+
       final presetProvider = Provider.of<PresetProvider>(
         context,
         listen: false,
@@ -124,7 +140,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                   EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                 ),
               ),
-              child: Text('Save'),
+              child: Text(widget.startAfterSave ? 'Save & Start' : 'Save'),
             ),
           ],
         ),

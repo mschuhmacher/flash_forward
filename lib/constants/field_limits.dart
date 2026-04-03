@@ -121,4 +121,26 @@ class FieldValidators {
     }
     return null;
   }
+
+  static String? load(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final number = double.tryParse(value);
+    if (number == null) return 'Please enter a valid number';
+    if (number < 0) return 'Load cannot be negative';
+    if (number > FieldLimits.loadLimit) {
+      return 'Must be ${FieldLimits.loadLimit} or less';
+    }
+    return null;
+  }
+
+  static String? timeField(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final number = int.tryParse(value);
+    if (number == null) return 'Please enter a valid integer';
+    if (number < 0) return 'Value cannot be negative';
+    if (number > FieldLimits.timeLimit) {
+      return 'Must be ${FieldLimits.timeLimit} or less';
+    }
+    return null;
+  }
 }

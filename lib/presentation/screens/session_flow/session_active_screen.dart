@@ -1,3 +1,4 @@
+import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/utils/nullable.dart';
@@ -507,8 +508,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   timeBetweenReps: localTimeBetweenReps,
                   activeTime: localActiveTime,
                   load:
-                      double.tryParse(loadController.text.trim()) ??
-                      activeExercise.load,
+                      (double.tryParse(loadController.text.trim()) ??
+                              activeExercise.load)
+                          .clamp(0, FieldLimits.loadLimit.toDouble()),
                   loadUnit: Nullable(localLoadUnit),
                   rpe: Nullable(localRpeEnabled ? localRpe.clamp(1, 10) : null),
                   notes: Nullable(
@@ -596,10 +598,16 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 label: 'Sets',
                                 value: localSets,
                                 minimum: sessionStateData.progress.currentSet,
+                                maximum: FieldLimits.setLimit,
                                 onDecrement:
                                     () => setDialogState(() => localSets--),
                                 onIncrement:
-                                    () => setDialogState(() => localSets++),
+                                    () => setDialogState(
+                                      () => localSets = (localSets + 1).clamp(
+                                        1,
+                                        FieldLimits.setLimit,
+                                      ),
+                                    ),
                               ),
                               const _SessionEditDivider(),
 
@@ -610,6 +618,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   label: 'Reps',
                                   value: localReps ?? 10,
                                   minimum: sessionStateData.progress.currentRep,
+                                  maximum: FieldLimits.repLimit,
                                   onDecrement:
                                       () => setDialogState(
                                         () =>
@@ -618,12 +627,17 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                                   sessionStateData
                                                       .progress
                                                       .currentRep,
-                                                  9999,
+                                                  FieldLimits.repLimit,
                                                 ),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localReps = (localReps ?? 10) + 1,
+                                        () =>
+                                            localReps = ((localReps ?? 10) + 1)
+                                                .clamp(
+                                                  1,
+                                                  FieldLimits.repLimit,
+                                                ),
                                       ),
                                 ),
                                 const _SessionEditDivider(),
@@ -631,16 +645,26 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   label: 'Rest between sets',
                                   value: localTimeBetweenSets,
                                   minimum: 0,
+                                  maximum: FieldLimits.timeLimit,
                                   onDecrement:
                                       () => setDialogState(
                                         () =>
                                             localTimeBetweenSets =
                                                 (localTimeBetweenSets - 5)
-                                                    .clamp(0, 9999),
+                                                    .clamp(
+                                                      0,
+                                                      FieldLimits.timeLimit,
+                                                    ),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localTimeBetweenSets += 5,
+                                        () =>
+                                            localTimeBetweenSets =
+                                                (localTimeBetweenSets + 5)
+                                                    .clamp(
+                                                      0,
+                                                      FieldLimits.timeLimit,
+                                                    ),
                                       ),
                                 ),
                                 const SizedBox(height: 8),
@@ -648,13 +672,19 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   label: 'Time per rep',
                                   value: localTimePerRep,
                                   minimum: 0,
+                                  maximum: FieldLimits.timeLimit,
                                   onDecrement:
                                       () => setDialogState(
                                         () => localTimePerRep--,
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localTimePerRep++,
+                                        () =>
+                                            localTimePerRep =
+                                                (localTimePerRep + 1).clamp(
+                                                  0,
+                                                  FieldLimits.timeLimit,
+                                                ),
                                       ),
                                 ),
                                 const SizedBox(height: 8),
@@ -662,13 +692,20 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   label: 'Rest between reps',
                                   value: localTimeBetweenReps,
                                   minimum: 0,
+                                  maximum: FieldLimits.timeLimit,
                                   onDecrement:
                                       () => setDialogState(
                                         () => localTimeBetweenReps--,
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localTimeBetweenReps++,
+                                        () =>
+                                            localTimeBetweenReps =
+                                                (localTimeBetweenReps + 1)
+                                                    .clamp(
+                                                      0,
+                                                      FieldLimits.timeLimit,
+                                                    ),
                                       ),
                                 ),
                               ] else if (activeExercise.type ==
@@ -677,16 +714,26 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   label: 'Active time (s)',
                                   value: localActiveTime,
                                   minimum: 5,
+                                  maximum: FieldLimits.timeLimit,
                                   onDecrement:
                                       () => setDialogState(
                                         () =>
                                             localActiveTime = (localActiveTime -
                                                     5)
-                                                .clamp(5, 9999),
+                                                .clamp(
+                                                  5,
+                                                  FieldLimits.timeLimit,
+                                                ),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localActiveTime += 5,
+                                        () =>
+                                            localActiveTime = (localActiveTime +
+                                                    5)
+                                                .clamp(
+                                                  5,
+                                                  FieldLimits.timeLimit,
+                                                ),
                                       ),
                                 ),
                                 const _SessionEditDivider(),
@@ -694,22 +741,33 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   label: 'Rest between sets',
                                   value: localTimeBetweenSets,
                                   minimum: 0,
+                                  maximum: FieldLimits.timeLimit,
                                   onDecrement:
                                       () => setDialogState(
                                         () =>
                                             localTimeBetweenSets =
                                                 (localTimeBetweenSets - 5)
-                                                    .clamp(0, 9999),
+                                                    .clamp(
+                                                      0,
+                                                      FieldLimits.timeLimit,
+                                                    ),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localTimeBetweenSets += 5,
+                                        () =>
+                                            localTimeBetweenSets =
+                                                (localTimeBetweenSets + 5)
+                                                    .clamp(
+                                                      0,
+                                                      FieldLimits.timeLimit,
+                                                    ),
                                       ),
                                 ),
                                 const _SessionEditDivider(),
                                 _SessionEditOptionalRepsRow(
                                   enabled: localRepsEnabled,
                                   reps: localReps ?? 5,
+                                  maximum: FieldLimits.repLimit,
                                   onToggle:
                                       (enabled) => setDialogState(() {
                                         localRepsEnabled = enabled;
@@ -719,11 +777,19 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       () => setDialogState(
                                         () =>
                                             localReps = ((localReps ?? 5) - 1)
-                                                .clamp(1, 9999),
+                                                .clamp(
+                                                  1,
+                                                  FieldLimits.repLimit,
+                                                ),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localReps = (localReps ?? 5) + 1,
+                                        () =>
+                                            localReps = ((localReps ?? 5) + 1)
+                                                .clamp(
+                                                  1,
+                                                  FieldLimits.repLimit,
+                                                ),
                                       ),
                                 ),
                               ] else ...[
@@ -732,22 +798,33 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   label: 'Rest between sets',
                                   value: localTimeBetweenSets,
                                   minimum: 0,
+                                  maximum: FieldLimits.timeLimit,
                                   onDecrement:
                                       () => setDialogState(
                                         () =>
                                             localTimeBetweenSets =
                                                 (localTimeBetweenSets - 5)
-                                                    .clamp(0, 9999),
+                                                    .clamp(
+                                                      0,
+                                                      FieldLimits.timeLimit,
+                                                    ),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localTimeBetweenSets += 5,
+                                        () =>
+                                            localTimeBetweenSets =
+                                                (localTimeBetweenSets + 5)
+                                                    .clamp(
+                                                      0,
+                                                      FieldLimits.timeLimit,
+                                                    ),
                                       ),
                                 ),
                                 const _SessionEditDivider(),
                                 _SessionEditOptionalRepsRow(
                                   enabled: localRepsEnabled,
                                   reps: localReps ?? 5,
+                                  maximum: FieldLimits.repLimit,
                                   onToggle:
                                       (enabled) => setDialogState(() {
                                         localRepsEnabled = enabled;
@@ -757,11 +834,19 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       () => setDialogState(
                                         () =>
                                             localReps = ((localReps ?? 5) - 1)
-                                                .clamp(1, 9999),
+                                                .clamp(
+                                                  1,
+                                                  FieldLimits.repLimit,
+                                                ),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () => localReps = (localReps ?? 5) + 1,
+                                        () =>
+                                            localReps = ((localReps ?? 5) + 1)
+                                                .clamp(
+                                                  1,
+                                                  FieldLimits.repLimit,
+                                                ),
                                       ),
                                 ),
                               ],
@@ -981,6 +1066,7 @@ class _SessionEditCounterRow extends StatelessWidget {
   final String label;
   final int value;
   final int minimum;
+  final int? maximum;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
 
@@ -988,6 +1074,7 @@ class _SessionEditCounterRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.minimum,
+    this.maximum,
     required this.onDecrement,
     required this.onIncrement,
   });
@@ -1001,6 +1088,7 @@ class _SessionEditCounterRow extends StatelessWidget {
         IncrementDecrementNumberWidget(
           value: value,
           minimum: minimum,
+          maximum: maximum,
           decrement: onDecrement,
           increment: onIncrement,
         ),
@@ -1012,6 +1100,7 @@ class _SessionEditCounterRow extends StatelessWidget {
 class _SessionEditOptionalRepsRow extends StatelessWidget {
   final bool enabled;
   final int reps;
+  final int? maximum;
   final ValueChanged<bool> onToggle;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
@@ -1019,6 +1108,7 @@ class _SessionEditOptionalRepsRow extends StatelessWidget {
   const _SessionEditOptionalRepsRow({
     required this.enabled,
     required this.reps,
+    this.maximum,
     required this.onToggle,
     required this.onDecrement,
     required this.onIncrement,
@@ -1052,6 +1142,7 @@ class _SessionEditOptionalRepsRow extends StatelessWidget {
             label: 'Reps',
             value: reps,
             minimum: 1,
+            maximum: maximum,
             onDecrement: onDecrement,
             onIncrement: onIncrement,
           ),

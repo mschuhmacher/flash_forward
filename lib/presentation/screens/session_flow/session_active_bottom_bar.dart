@@ -1,3 +1,4 @@
+import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/data/grade_scales.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/models/grade_entry.dart';
@@ -365,9 +366,13 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                         if (bwText.isNotEmpty) {
                           final parsed = double.tryParse(bwText);
                           if (parsed != null && parsed > 0) {
+                            final clamped = parsed.clamp(
+                              0.0,
+                              FieldLimits.loadLimit.toDouble(),
+                            );
                             bodyWeightKg = weightUnit == 'lbs'
-                                ? parsed / 2.20462
-                                : parsed;
+                                ? clamped / 2.20462
+                                : clamped;
                           }
                         }
 
@@ -379,8 +384,12 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           final text = info.controller.text.trim();
                           final parsed = double.tryParse(text);
                           if (parsed != null && parsed > 0) {
+                            final clamped = parsed.clamp(
+                              0.0,
+                              FieldLimits.loadLimit.toDouble(),
+                            );
                             loadKgMap[info.key] =
-                                weightUnit == 'lbs' ? parsed / 2.20462 : parsed;
+                                weightUnit == 'lbs' ? clamped / 2.20462 : clamped;
                           }
                         }
 

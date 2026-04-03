@@ -262,8 +262,11 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                     label: 'Sets',
                     value: _sets,
                     minimum: 1,
+                    maximum: FieldLimits.setLimit,
                     onDecrement: () => setState(() => _sets--),
-                    onIncrement: () => setState(() => _sets++),
+                    onIncrement: () => setState(
+                      () => _sets = (_sets + 1).clamp(1, FieldLimits.setLimit),
+                    ),
                   ),
                   SizedBox(height: 8),
 
@@ -273,75 +276,125 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       label: 'Reps',
                       value: _reps ?? 10,
                       minimum: 1,
+                      maximum: FieldLimits.repLimit,
                       onDecrement:
                           () => setState(
-                            () => _reps = ((_reps ?? 10) - 1).clamp(1, 9999),
+                            () => _reps = ((_reps ?? 10) - 1).clamp(
+                              1,
+                              FieldLimits.repLimit,
+                            ),
                           ),
                       onIncrement:
-                          () => setState(() => _reps = (_reps ?? 10) + 1),
+                          () => setState(
+                            () => _reps = ((_reps ?? 10) + 1).clamp(
+                              1,
+                              FieldLimits.repLimit,
+                            ),
+                          ),
                     ),
                     _Divider(),
                     _CounterRow(
                       label: 'Rest between sets',
                       value: _timeBetweenSets,
                       minimum: 0,
+                      maximum: FieldLimits.timeLimit,
                       onDecrement:
                           () => setState(
                             () =>
                                 _timeBetweenSets = (_timeBetweenSets - 5).clamp(
                                   0,
-                                  9999,
+                                  FieldLimits.timeLimit,
                                 ),
                           ),
-                      onIncrement: () => setState(() => _timeBetweenSets += 5),
+                      onIncrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenSets = (_timeBetweenSets + 5).clamp(
+                                  0,
+                                  FieldLimits.timeLimit,
+                                ),
+                          ),
                     ),
                     SizedBox(height: 8),
                     _CounterRow(
                       label: 'Time per rep',
                       value: _timePerRep,
                       minimum: 0,
+                      maximum: FieldLimits.timeLimit,
                       onDecrement: () => setState(() => _timePerRep--),
-                      onIncrement: () => setState(() => _timePerRep++),
+                      onIncrement:
+                          () => setState(
+                            () => _timePerRep = (_timePerRep + 1).clamp(
+                              0,
+                              FieldLimits.timeLimit,
+                            ),
+                          ),
                     ),
                     SizedBox(height: 8),
                     _CounterRow(
                       label: 'Rest between reps',
                       value: _timeBetweenReps,
                       minimum: 0,
+                      maximum: FieldLimits.timeLimit,
                       onDecrement: () => setState(() => _timeBetweenReps--),
-                      onIncrement: () => setState(() => _timeBetweenReps++),
+                      onIncrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenReps = (_timeBetweenReps + 1).clamp(
+                                  0,
+                                  FieldLimits.timeLimit,
+                                ),
+                          ),
                     ),
                   ] else if (_exerciseType == ExerciseType.fixedDuration) ...[
                     _CounterRow(
                       label: 'Active time (s)',
                       value: _activeTime,
                       minimum: 5,
+                      maximum: FieldLimits.timeLimit,
                       onDecrement:
                           () => setState(
-                            () =>
-                                _activeTime = (_activeTime - 5).clamp(5, 9999),
+                            () => _activeTime = (_activeTime - 5).clamp(
+                              5,
+                              FieldLimits.timeLimit,
+                            ),
                           ),
-                      onIncrement: () => setState(() => _activeTime += 5),
+                      onIncrement:
+                          () => setState(
+                            () => _activeTime = (_activeTime + 5).clamp(
+                              5,
+                              FieldLimits.timeLimit,
+                            ),
+                          ),
                     ),
                     _Divider(),
                     _CounterRow(
                       label: 'Rest between sets',
                       value: _timeBetweenSets,
                       minimum: 0,
+                      maximum: FieldLimits.timeLimit,
                       onDecrement:
                           () => setState(
                             () =>
                                 _timeBetweenSets = (_timeBetweenSets - 5).clamp(
                                   0,
-                                  9999,
+                                  FieldLimits.timeLimit,
                                 ),
                           ),
-                      onIncrement: () => setState(() => _timeBetweenSets += 5),
+                      onIncrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenSets = (_timeBetweenSets + 5).clamp(
+                                  0,
+                                  FieldLimits.timeLimit,
+                                ),
+                          ),
                     ),
                     _Divider(),
                     _OptionalRepsRow(
                       enabled: _repsEnabled,
                       reps: _reps ?? 5,
+                      maximum: FieldLimits.repLimit,
                       onToggle:
                           (enabled) => setState(() {
                             _repsEnabled = enabled;
@@ -349,10 +402,18 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                           }),
                       onDecrement:
                           () => setState(
-                            () => _reps = ((_reps ?? 5) - 1).clamp(1, 9999),
+                            () => _reps = ((_reps ?? 5) - 1).clamp(
+                              1,
+                              FieldLimits.repLimit,
+                            ),
                           ),
                       onIncrement:
-                          () => setState(() => _reps = (_reps ?? 5) + 1),
+                          () => setState(
+                            () => _reps = ((_reps ?? 5) + 1).clamp(
+                              1,
+                              FieldLimits.repLimit,
+                            ),
+                          ),
                     ),
                   ] else ...[
                     // manual
@@ -360,20 +421,29 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       label: 'Rest between sets',
                       value: _timeBetweenSets,
                       minimum: 0,
+                      maximum: FieldLimits.timeLimit,
                       onDecrement:
                           () => setState(
                             () =>
                                 _timeBetweenSets = (_timeBetweenSets - 5).clamp(
                                   0,
-                                  9999,
+                                  FieldLimits.timeLimit,
                                 ),
                           ),
-                      onIncrement: () => setState(() => _timeBetweenSets += 5),
+                      onIncrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenSets = (_timeBetweenSets + 5).clamp(
+                                  0,
+                                  FieldLimits.timeLimit,
+                                ),
+                          ),
                     ),
                     _Divider(),
                     _OptionalRepsRow(
                       enabled: _repsEnabled,
                       reps: _reps ?? 5,
+                      maximum: FieldLimits.repLimit,
                       onToggle:
                           (enabled) => setState(() {
                             _repsEnabled = enabled;
@@ -381,10 +451,18 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                           }),
                       onDecrement:
                           () => setState(
-                            () => _reps = ((_reps ?? 5) - 1).clamp(1, 9999),
+                            () => _reps = ((_reps ?? 5) - 1).clamp(
+                              1,
+                              FieldLimits.repLimit,
+                            ),
                           ),
                       onIncrement:
-                          () => setState(() => _reps = (_reps ?? 5) + 1),
+                          () => setState(
+                            () => _reps = ((_reps ?? 5) + 1).clamp(
+                              1,
+                              FieldLimits.repLimit,
+                            ),
+                          ),
                     ),
                   ],
                   _Divider(),
@@ -410,6 +488,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                               RegExp(r'^\d*\.?\d*'),
                             ),
                           ],
+                          validator: FieldValidators.load,
                           decoration: InputDecoration(
                             fillColor: context.colorScheme.surfaceBright,
                             labelText: 'Load',
@@ -644,6 +723,7 @@ class _ExerciseTypeSelector extends StatelessWidget {
 class _OptionalRepsRow extends StatelessWidget {
   final bool enabled;
   final int reps;
+  final int? maximum;
   final ValueChanged<bool> onToggle;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
@@ -651,6 +731,7 @@ class _OptionalRepsRow extends StatelessWidget {
   const _OptionalRepsRow({
     required this.enabled,
     required this.reps,
+    this.maximum,
     required this.onToggle,
     required this.onDecrement,
     required this.onIncrement,
@@ -684,6 +765,7 @@ class _OptionalRepsRow extends StatelessWidget {
             label: 'Reps',
             value: reps,
             minimum: 1,
+            maximum: maximum,
             onDecrement: onDecrement,
             onIncrement: onIncrement,
           ),
@@ -737,6 +819,7 @@ class _CounterRow extends StatelessWidget {
   final String label;
   final int value;
   final int minimum;
+  final int? maximum;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
 
@@ -744,6 +827,7 @@ class _CounterRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.minimum,
+    this.maximum,
     required this.onDecrement,
     required this.onIncrement,
   });
@@ -757,6 +841,7 @@ class _CounterRow extends StatelessWidget {
         IncrementDecrementNumberWidget(
           value: value,
           minimum: minimum,
+          maximum: maximum,
           decrement: onDecrement,
           increment: onIncrement,
         ),

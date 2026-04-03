@@ -248,7 +248,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                       context,
                       MaterialPageRoute(
                         builder:
-                            (context) => NewSessionScreen(session: session),
+                            (context) => NewSessionScreen(session: session, startAfterSave: true),
                       ),
                     );
                   },
