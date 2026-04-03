@@ -167,7 +167,7 @@ class _SessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(40),
         border:
