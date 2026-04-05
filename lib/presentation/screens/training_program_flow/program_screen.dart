@@ -59,13 +59,19 @@ class _ProgramListviewState extends State<ProgramListview> {
     switch (widget.itemType) {
       case ItemType.sessions:
         final copy = (item as Session).deepCopy();
-        await presetProvider.addPresetSession(copy.copyWith(title: '${copy.title} - copy', userId: userId));
+        await presetProvider.addPresetSession(
+          copy.copyWith(title: '${copy.title} - copy', userId: userId),
+        );
       case ItemType.workouts:
         final copy = (item as Workout).deepCopy();
-        await presetProvider.addPresetWorkout(copy.copyWith(title: '${copy.title} - copy', userId: userId));
+        await presetProvider.addPresetWorkout(
+          copy.copyWith(title: '${copy.title} - copy', userId: userId),
+        );
       case ItemType.exercises:
         final copy = (item as Exercise).deepCopy();
-        await presetProvider.addPresetExercise(copy.copyWith(title: '${copy.title} - copy', userId: userId));
+        await presetProvider.addPresetExercise(
+          copy.copyWith(title: '${copy.title} - copy', userId: userId),
+        );
     }
   }
 
@@ -80,7 +86,6 @@ class _ProgramListviewState extends State<ProgramListview> {
         await presetProvider.deleteUserPresetExercise((item as Exercise).id);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +130,7 @@ class _ProgramListviewState extends State<ProgramListview> {
               onFilterLabelChanged:
                   (value) => setState(() => _filterLabel = value ?? ''),
             ),
+            SizedBox(height: 4),
             Expanded(
               child: Scrollbar(
                 controller: scrollController,
@@ -142,11 +148,14 @@ class _ProgramListviewState extends State<ProgramListview> {
                     final bool isUserDefined;
                     switch (widget.itemType) {
                       case ItemType.sessions:
-                        isUserDefined = presetData.presetUserSessionIDs.contains(item.id);
+                        isUserDefined = presetData.presetUserSessionIDs
+                            .contains(item.id);
                       case ItemType.workouts:
-                        isUserDefined = presetData.presetUserWorkoutsIDs.contains(item.id);
+                        isUserDefined = presetData.presetUserWorkoutsIDs
+                            .contains(item.id);
                       case ItemType.exercises:
-                        isUserDefined = presetData.presetUserExerciseIDs.contains(item.id);
+                        isUserDefined = presetData.presetUserExerciseIDs
+                            .contains(item.id);
                     }
 
                     return ProgramListviewCard(
@@ -223,7 +232,7 @@ class ProgramListviewCard extends StatelessWidget {
               SizedBox(width: 8),
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
-                onPressed: (_) => onCopy(), 
+                onPressed: (_) => onCopy(),
                 backgroundColor: context.colorScheme.secondary,
                 foregroundColor: context.colorScheme.onError,
                 icon: Icons.copy_rounded,

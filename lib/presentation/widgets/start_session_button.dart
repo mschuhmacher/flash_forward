@@ -1,8 +1,5 @@
-import 'package:flash_forward/models/session.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/presentation/screens/session_flow/session_select_screen.dart';
-import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 

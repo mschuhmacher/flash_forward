@@ -1,12 +1,10 @@
 import 'package:flash_forward/constants/field_limits.dart';
-import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_badge.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
-import 'package:flash_forward/presentation/widgets/session_select_listview.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';

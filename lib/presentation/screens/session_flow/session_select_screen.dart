@@ -11,7 +11,6 @@ import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
-import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 
@@ -312,7 +311,6 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
 
 class _SessionCard extends StatelessWidget {
   const _SessionCard({
-    super.key,
     required this.isSelected,
     required this.session,
     required this.isExpanded,
@@ -381,7 +379,7 @@ class _SessionCard extends StatelessWidget {
 }
 
 class _WorkoutCard extends StatelessWidget {
-  const _WorkoutCard({super.key, required this.workout});
+  const _WorkoutCard({required this.workout});
 
   final Workout workout;
 
@@ -418,7 +416,7 @@ class _WorkoutCard extends StatelessWidget {
 }
 
 class _ExerciseCard extends StatelessWidget {
-  const _ExerciseCard({super.key, required this.exercise});
+  const _ExerciseCard({required this.exercise});
 
   final Exercise exercise;
 

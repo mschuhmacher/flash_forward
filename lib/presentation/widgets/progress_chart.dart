@@ -68,6 +68,36 @@ Widget _buildXLabel(double xMs, _XScale scale, BuildContext context) {
   );
 }
 
+/// Integer key for a UTC date (yyyymmdd) used to match tick positions to data.
+int _dayKey(DateTime utcDate) =>
+    utcDate.year * 10000 + utcDate.month * 100 + utcDate.day;
+
+/// Returns a getTitlesWidget callback that shows labels at actual data-point
+/// dates when there are few points (≤ 7), and falls back to calendar-aligned
+/// ticks otherwise. Keeps both charts consistent for any data density.
+Widget Function(double, TitleMeta) _dataAwareXLabelBuilder({
+  required Set<int> dataPointDayKeys,
+  required int pointCount,
+  required _XScale scale,
+  required BuildContext context,
+}) {
+  return (double value, TitleMeta meta) {
+    if (value == meta.min || value == meta.max) {
+      return const SizedBox.shrink();
+    }
+    if (pointCount <= 7) {
+      final utcDate =
+          DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true);
+      if (!dataPointDayKeys.contains(_dayKey(utcDate))) {
+        return const SizedBox.shrink();
+      }
+      // Always use "d MMM" format for sparse data so every dot is labeled.
+      return _buildXLabel(value, _XScale.daily, context);
+    }
+    return _buildXLabel(value, scale, context);
+  };
+}
+
 /// Returns a y-axis tick interval for ratio charts (loadKg / bodyWeightKg)
 /// that targets ~4 visible ticks for typical ratio ranges (0.0–2.0).
 double _niceRatioInterval(double maxY) {
@@ -179,6 +209,9 @@ class StrengthProgressChart extends StatelessWidget {
             ? context.colorScheme.primary
             : context.colorScheme.secondary;
 
+    final dataPointDayKeys =
+        points.map((p) => _dayKey(p.date.toUtc())).toSet();
+
     final lineBarsData = [
       LineChartBarData(
         spots: spots,
@@ -225,12 +258,12 @@ class StrengthProgressChart extends StatelessWidget {
                 showTitles: true,
                 reservedSize: 56,
                 interval: 86400000,
-                getTitlesWidget: (value, meta) {
-                  if (value == meta.min || value == meta.max) {
-                    return const SizedBox.shrink();
-                  }
-                  return _buildXLabel(value, scale, context);
-                },
+                getTitlesWidget: _dataAwareXLabelBuilder(
+                  dataPointDayKeys: dataPointDayKeys,
+                  pointCount: points.length,
+                  scale: scale,
+                  context: context,
+                ),
               ),
             ),
             topTitles: const AxisTitles(
@@ -345,6 +378,9 @@ class GradeProgressChart extends StatelessWidget {
     final minY = (minIdx - 1).clamp(0, scaleLabels.length - 1).toDouble();
     final maxY = (maxIdx + 1).clamp(0, scaleLabels.length - 1).toDouble();
 
+    final dataPointDayKeys =
+        allPoints.map((p) => _dayKey(p.date.toUtc())).toSet();
+
     FlSpot toSpot(GradePoint p) => FlSpot(
       p.date.millisecondsSinceEpoch.toDouble(),
       p.grade.gradeIndex.toDouble(),
@@ -428,12 +464,12 @@ class GradeProgressChart extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 56,
                     interval: 86400000,
-                    getTitlesWidget: (value, meta) {
-                      if (value == meta.min || value == meta.max) {
-                        return const SizedBox.shrink();
-                      }
-                      return _buildXLabel(value, scale, context);
-                    },
+                    getTitlesWidget: _dataAwareXLabelBuilder(
+                      dataPointDayKeys: dataPointDayKeys,
+                      pointCount: allPoints.length,
+                      scale: scale,
+                      context: context,
+                    ),
                   ),
                 ),
                 topTitles: const AxisTitles(
@@ -535,6 +571,9 @@ class BodyWeightChart extends StatelessWidget {
     final minY = allWeights.reduce((a, b) => a < b ? a : b) * 0.9;
     final maxY = allWeights.reduce((a, b) => a > b ? a : b) * 1.1;
 
+    final dataPointDayKeys =
+        points.map((p) => _dayKey(p.date.toUtc())).toSet();
+
     final spots =
         displayPoints
             .map(
@@ -588,12 +627,12 @@ class BodyWeightChart extends StatelessWidget {
                 showTitles: true,
                 reservedSize: 56,
                 interval: 86400000,
-                getTitlesWidget: (value, meta) {
-                  if (value == meta.min || value == meta.max) {
-                    return const SizedBox.shrink();
-                  }
-                  return _buildXLabel(value, scale, context);
-                },
+                getTitlesWidget: _dataAwareXLabelBuilder(
+                  dataPointDayKeys: dataPointDayKeys,
+                  pointCount: points.length,
+                  scale: scale,
+                  context: context,
+                ),
               ),
             ),
             topTitles: const AxisTitles(
