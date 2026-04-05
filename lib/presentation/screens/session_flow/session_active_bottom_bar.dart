@@ -234,9 +234,6 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                     SizedBox(height: 24),
                     MyLabelDropdownButton(
                       value: activeSession.label,
-                      // labelController.text.isNotEmpty
-                      //     ? labelController.text
-                      //     : null,
                       onChanged: (value) {
                         setState(() {
                           labelController.text = value ?? '';

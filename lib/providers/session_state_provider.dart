@@ -172,7 +172,7 @@ class SessionStateProvider extends ChangeNotifier {
         exerciseIndex: _exerciseIndex,
         currentSet: 1,
         currentRep: 1,
-        phase: TimerPhase.rep,
+        phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
       notifyListeners();
@@ -186,7 +186,7 @@ class SessionStateProvider extends ChangeNotifier {
         exerciseIndex: _exerciseIndex,
         currentSet: 1,
         currentRep: 1,
-        phase: TimerPhase.rep,
+        phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
       notifyListeners();
@@ -202,7 +202,7 @@ class SessionStateProvider extends ChangeNotifier {
         exerciseIndex: _exerciseIndex,
         currentSet: 1,
         currentRep: 1,
-        phase: TimerPhase.rep,
+        phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
       notifyListeners();
