@@ -245,10 +245,6 @@ class ProgramListviewCard extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(25),
-              border: Border.all(
-                width: 0.5,
-                color: context.colorScheme.onSurface,
-              ),
               color: context.colorScheme.surfaceBright,
               boxShadow: context.shadowSmall,
             ),

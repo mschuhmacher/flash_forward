@@ -38,11 +38,13 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         if (progress.exerciseIndex + 1 < activeWorkout.exercises.length) {
           nextExerciseString =
               'Next exercise: \n${activeWorkout.exercises[progress.exerciseIndex + 1].title}';
-        } else if (progress.exerciseIndex + 1 == activeWorkout.exercises.length &&
+        } else if (progress.exerciseIndex + 1 ==
+                activeWorkout.exercises.length &&
             progress.workoutIndex + 1 < activeSession.workouts.length) {
           nextExerciseString =
               'Next exercise: \n${activeSession.workouts[progress.workoutIndex + 1].exercises[0].title}';
-        } else if (progress.exerciseIndex + 1 == activeWorkout.exercises.length &&
+        } else if (progress.exerciseIndex + 1 ==
+                activeWorkout.exercises.length &&
             progress.workoutIndex + 1 == activeSession.workouts.length) {
           nextExerciseString = 'Next exercise: \nDone';
         } else {
@@ -133,7 +135,8 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
     SessionLogProvider sessionLogData,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final gradeSystemName = prefs.getString('pref_grade_system') ?? 'fontainebleau';
+    final gradeSystemName =
+        prefs.getString('pref_grade_system') ?? 'fontainebleau';
     final gradeSystem = GradeSystem.values.byName(gradeSystemName);
     final weightUnit = prefs.getString('pref_weight_unit') ?? 'kg';
     final lastBodyWeightKg = ProgressExtractor.lastKnownBodyWeight(
@@ -148,25 +151,34 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
     // Pre-fill body weight converted to user's preferred unit
     String? bodyWeightPreFill;
     if (lastBodyWeightKg != null) {
-      final displayValue = weightUnit == 'lbs'
-          ? (lastBodyWeightKg * 2.20462)
-          : lastBodyWeightKg;
+      final displayValue =
+          weightUnit == 'lbs' ? (lastBodyWeightKg * 2.20462) : lastBodyWeightKg;
       bodyWeightPreFill = displayValue.toStringAsFixed(1);
     }
     final bodyWeightController = TextEditingController(
       text: bodyWeightPreFill ?? '',
     );
+    // Climbing labels to define whether to show the max grade climbed and flashed
+    const climbingLabels = {
+      'Limit',
+      'Power',
+      'Powerendurance',
+      'Endurance',
+      'Technique',
+    };
+    bool hasClimbingExercise = false;
 
     // Collect unique Max exercises so the user can enter the load achieved.
     // Deduplication by templateId ?? title mirrors the key used in ProgressExtractor.
     final seenKeys = <String>{};
-    final maxExercisesForLoad = <({
-      String key,
-      String title,
-      TextEditingController controller,
-    })>[];
+    final maxExercisesForLoad =
+        <({String key, String title, TextEditingController controller})>[];
     for (final workout in activeSession.workouts) {
       for (final exercise in workout.exercises) {
+        // if session has climbing exercise
+        if (climbingLabels.contains(exercise.label)) hasClimbingExercise = true;
+
+        // Find Max exercises and which ones
         if (!ProgressExtractor.isMaxExercise(exercise)) continue;
         final key = exercise.templateId ?? exercise.title;
         if (seenKeys.contains(key)) continue;
@@ -175,9 +187,10 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         // Normalize stored value (exercise.loadUnit) to the display unit.
         String prefill = '';
         if (exercise.load > 0) {
-          final loadKg = (exercise.loadUnit?.toLowerCase() == 'lbs')
-              ? exercise.load / 2.20462
-              : exercise.load;
+          final loadKg =
+              (exercise.loadUnit?.toLowerCase() == 'lbs')
+                  ? exercise.load / 2.20462
+                  : exercise.load;
           final displayLoad = weightUnit == 'lbs' ? loadKg * 2.20462 : loadKg;
           prefill = displayLoad.toStringAsFixed(1);
         }
@@ -248,29 +261,35 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                     ),
 
                     // ── Grade section (always shown, optional) ────────────
-                    const SizedBox(height: 20),
-                    Text(
-                      'Climbing grades (optional)',
-                      style: dialogContext.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    _GradePicker(
-                      label: 'Max grade climbed',
-                      gradeLabels: gradeLabels,
-                      selected: selectedGradeClimbed,
-                      gradeSystem: gradeSystem,
-                      onChanged: (entry) =>
-                          setDialogState(() => selectedGradeClimbed = entry),
-                    ),
-                    const SizedBox(height: 8),
-                    _GradePicker(
-                      label: 'Max grade flashed',
-                      gradeLabels: gradeLabels,
-                      selected: selectedGradeFlashed,
-                      gradeSystem: gradeSystem,
-                      onChanged: (entry) =>
-                          setDialogState(() => selectedGradeFlashed = entry),
-                    ),
+                    if (hasClimbingExercise) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'Climbing grades (optional)',
+                        style: dialogContext.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      _GradePicker(
+                        label: 'Max grade climbed',
+                        gradeLabels: gradeLabels,
+                        selected: selectedGradeClimbed,
+                        gradeSystem: gradeSystem,
+                        onChanged:
+                            (entry) => setDialogState(
+                              () => selectedGradeClimbed = entry,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      _GradePicker(
+                        label: 'Max grade flashed',
+                        gradeLabels: gradeLabels,
+                        selected: selectedGradeFlashed,
+                        gradeSystem: gradeSystem,
+                        onChanged:
+                            (entry) => setDialogState(
+                              () => selectedGradeFlashed = entry,
+                            ),
+                      ),
+                    ],
 
                     // ── Max exercise loads (shown when session has Max exercises) ──
                     if (hasMaxExercise) ...[
@@ -302,7 +321,10 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                             ],
                             decoration: InputDecoration(
                               labelText: info.title,
-                              hintText: weightUnit == 'lbs' ? 'e.g. 154.3' : 'e.g. 70.0',
+                              hintText:
+                                  weightUnit == 'lbs'
+                                      ? 'e.g. 154.3'
+                                      : 'e.g. 70.0',
                               border: const OutlineInputBorder(),
                               suffixText: weightUnit,
                             ),
@@ -337,7 +359,8 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                         ],
                         decoration: InputDecoration(
                           labelText: 'Weight ($weightUnit)',
-                          hintText: weightUnit == 'lbs' ? 'e.g. 154.3' : 'e.g. 70.0',
+                          hintText:
+                              weightUnit == 'lbs' ? 'e.g. 154.3' : 'e.g. 70.0',
                           border: const OutlineInputBorder(),
                           suffixText: weightUnit,
                         ),
@@ -370,9 +393,10 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                               0.0,
                               FieldLimits.loadLimit.toDouble(),
                             );
-                            bodyWeightKg = weightUnit == 'lbs'
-                                ? clamped / 2.20462
-                                : clamped;
+                            bodyWeightKg =
+                                weightUnit == 'lbs'
+                                    ? clamped / 2.20462
+                                    : clamped;
                           }
                         }
 
@@ -389,28 +413,39 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                               FieldLimits.loadLimit.toDouble(),
                             );
                             loadKgMap[info.key] =
-                                weightUnit == 'lbs' ? clamped / 2.20462 : clamped;
+                                weightUnit == 'lbs'
+                                    ? clamped / 2.20462
+                                    : clamped;
                           }
                         }
 
                         // Apply entered loads to the session copy. Exercises not in loadKgMap
                         // are returned unchanged. Loads are stored in kg with loadUnit 'kg' for
                         // consistent normalization in ProgressExtractor._normalizeToKg.
-                        final updatedWorkouts = loadKgMap.isEmpty
-                            ? activeSession.workouts
-                            : activeSession.workouts.map((workout) {
-                                final updatedExercises = workout.exercises.map((exercise) {
-                                  if (!ProgressExtractor.isMaxExercise(exercise)) return exercise;
-                                  final key = exercise.templateId ?? exercise.title;
-                                  final loadKg = loadKgMap[key];
-                                  if (loadKg == null) return exercise;
-                                  return exercise.copyWith(
-                                    load: loadKg,
-                                    loadUnit: Nullable('kg'),
+                        final updatedWorkouts =
+                            loadKgMap.isEmpty
+                                ? activeSession.workouts
+                                : activeSession.workouts.map((workout) {
+                                  final updatedExercises =
+                                      workout.exercises.map((exercise) {
+                                        if (!ProgressExtractor.isMaxExercise(
+                                          exercise,
+                                        ))
+                                          return exercise;
+                                        final key =
+                                            exercise.templateId ??
+                                            exercise.title;
+                                        final loadKg = loadKgMap[key];
+                                        if (loadKg == null) return exercise;
+                                        return exercise.copyWith(
+                                          load: loadKg,
+                                          loadUnit: Nullable('kg'),
+                                        );
+                                      }).toList();
+                                  return workout.copyWith(
+                                    exercises: updatedExercises,
                                   );
                                 }).toList();
-                                return workout.copyWith(exercises: updatedExercises);
-                              }).toList();
 
                         // Upon start, activeSession is newly created with deepCopy, call copyWith here for adding the label, description, and completion time
                         final finishedSession = activeSession.copyWith(
@@ -435,7 +470,9 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                         // If user leaves screen before await is done, mounted would be false
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Session saved to log!')),
+                            const SnackBar(
+                              content: Text('Session saved to log!'),
+                            ),
                           );
 
                           // Reset the session state data
@@ -495,17 +532,15 @@ class _GradePicker extends StatelessWidget {
         const DropdownMenuItem<int?>(value: null, child: Text('—')),
         ...List.generate(
           gradeLabels.length,
-          (i) => DropdownMenuItem<int?>(
-            value: i,
-            child: Text(gradeLabels[i]),
-          ),
+          (i) => DropdownMenuItem<int?>(value: i, child: Text(gradeLabels[i])),
         ),
       ],
-      onChanged: (index) => onChanged(
-        index == null
-            ? null
-            : GradeEntry(system: gradeSystem, gradeIndex: index),
-      ),
+      onChanged:
+          (index) => onChanged(
+            index == null
+                ? null
+                : GradeEntry(system: gradeSystem, gradeIndex: index),
+          ),
     );
   }
 }

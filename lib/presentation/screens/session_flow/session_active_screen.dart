@@ -1,6 +1,7 @@
 import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/presentation/widgets/label_badge.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
@@ -507,10 +508,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                   timePerRep: localTimePerRep,
                   timeBetweenReps: localTimeBetweenReps,
                   activeTime: localActiveTime,
-                  load:
-                      (double.tryParse(loadController.text.trim()) ??
-                              activeExercise.load)
-                          .clamp(0, FieldLimits.loadLimit.toDouble()),
+                  load: (double.tryParse(loadController.text.trim()) ??
+                          activeExercise.load)
+                      .clamp(0, FieldLimits.loadLimit.toDouble()),
                   loadUnit: Nullable(localLoadUnit),
                   rpe: Nullable(localRpeEnabled ? localRpe.clamp(1, 10) : null),
                   notes: Nullable(
@@ -574,9 +574,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           const SizedBox(height: 8),
                           _SessionEditSectionCard(
                             children: [
-                              Text(activeExercise.title, style: context.h3),
+                              LabelBadge(labelKey: activeExercise.label),
                               const SizedBox(height: 4),
-                              Chip(label: Text(activeExercise.label)),
+                              Text(activeExercise.title, style: context.h3),
                               if (activeExercise.description.isNotEmpty) ...[
                                 const SizedBox(height: 8),
                                 Text(
@@ -603,10 +603,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                     () => setDialogState(() => localSets--),
                                 onIncrement:
                                     () => setDialogState(
-                                      () => localSets = (localSets + 1).clamp(
-                                        1,
-                                        FieldLimits.setLimit,
-                                      ),
+                                      () =>
+                                          localSets = (localSets + 1).clamp(
+                                            1,
+                                            FieldLimits.setLimit,
+                                          ),
                                     ),
                               ),
                               const _SessionEditDivider(),
@@ -634,10 +635,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       () => setDialogState(
                                         () =>
                                             localReps = ((localReps ?? 10) + 1)
-                                                .clamp(
-                                                  1,
-                                                  FieldLimits.repLimit,
-                                                ),
+                                                .clamp(1, FieldLimits.repLimit),
                                       ),
                                 ),
                                 const _SessionEditDivider(),
@@ -718,9 +716,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   onDecrement:
                                       () => setDialogState(
                                         () =>
-                                            localActiveTime = (localActiveTime -
-                                                    5)
-                                                .clamp(
+                                            localActiveTime =
+                                                (localActiveTime - 5).clamp(
                                                   5,
                                                   FieldLimits.timeLimit,
                                                 ),
@@ -728,9 +725,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                   onIncrement:
                                       () => setDialogState(
                                         () =>
-                                            localActiveTime = (localActiveTime +
-                                                    5)
-                                                .clamp(
+                                            localActiveTime =
+                                                (localActiveTime + 5).clamp(
                                                   5,
                                                   FieldLimits.timeLimit,
                                                 ),
@@ -777,19 +773,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       () => setDialogState(
                                         () =>
                                             localReps = ((localReps ?? 5) - 1)
-                                                .clamp(
-                                                  1,
-                                                  FieldLimits.repLimit,
-                                                ),
+                                                .clamp(1, FieldLimits.repLimit),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
                                         () =>
                                             localReps = ((localReps ?? 5) + 1)
-                                                .clamp(
-                                                  1,
-                                                  FieldLimits.repLimit,
-                                                ),
+                                                .clamp(1, FieldLimits.repLimit),
                                       ),
                                 ),
                               ] else ...[
@@ -834,19 +824,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       () => setDialogState(
                                         () =>
                                             localReps = ((localReps ?? 5) - 1)
-                                                .clamp(
-                                                  1,
-                                                  FieldLimits.repLimit,
-                                                ),
+                                                .clamp(1, FieldLimits.repLimit),
                                       ),
                                   onIncrement:
                                       () => setDialogState(
                                         () =>
                                             localReps = ((localReps ?? 5) + 1)
-                                                .clamp(
-                                                  1,
-                                                  FieldLimits.repLimit,
-                                                ),
+                                                .clamp(1, FieldLimits.repLimit),
                                       ),
                                 ),
                               ],

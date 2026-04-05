@@ -119,7 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
             motion: ScrollMotion(),
             children: [
               SizedBox(width: 8),
-              //TODO: add rounded corners
               SlidableAction(
                 // An action can be bigger than the others.
                 flex: 3,
@@ -140,8 +139,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          child: Material(
-            //ListTile is wwrapped in a material widget so prevent the list from overflowing into the other widgets in the column. Known issue.
+          child: Container(
+            //ListTile is wrapped in a material widget so prevent the list from overflowing into the other widgets in the column. Known issue.
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              color: context.colorScheme.surfaceBright,
+              boxShadow: context.shadowSmall,
+            ),
+
             child: ListTile(
               title: Text(session.title, style: context.titleMedium),
               subtitle: Text(
@@ -167,14 +172,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         tooltip: session.label,
                       )
                       : null,
-              tileColor: context.colorScheme.surfaceBright,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-                side: BorderSide(
-                  color: context.colorScheme.onSurface,
-                  width: 0.5,
-                ),
-              ),
             ),
           ),
         );
