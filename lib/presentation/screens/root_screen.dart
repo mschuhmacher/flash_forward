@@ -235,7 +235,7 @@ class SettingsDrawer extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Past entries use their stored system and will still display correctly.',
+                          'Past entries are automatically converted to the selected system.',
                           style: context.bodyMedium.copyWith(
                             color: context.colorScheme.onSurfaceVariant,
                           ),

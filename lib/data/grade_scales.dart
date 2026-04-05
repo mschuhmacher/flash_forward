@@ -41,6 +41,30 @@ String gradeLabel(GradeEntry entry) => switch (entry.system) {
         : '?',
 };
 
+/// Converts [entry] to [targetSystem]. Returns it unchanged if already in
+/// that system, or null if the grade index is out of the known mapping range.
+GradeEntry? convertGrade(GradeEntry entry, GradeSystem targetSystem) {
+  if (entry.system == targetSystem) return entry;
+  switch (targetSystem) {
+    case GradeSystem.fontainebleau:
+      if (entry.gradeIndex < 0 ||
+          entry.gradeIndex >= kVToFontIndices.length) {
+        return null;
+      }
+      return GradeEntry(
+        system: GradeSystem.fontainebleau,
+        gradeIndex: kVToFontIndices[entry.gradeIndex].first,
+      );
+    case GradeSystem.vscale:
+      for (int v = 0; v < kVToFontIndices.length; v++) {
+        if (kVToFontIndices[v].contains(entry.gradeIndex)) {
+          return GradeEntry(system: GradeSystem.vscale, gradeIndex: v);
+        }
+      }
+      return null;
+  }
+}
+
 /// Returns the Font scale grades that correspond to a given V-scale index.
 /// Used to render the reference grid on grade charts.
 List<String> fontEquivalentsForVGrade(int vIndex) {

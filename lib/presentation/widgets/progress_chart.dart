@@ -324,12 +324,22 @@ class GradeProgressChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Filter to only points stored in the active grade system so Font and
-    // V indices are never mixed on the same axis.
-    final filteredClimbed =
-        climbed.where((p) => p.grade.system == gradeSystem).toList();
-    final filteredFlashed =
-        flashed.where((p) => p.grade.system == gradeSystem).toList();
+    // Convert all points to the active grade system so historical data
+    // logged in a different scale is never hidden.
+    final filteredClimbed = climbed
+        .map((p) {
+          final g = convertGrade(p.grade, gradeSystem);
+          return g != null ? (date: p.date, grade: g) : null;
+        })
+        .whereType<GradePoint>()
+        .toList();
+    final filteredFlashed = flashed
+        .map((p) {
+          final g = convertGrade(p.grade, gradeSystem);
+          return g != null ? (date: p.date, grade: g) : null;
+        })
+        .whereType<GradePoint>()
+        .toList();
 
     if (filteredClimbed.isEmpty && filteredFlashed.isEmpty) {
       return _EmptyState(message: 'No grades logged yet');
