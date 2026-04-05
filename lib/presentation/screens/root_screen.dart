@@ -5,7 +5,7 @@ import 'package:flash_forward/presentation/screens/profile_flow/profile_screen.d
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/program_screen.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/catalog_screen.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
@@ -37,7 +37,7 @@ class _RootScreenState extends State<RootScreen>
     _tabController = TabController(length: 3, vsync: this);
     destinationScreens = [
       HomeScreen(),
-      ProgramScreen(tabController: _tabController),
+      CatalogScreen(tabController: _tabController),
       ProfileScreen(),
     ];
   }
@@ -130,7 +130,7 @@ class _RootScreenState extends State<RootScreen>
                     ),
                     tabs: [
                       GButton(icon: Icons.home_rounded, text: 'Home'),
-                      GButton(icon: Icons.event_note_rounded, text: 'Program'),
+                      GButton(icon: Icons.event_note_rounded, text: 'Catalog'),
                       GButton(
                         icon: Icons.person_rounded,
                         text:

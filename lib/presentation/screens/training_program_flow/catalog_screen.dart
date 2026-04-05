@@ -17,16 +17,16 @@ import 'package:provider/provider.dart';
 
 enum ItemType { sessions, workouts, exercises }
 
-class ProgramScreen extends StatefulWidget {
+class CatalogScreen extends StatefulWidget {
   final TabController tabController;
 
-  const ProgramScreen({super.key, required this.tabController});
+  const CatalogScreen({super.key, required this.tabController});
 
   @override
-  State<ProgramScreen> createState() => _ProgramScreenState();
+  State<CatalogScreen> createState() => _CatalogScreenState();
 }
 
-class _ProgramScreenState extends State<ProgramScreen> {
+class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) {
     return TabBarView(
