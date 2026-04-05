@@ -118,7 +118,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
               phaseText =
                   'set ${progress.currentSet} of ${activeExercise.sets}';
             } else {
-              phaseText = 'rep';
+              phaseText = 'active';
             }
           case TimerPhase.repRest:
             phaseText = 'rest';
