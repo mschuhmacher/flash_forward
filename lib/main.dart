@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/loading_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/reset_password_screen.dart';
 import 'package:flash_forward/services/supabase_config.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
@@ -75,6 +76,15 @@ class _MyAppState extends State<MyApp> {
         if (data.event == AuthChangeEvent.passwordRecovery) {
           _navigatorKey.currentState?.pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+            (route) => false,
+          );
+        }
+      },
+      onError: (error, stackTrace) {
+        if (error is AuthException) {
+          Supabase.instance.client.auth.signOut();
+          _navigatorKey.currentState?.pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
             (route) => false,
           );
         }
