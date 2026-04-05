@@ -77,7 +77,6 @@ int _dayKey(DateTime utcDate) =>
 /// ticks otherwise. Keeps both charts consistent for any data density.
 Widget Function(double, TitleMeta) _dataAwareXLabelBuilder({
   required Set<int> dataPointDayKeys,
-  required int pointCount,
   required _XScale scale,
   required BuildContext context,
 }) {
@@ -85,7 +84,7 @@ Widget Function(double, TitleMeta) _dataAwareXLabelBuilder({
     if (value == meta.min || value == meta.max) {
       return const SizedBox.shrink();
     }
-    if (pointCount <= 7) {
+    if (dataPointDayKeys.length <= 7) {
       final utcDate =
           DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true);
       if (!dataPointDayKeys.contains(_dayKey(utcDate))) {
@@ -260,7 +259,6 @@ class StrengthProgressChart extends StatelessWidget {
                 interval: 86400000,
                 getTitlesWidget: _dataAwareXLabelBuilder(
                   dataPointDayKeys: dataPointDayKeys,
-                  pointCount: points.length,
                   scale: scale,
                   context: context,
                 ),
@@ -466,7 +464,6 @@ class GradeProgressChart extends StatelessWidget {
                     interval: 86400000,
                     getTitlesWidget: _dataAwareXLabelBuilder(
                       dataPointDayKeys: dataPointDayKeys,
-                      pointCount: allPoints.length,
                       scale: scale,
                       context: context,
                     ),
@@ -629,7 +626,6 @@ class BodyWeightChart extends StatelessWidget {
                 interval: 86400000,
                 getTitlesWidget: _dataAwareXLabelBuilder(
                   dataPointDayKeys: dataPointDayKeys,
-                  pointCount: points.length,
                   scale: scale,
                   context: context,
                 ),
