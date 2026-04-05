@@ -2,16 +2,17 @@ import 'dart:async';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flash_forward/presentation/screens/loading_screen.dart';
-import 'package:flash_forward/presentation/screens/reset_password_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/loading_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/reset_password_screen.dart';
 import 'package:flash_forward/services/supabase_config.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/themes/app_theme.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -28,7 +29,7 @@ void main() async {
 
   await SentryFlutter.init(
     (options) {
-      options.dsn = const String.fromEnvironment('SENTRY_DSN');
+      options.dsn = kDebugMode ? '' : const String.fromEnvironment('SENTRY_DSN');
       options.environment = kDebugMode ? 'debug' : 'production';
       options.release =
           'flash_forward@${packageInfo.version}+${packageInfo.buildNumber}';
@@ -46,6 +47,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => SessionLogProvider()),
         ChangeNotifierProvider(create: (context) => PresetProvider()),
         ChangeNotifierProvider(create: (context) => SessionStateProvider()),
+        ChangeNotifierProvider(create: (context) => SettingsProvider()),
       ],
       child: const MyApp(),
     ),

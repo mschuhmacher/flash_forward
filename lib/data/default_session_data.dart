@@ -11,10 +11,9 @@ final List<Session> kDefaultSessions = [
   Session(
     title: 'Projecting session',
     description: 'Flash tries and projecting',
-    date: DateTime.now(),
     label: 'Limit',
-    list: [
-      _findWorkout('General Warm-up'),
+    workouts: [
+      _findWorkout('Climbing Warm-up'),
       _findWorkout('Flash and limit bouldering'),
       _findWorkout('Full-Body Strength Workout'),
     ],
@@ -22,37 +21,43 @@ final List<Session> kDefaultSessions = [
   Session(
     title: 'Powerendurance training',
     description: 'Powerendurance',
-    date: DateTime.now(),
     label: 'Powerendurance',
-    list: [
-      _findWorkout('General Warm-up'),
-      _findWorkout('Fingerboard Strength Builder'),
+    workouts: [
+      _findWorkout('Climbing Warm-up'),
+      _findWorkout('Max Pick-ups & Min Edge Hangs'),
       _findWorkout('Boulder Pyramid Endurance'),
-      _findWorkout('Push & Antagonist Training'),
-      _findWorkout('Quick Core Maintenance'),
+      _findWorkout('General Upper-body Strength'),
     ],
   ),
   Session(
     title: 'Power',
     description: 'Training power',
-    date: DateTime.now(),
     label: 'Power',
-    list: [
-      _findWorkout('General Warm-up'),
+    workouts: [
+      _findWorkout('Climbing Warm-up'),
       _findWorkout('Combined Limit Strength'),
       _findWorkout('Dynamic Climbing Power'),
-      _findWorkout('Upper Body Power'),
+      _findWorkout('Upper-body Power'),
+    ],
+  ),
+  Session(
+    title: 'Volume',
+    description: 'Lots of easy climbing',
+    label: 'Endurance',
+    workouts: [
+      _findWorkout('Climbing Warm-up'),
+      _findWorkout('Route Laps Endurance'),
+      _findWorkout('Full-Body Strength Workout'),
     ],
   ),
   Session(
     title: 'Full body strength training',
     description: 'No climbing, just strength and finger training',
-    date: DateTime.now(),
     label: 'Strength',
-    list: [
-      _findWorkout('General Warm-up'),
+    workouts: [
+      _findWorkout('Strength Training Warm-up'),
+      _findWorkout('Handstand Training'),
       _findWorkout('Pull-ups & Pick-ups Set'),
-      _findWorkout('Handstand Progression Training'),
       _findWorkout('Dips and front lever'),
       _findWorkout('Barbell Strength Training'),
     ],
@@ -60,23 +65,19 @@ final List<Session> kDefaultSessions = [
   Session(
     title: 'Daily fingerboard and stretching',
     description: 'Quick light fingerboard and stretching',
-    date: DateTime.now(),
     label: 'Daily maintenance',
-    list: [_findWorkout('Daily Mobility & Light Hangs')],
+    workouts: [_findWorkout('Daily Mobility & Light Hangs')],
   ),
   Session(
     title: 'Daily evening stretch',
     description: 'Relaxed stretching at the end of the day',
-    date: DateTime.now(),
     label: 'Daily maintenance',
-    list: [_findWorkout('Evening Stretch & Recovery')],
+    workouts: [_findWorkout('Evening Stretch & Recovery')],
   ),
-  // // TEST - UI LIMIT VERIFICATION SESSION
-  // Session(
-  //   title: 'UI Test Session - Max Limits',
-  //   description: 'Test session with exercises at character limits for UI verification and finetuning purposes',
-  //   date: DateTime.now(),
-  //   label: 'Test',
-  //   list: [_findWorkout('Test Workout Maximum Title Lim')],
-  // ),
+  Session(
+    title: 'Quick fingerboarding',
+    description: 'As you\'re passing the fingerboard ',
+    label: 'Daily maintenance',
+    workouts: [_findWorkout('Quick Fingerboarding')],
+  ),
 ];

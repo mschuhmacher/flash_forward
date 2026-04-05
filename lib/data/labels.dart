@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flash_forward/models/label.dart';
 
 const Map<String, Label> kDefaultLabels = {
-  'Warm-up': Label(name: 'Warm-up', icon: Icons.wb_sunny, color: Colors.amber),
+  'Warm-up': Label(name: 'Warm-up', icon: Icons.wb_sunny, color: Colors.deepPurple),
   'Limit': Label(name: 'Limit', icon: Icons.trending_up, color: Colors.red),
   'Finger strength': Label(
     name: 'Finger strength',
     icon: Icons.fingerprint_outlined,
-    color: Colors.yellow,
+    color: Colors.blueAccent,
   ),
   'Power': Label(
     name: 'Power',
@@ -42,4 +42,9 @@ const Map<String, Label> kDefaultLabels = {
     color: Colors.redAccent,
   ),
   'Other': Label(name: 'Other', icon: Icons.more_horiz, color: Colors.grey),
+  'Max': Label(
+    name: 'Max',
+    icon: Icons.emoji_events_outlined,
+    color: Colors.deepOrange,
+  ),
 };

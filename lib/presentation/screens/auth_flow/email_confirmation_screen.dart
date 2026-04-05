@@ -1,5 +1,5 @@
-import 'package:flash_forward/presentation/screens/loading_screen.dart';
-import 'package:flash_forward/presentation/screens/login_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/loading_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/services/auth_service.dart';
 import 'package:flash_forward/themes/app_colors.dart';

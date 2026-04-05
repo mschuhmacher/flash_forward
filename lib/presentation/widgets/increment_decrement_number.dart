@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 class IncrementDecrementNumberWidget extends StatelessWidget {
   final int value;
   final int minimum;
+  final int? maximum;
   final VoidCallback decrement;
   final VoidCallback increment;
 
   const IncrementDecrementNumberWidget({
     required this.value,
     required this.minimum,
+    this.maximum,
     required this.decrement,
     required this.increment,
     super.key,
@@ -45,7 +47,11 @@ class IncrementDecrementNumberWidget extends StatelessWidget {
           ),
         ),
         GestureDetector(
-          onTap: increment,
+          onTap: () {
+            if (maximum == null || value < maximum!) {
+              increment();
+            }
+          },
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.horizontal(right: Radius.circular(16)),

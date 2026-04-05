@@ -1,5 +1,5 @@
 import 'package:flash_forward/constants/field_limits.dart';
-import 'package:flash_forward/models/exercise_template.dart';
+import 'package:flash_forward/models/exercise.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -323,22 +323,22 @@ class _AddExerciseModalSheetState extends State<AddExerciseModalSheet> {
                       ElevatedButton(
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
-                            final newExercise = ExerciseTemplate(
+                            final newExercise = Exercise(
                               title: _titleController.text.trim(),
                               label: _labelController.text.trim(),
                               description: _descriptionController.text.trim(),
-                              defaultReps: _numberOfReps,
-                              defaultSets: _numberOfSets,
-                              defaultTimeBetweenSets: int.parse(
+                              reps: _numberOfReps,
+                              sets: _numberOfSets,
+                              timeBetweenSets: int.parse(
                                 _timeBetweenSetsController.text.trim(),
                               ),
-                              defaultTimePerRep: int.parse(
+                              timePerRep: int.parse(
                                 _timePerRepController.text.trim(),
                               ),
-                              defaultTimeBetweenReps: int.parse(
+                              timeBetweenReps: int.parse(
                                 _timeBetweenRepsController.text.trim(),
                               ),
-                              defaultLoad: double.parse(
+                              load: double.parse(
                                 _loadController.text.trim(),
                               ),
                             );
