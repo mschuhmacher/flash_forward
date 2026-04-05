@@ -82,7 +82,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       } else {
         await presetProvider.updatePresetWorkout(workout);
       }
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context, workout);
     }
   }
 
@@ -160,13 +160,14 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: _canEditMetadata
-                          ? (v) => FieldValidators.workoutTitle(
-                              v,
-                              existingTitles: existingWorkoutTitles,
-                              ownTitle: widget.workout?.title,
-                            )
-                          : null,
+                      validator:
+                          _canEditMetadata
+                              ? (v) => FieldValidators.workoutTitle(
+                                v,
+                                existingTitles: existingWorkoutTitles,
+                                ownTitle: widget.workout?.title,
+                              )
+                              : null,
                     ),
                   ),
                   SizedBox(width: 8),
@@ -247,15 +248,30 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           ), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
                           onCopy: () => _copyExercise(exercise),
                           onDelete: () => _deleteExercise(exercise),
-                          onTap:
-                              () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) =>
-                                          NewExerciseScreen(exercise: exercise),
-                                ),
-                              ),
+                          onTap: () async {
+                            Exercise? newExercise =
+                                await Navigator.push<Exercise>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => NewExerciseScreen(
+                                          exercise: exercise,
+                                        ),
+                                  ),
+                                );
+                            if (newExercise != null) {
+                              setState(() {
+                                _workout.exercises[index] = newExercise;
+                                // _workout.exercises.where((s) => s.id == exercise.id) = newExercise;
+                                // _workout = _workout.copyWith(
+                                //   exercises: [
+                                //     ..._workout.exercises,
+                                //     ...newExercise,
+                                //   ],
+                                // );
+                              });
+                            }
+                          },
                         );
                       },
                       onReorder: (int oldIndex, int newIndex) {
@@ -278,7 +294,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          List<Exercise>? addedExercises = await Navigator.push(
+          List<Exercise>? newExercises = await Navigator.push(
             context,
             MaterialPageRoute<List<Exercise>>(
               builder:
@@ -289,10 +305,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             ),
           );
 
-          if (addedExercises != null && addedExercises.isNotEmpty) {
+          if (newExercises != null && newExercises.isNotEmpty) {
             setState(() {
               _workout = _workout.copyWith(
-                exercises: [..._workout.exercises, ...addedExercises],
+                exercises: [..._workout.exercises, ...newExercises],
               );
             });
           }
@@ -328,14 +344,14 @@ class _ExerciseCard extends StatelessWidget {
           motion: ScrollMotion(),
           children: [
             SizedBox(width: 8),
-              SlidableAction(
-                borderRadius: BorderRadius.circular(12),
-                onPressed: (_) => onCopy(),
-                backgroundColor: context.colorScheme.secondary,
-                foregroundColor: context.colorScheme.onError,
-                icon: Icons.copy_rounded,
-                label: 'Copy',
-              ),
+            SlidableAction(
+              borderRadius: BorderRadius.circular(12),
+              onPressed: (_) => onCopy(),
+              backgroundColor: context.colorScheme.secondary,
+              foregroundColor: context.colorScheme.onError,
+              icon: Icons.copy_rounded,
+              label: 'Copy',
+            ),
             SizedBox(width: 8),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),

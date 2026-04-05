@@ -20,7 +20,11 @@ class NewSessionScreen extends StatefulWidget {
   final Session? session;
   final bool startAfterSave;
 
-  const NewSessionScreen({super.key, this.session, this.startAfterSave = false});
+  const NewSessionScreen({
+    super.key,
+    this.session,
+    this.startAfterSave = false,
+  });
 
   @override
   State<NewSessionScreen> createState() => _NewSessionScreenState();
@@ -167,11 +171,12 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: (v) => FieldValidators.sessionTitle(
-                        v,
-                        existingTitles: existingSessionTitles,
-                        ownTitle: widget.session?.title,
-                      ),
+                      validator:
+                          (v) => FieldValidators.sessionTitle(
+                            v,
+                            existingTitles: existingSessionTitles,
+                            ownTitle: widget.session?.title,
+                          ),
                     ),
                   ),
                   SizedBox(width: 8),
@@ -242,15 +247,21 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           ), // prefix index to workout.id to allow multiple instances of same workout in the reorderable list
                           onCopy: () => _copyWorkout(workout),
                           onDelete: () => _deleteWorkout(workout),
-                          onTap:
-                              () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) =>
-                                          NewWorkoutScreen(workout: workout),
-                                ),
+                          onTap: () async {
+                            final newWorkout = await Navigator.push<Workout>(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        NewWorkoutScreen(workout: workout),
                               ),
+                            );
+                            setState(() {
+                              if (newWorkout != null) {
+                                _session.workouts[index] = newWorkout;
+                              }
+                            });
+                          },
                         );
                       },
                       onReorder: (int oldIndex, int newIndex) {
@@ -359,7 +370,13 @@ class _WorkoutCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: Text(workout.title, style: context.titleMedium, maxLines: 2,)),
+                  Expanded(
+                    child: Text(
+                      workout.title,
+                      style: context.titleMedium,
+                      maxLines: 2,
+                    ),
+                  ),
                   LabelBadge(labelKey: workout.label),
                 ],
               ),
