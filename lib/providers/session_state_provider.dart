@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/services/beep_scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
@@ -82,6 +83,12 @@ class SessionStateProvider extends ChangeNotifier {
   bool _isPaused = true;
   // Periodic timer that ticks once per second and advances phases.
   Timer? _ticker;
+  // Wall-clock time of the last ticker callback. Used to measure real elapsed
+  // time instead of assuming exactly 1 s per tick. Preserved across OS isolate
+  // suspension so the next tick can catch up after the screen is locked.
+  DateTime? _lastTickAt;
+  // Injected scheduler — null until setBeepScheduler() is called.
+  BeepScheduler? _beepScheduler;
 
   TimerPhase _rememberCurrentPhaseForPausing = TimerPhase.getReady;
 
@@ -96,6 +103,8 @@ class SessionStateProvider extends ChangeNotifier {
 
   /// The active session copy. Non-null while a session is running.
   Session? get activeSession => _activeSession;
+
+  void setBeepScheduler(BeepScheduler scheduler) => _beepScheduler = scheduler;
 
   void incrementWeekIndex() {
     _weekIndex++;
@@ -151,6 +160,7 @@ class SessionStateProvider extends ChangeNotifier {
       phase: TimerPhase.rep,
     );
     _remaining = _getDurationForPhase(_progress);
+    _scheduleAllFutureBeeps();
     notifyListeners();
   }
 
@@ -175,6 +185,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
+      _scheduleAllFutureBeeps();
       notifyListeners();
     }
     // When within range of list of exercises of workout, go to previous or next
@@ -189,6 +200,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
+      _scheduleAllFutureBeeps();
       notifyListeners();
     }
     // When at the last exercise of a workout and not the final exercise of session, go to first exercise of next workout
@@ -205,6 +217,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
+      _scheduleAllFutureBeeps();
       notifyListeners();
     }
   }
@@ -221,6 +234,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.rep,
       );
       _remaining = _getDurationForPhase(_progress);
+      _scheduleAllFutureBeeps();
       notifyListeners();
     } else if (index > 0 &&
         index <=
@@ -236,6 +250,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.rep,
       );
       _remaining = _getDurationForPhase(_progress);
+      _scheduleAllFutureBeeps();
       notifyListeners();
     } else if (index >
         _activeSession!
@@ -293,15 +308,19 @@ class SessionStateProvider extends ChangeNotifier {
     _remaining = _getDurationForPhase(_progress);
     _isPaused = false;
     _startTicker();
+    _scheduleAllFutureBeeps();
     notifyListeners();
   }
 
   void pause() {
-    if (_isPaused)
-      {return;} // idempotent — second call would corrupt _rememberCurrentPhaseForPausing
+    if (_isPaused) {
+      return; // idempotent — second call would corrupt _rememberCurrentPhaseForPausing
+    }
     _isPaused = true;
+    _lastTickAt = null;
     _rememberCurrentPhaseForPausing = _progress.phase;
     _progress = _progress.copyWith(phase: TimerPhase.paused);
+    _scheduleAllFutureBeeps(); // cancels because _isPaused is true
     notifyListeners();
   }
 
@@ -310,11 +329,14 @@ class SessionStateProvider extends ChangeNotifier {
     _isPaused = false;
     _progress = _progress.copyWith(phase: _rememberCurrentPhaseForPausing);
     _startTicker();
+    _scheduleAllFutureBeeps();
     notifyListeners();
   }
 
   void reset() {
     _ticker?.cancel();
+    _lastTickAt = null;
+    _beepScheduler?.cancelAll();
     _activeSession = null;
     _progress = const SessionProgress(
       workoutIndex: 0,
@@ -325,6 +347,18 @@ class SessionStateProvider extends ChangeNotifier {
     );
     _remaining = Duration.zero;
     _isPaused = true;
+    notifyListeners();
+  }
+
+  /// Called when the app returns to foreground. Catches any time gap the
+  /// ticker missed while the isolate was suspended, then reschedules beeps
+  /// for the session's remaining phases.
+  void reconcileAfterBackground() {
+    if (_isPaused || _activeSession == null || _lastTickAt == null) return;
+    final now = DateTime.now();
+    _advanceByElapsed(now.difference(_lastTickAt!));
+    _lastTickAt = now;
+    _scheduleAllFutureBeeps();
     notifyListeners();
   }
 
@@ -344,45 +378,144 @@ class SessionStateProvider extends ChangeNotifier {
       _progress = _progress.copyWith(phase: TimerPhase.exerciseRest);
     }
     _remaining = _getDurationForPhase(_progress);
+    _scheduleAllFutureBeeps();
     notifyListeners();
-    // The existing ticker picks up the timed setRest/exerciseRest countdown normally.
   }
 
   void _startTicker() {
-    // Ensure only one ticker runs at a time.
     _ticker?.cancel();
+    // Stamp the current wall-clock time so the first tick can measure a real
+    // elapsed delta.
+    _lastTickAt = DateTime.now();
     _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_isPaused || _progress.phase == TimerPhase.workoutComplete) return;
+      final now = DateTime.now();
+      // Use actual wall-clock elapsed instead of a fixed 1 s decrement.
+      // When the OS suspends the isolate (screen locked), the ticker stops
+      // firing but _lastTickAt is preserved. The next tick after the isolate
+      // resumes will have a large elapsed value (e.g. 45 s), which
+      // _advanceByElapsed handles by fast-forwarding through however many
+      // phases elapsed during that gap.
+      _advanceByElapsed(now.difference(_lastTickAt!));
+      _lastTickAt = now;
+      _scheduleAllFutureBeeps();
+      notifyListeners();
+    });
+  }
 
-      if (_remaining > Duration.zero) {
-        _remaining -= const Duration(seconds: 1);
-        notifyListeners();
-        return;
-      }
+  void _advanceByElapsed(Duration elapsed) {
+    // Subtract the real elapsed time. If the isolate was suspended (screen
+    // locked), elapsed can be many seconds in a single call, making _remaining
+    // go deeply negative.
+    _remaining -= elapsed;
 
-      // Do not auto-advance manual exercises in the rep phase — wait for advanceManually().
+    // Loop because a single large elapsed value can skip through multiple
+    // phases. e.g. locked for 45 s during a 10 s getReady → blows past
+    // getReady, setRest, into rep.
+    while (_remaining <= Duration.zero) {
+      // Manual exercises wait for the user to tap advanceManually() — never
+      // auto-advance.
       if (_activeSession != null) {
-        final exercise =
-            _activeSession!.workouts[_progress.workoutIndex].exercises[_progress
-                .exerciseIndex];
+        final exercise = _activeSession!
+            .workouts[_progress.workoutIndex].exercises[_progress.exerciseIndex];
         if (exercise.type == ExerciseType.manual &&
             _progress.phase == TimerPhase.rep) {
+          _remaining = Duration.zero;
           return;
         }
       }
-
       final next = _calculateNextState(_progress);
       if (next == null) {
         _progress = _progress.copyWith(phase: TimerPhase.workoutComplete);
         _remaining = Duration.zero;
-        notifyListeners();
         return;
       }
-
+      // _remaining is negative here (the overshoot past phase end).
+      // Adding the next phase's full duration keeps the overshoot as a debt,
+      // so rapid successive phases consume the correct total elapsed time.
+      _remaining = _getDurationForPhase(next) + _remaining;
       _progress = next;
-      _remaining = _getDurationForPhase(_progress);
-      notifyListeners();
-    });
+    }
+  }
+
+  /// Cancels all pending beeps and reschedules from the current position.
+  /// No-op if the scheduler is not set or the session is paused/inactive.
+  void _scheduleAllFutureBeeps() {
+    if (_beepScheduler == null || _isPaused || _activeSession == null) {
+      _beepScheduler?.cancelAll();
+      return;
+    }
+    _beepScheduler!.scheduleAll(_calculateFutureBeeps());
+  }
+
+  /// Simulates the remaining state machine from the current position and
+  /// returns a chronological list of beeps to schedule. Stops at
+  /// [BeepScheduler.maxBeeps] entries (iOS limit) or when a manual rep phase
+  /// is reached (unknown duration).
+  List<ScheduledBeep> _calculateFutureBeeps() {
+    final beeps = <ScheduledBeep>[];
+    var simProgress = _progress;
+    var phaseEndAt = DateTime.now().add(_remaining);
+
+    while (true) {
+      _addBeepsForPhase(beeps, simProgress, phaseEndAt);
+      if (beeps.length >= BeepScheduler.maxBeeps) break;
+
+      final next = _calculateNextState(simProgress);
+      if (next == null) break;
+
+      // Manual rep phase: duration unknown — cannot predict further.
+      if (_activeSession != null) {
+        final exercise = _activeSession!
+            .workouts[next.workoutIndex].exercises[next.exerciseIndex];
+        if (exercise.type == ExerciseType.manual &&
+            next.phase == TimerPhase.rep) {
+          break;
+        }
+      }
+
+      phaseEndAt = phaseEndAt.add(_getDurationForPhase(next));
+      simProgress = next;
+    }
+
+    return beeps;
+  }
+
+  void _addBeepsForPhase(
+    List<ScheduledBeep> beeps,
+    SessionProgress p,
+    DateTime phaseEndAt,
+  ) {
+    final now = DateTime.now();
+    switch (p.phase) {
+      case TimerPhase.rep:
+        // Stop beep (microwave-style ding) when the rep duration ends.
+        if (phaseEndAt.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.stop));
+        }
+      case TimerPhase.getReady:
+      case TimerPhase.setRest:
+        // Countdown beeps at 3 / 2 / 1 s before phase end, then go beep at
+        // phase end. repRest intentionally excluded — no countdown for
+        // inter-rep rests.
+        for (final offset in [3, 2, 1]) {
+          final t = phaseEndAt.subtract(Duration(seconds: offset));
+          if (t.isAfter(now)) {
+            beeps.add(ScheduledBeep(at: t, type: BeepType.countdown));
+          }
+        }
+        if (phaseEndAt.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
+        }
+      case TimerPhase.repRest:
+        // No countdown for inter-rep rests, but go beep fires at the start of
+        // each rep.
+        if (phaseEndAt.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
+        }
+      default:
+        break; // exerciseRest, workoutComplete, paused — no beeps
+    }
   }
 
   // State machine transitions by exercise type:
