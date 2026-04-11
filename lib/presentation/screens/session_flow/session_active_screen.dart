@@ -26,8 +26,28 @@ class ActiveSessionScreen extends StatefulWidget {
   State<ActiveSessionScreen> createState() => _ActiveSessionScreenState();
 }
 
-class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
+class _ActiveSessionScreenState extends State<ActiveSessionScreen>
+    with WidgetsBindingObserver {
   bool _timerInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<SessionStateProvider>().reconcileAfterBackground();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
