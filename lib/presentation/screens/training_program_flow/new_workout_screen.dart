@@ -18,7 +18,13 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 class NewWorkoutScreen extends StatefulWidget {
   final Workout? workout;
 
-  const NewWorkoutScreen({super.key, this.workout});
+  /// When true, saving will persist the workout to [PresetProvider] (add or
+  /// update). Use this when opening the screen standalone (e.g. from the FAB
+  /// or catalog). Leave false when used as a sub-editor inside another form
+  /// (e.g. editing a workout within a session).
+  final bool persistToProvider;
+
+  const NewWorkoutScreen({super.key, this.workout, this.persistToProvider = false});
 
   @override
   State<NewWorkoutScreen> createState() => _NewWorkoutScreenState();
@@ -73,14 +79,16 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             _workout.userId ??
             Provider.of<AuthProvider>(context, listen: false).userId,
       );
-      final presetProvider = Provider.of<PresetProvider>(
-        context,
-        listen: false,
-      );
-      if (_isNew) {
-        await presetProvider.addPresetWorkout(workout);
-      } else {
-        await presetProvider.updatePresetWorkout(workout);
+      if (widget.persistToProvider) {
+        final presetProvider = Provider.of<PresetProvider>(
+          context,
+          listen: false,
+        );
+        if (_isNew) {
+          await presetProvider.addPresetWorkout(workout);
+        } else {
+          await presetProvider.updatePresetWorkout(workout);
+        }
       }
       if (mounted) Navigator.pop(context, workout);
     }

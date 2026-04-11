@@ -210,7 +210,10 @@ class ProgramListviewCard extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) => NewWorkoutScreen(workout: filteredListItem),
+                      (context) => NewWorkoutScreen(
+                        workout: filteredListItem,
+                        persistToProvider: true,
+                      ),
                 ),
               );
             case ItemType.exercises:
@@ -218,8 +221,10 @@ class ProgramListviewCard extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) =>
-                          NewExerciseScreen(exercise: filteredListItem),
+                      (context) => NewExerciseScreen(
+                        exercise: filteredListItem,
+                        persistToProvider: true,
+                      ),
                 ),
               );
           }

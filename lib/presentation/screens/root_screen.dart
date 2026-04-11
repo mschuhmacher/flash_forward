@@ -84,7 +84,10 @@ class _RootScreenState extends State<RootScreen>
                     case 1:
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => NewWorkoutScreen()),
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              NewWorkoutScreen(persistToProvider: true),
+                        ),
                       );
                     case 2:
                       Navigator.push(
