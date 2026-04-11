@@ -26,6 +26,13 @@ class ActiveSessionScreen extends StatefulWidget {
   State<ActiveSessionScreen> createState() => _ActiveSessionScreenState();
 }
 
+// WidgetsBindingObserver lets this widget react to app lifecycle changes.
+// When the app returns to the foreground (e.g. after the screen was locked),
+// didChangeAppLifecycleState fires with AppLifecycleState.resumed. We use
+// that to call reconcileAfterBackground(), which measures how much real time
+// passed while the Dart isolate was suspended and fast-forwards the timer
+// accordingly. It also reschedules any remaining beep notifications from the
+// new position.
 class _ActiveSessionScreenState extends State<ActiveSessionScreen>
     with WidgetsBindingObserver {
   bool _timerInitialized = false;
