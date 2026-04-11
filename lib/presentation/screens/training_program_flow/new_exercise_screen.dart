@@ -14,7 +14,12 @@ import 'package:provider/provider.dart';
 class NewExerciseScreen extends StatefulWidget {
   final Exercise? exercise;
 
-  const NewExerciseScreen({super.key, this.exercise});
+  /// When true, saving will persist the exercise to [PresetProvider] (add or
+  /// update). Use this when opening the screen standalone (e.g. from the FAB).
+  /// Leave false when used as a sub-editor inside another form.
+  final bool persistToProvider;
+
+  const NewExerciseScreen({super.key, this.exercise, this.persistToProvider = false});
 
   @override
   State<NewExerciseScreen> createState() => _NewExerciseScreenState();
@@ -85,7 +90,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
       final exercise = Exercise(
         id: widget.exercise?.id,
@@ -124,7 +129,18 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                 ? null
                 : _notesController.text.trim(),
       );
-      Navigator.pop(context, exercise);
+      if (widget.persistToProvider) {
+        final presetProvider = Provider.of<PresetProvider>(
+          context,
+          listen: false,
+        );
+        if (_isNew) {
+          await presetProvider.addPresetExercise(exercise);
+        } else {
+          await presetProvider.updatePresetExercise(exercise);
+        }
+      }
+      if (mounted) Navigator.pop(context, exercise);
     }
   }
 

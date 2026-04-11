@@ -316,6 +316,24 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updatePresetExercise(Exercise exercise) async {
+    final index = _userExercises.indexWhere((e) => e.id == exercise.id);
+    if (index == -1) return;
+    _userExercises[index] = exercise;
+    await PresetLogger.savePresetToFile(
+      'user_preset_exercises.json',
+      _userExercises,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadExercise(exercise);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
   Future<void> addPresetExercise(Exercise exercise) async {
     _userExercises.add(exercise);
     await PresetLogger.savePresetToFile(
