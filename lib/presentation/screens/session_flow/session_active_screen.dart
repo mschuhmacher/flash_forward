@@ -597,18 +597,12 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                               _SessionEditCounterRow(
                                 label: 'Sets',
                                 value: localSets,
-                                minimum: sessionStateData.progress.currentSet,
+                                minimum: 1,
                                 maximum: FieldLimits.setLimit,
                                 onDecrement:
                                     () => setDialogState(() => localSets--),
                                 onIncrement:
-                                    () => setDialogState(
-                                      () =>
-                                          localSets = (localSets + 1).clamp(
-                                            1,
-                                            FieldLimits.setLimit,
-                                          ),
-                                    ),
+                                    () => setDialogState(() => localSets++),
                               ),
                               const _SessionEditDivider(),
 
@@ -618,24 +612,15 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 _SessionEditCounterRow(
                                   label: 'Reps',
                                   value: localReps ?? 10,
-                                  minimum: sessionStateData.progress.currentRep,
+                                  minimum: 1,
                                   maximum: FieldLimits.repLimit,
                                   onDecrement:
                                       () => setDialogState(
-                                        () =>
-                                            localReps = ((localReps ?? 10) - 1)
-                                                .clamp(
-                                                  sessionStateData
-                                                      .progress
-                                                      .currentRep,
-                                                  FieldLimits.repLimit,
-                                                ),
+                                        () => localReps = (localReps ?? 10) - 1,
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () =>
-                                            localReps = ((localReps ?? 10) + 1)
-                                                .clamp(1, FieldLimits.repLimit),
+                                        () => localReps = (localReps ?? 10) + 1,
                                       ),
                                 ),
                                 const _SessionEditDivider(),
@@ -951,11 +936,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       minimum: 1,
                                       decrement: () {
                                         if (localRpe > 1)
-                                          setDialogState(() => localRpe--);
+                                          {setDialogState(() => localRpe--);}
                                       },
                                       increment: () {
                                         if (localRpe < 10)
-                                          setDialogState(() => localRpe++);
+                                          {setDialogState(() => localRpe++);}
                                       },
                                     ),
                                   ],

@@ -262,6 +262,16 @@ class SessionStateProvider extends ChangeNotifier {
       exercises: updatedExercises,
     );
     _activeSession = _activeSession!.copyWith(workouts: updatedWorkouts);
+
+    // Clamp progress if the user reduced sets/reps below current position.
+    final clampedSet = _progress.currentSet.clamp(1, updated.sets);
+    final clampedRep = updated.reps != null
+        ? _progress.currentRep.clamp(1, updated.reps!)
+        : _progress.currentRep;
+    if (clampedSet != _progress.currentSet || clampedRep != _progress.currentRep) {
+      _progress = _progress.copyWith(currentSet: clampedSet, currentRep: clampedRep);
+    }
+
     notifyListeners();
   }
 
