@@ -336,21 +336,23 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // MINUS
-                            _SessionCard(
-                              width: 50,
-                              child: IconButton(
-                                onPressed: () {
-                                  sessionStateData.jumpToSet(
-                                    progress.currentSet - 1,
-                                  );
-                                },
-                                icon: Icon(
-                                  Icons.remove_rounded,
-                                  color: context.colorScheme.onPrimary,
-                                  size: 24,
+                            if (sessionStateData.phase !=
+                                TimerPhase.exerciseRest)
+                              _SessionCard(
+                                width: 50,
+                                child: IconButton(
+                                  onPressed: () {
+                                    sessionStateData.jumpToSet(
+                                      progress.currentSet - 1,
+                                    );
+                                  },
+                                  icon: Icon(
+                                    Icons.remove_rounded,
+                                    color: context.colorScheme.onPrimary,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                            ),
                             SizedBox(width: 8),
                             // SETS
                             _SessionCard(
@@ -366,21 +368,23 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             ),
                             SizedBox(width: 8),
                             // PLUS
-                            _SessionCard(
-                              width: 50,
-                              child: IconButton(
-                                onPressed: () {
-                                  sessionStateData.jumpToSet(
-                                    progress.currentSet + 1,
-                                  );
-                                },
-                                icon: Icon(
-                                  Icons.add_rounded,
-                                  color: context.colorScheme.onPrimary,
-                                  size: 24,
+                            if (sessionStateData.phase !=
+                                TimerPhase.exerciseRest)
+                              _SessionCard(
+                                width: 50,
+                                child: IconButton(
+                                  onPressed: () {
+                                    sessionStateData.jumpToSet(
+                                      progress.currentSet + 1,
+                                    );
+                                  },
+                                  icon: Icon(
+                                    Icons.add_rounded,
+                                    color: context.colorScheme.onPrimary,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                            ),
                             Spacer(),
                             //EDIT
                             _SessionCard(

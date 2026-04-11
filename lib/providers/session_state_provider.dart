@@ -392,7 +392,8 @@ class SessionStateProvider extends ChangeNotifier {
   // manual:        getReady → rep [waits for advanceManually()] → setRest → rep [waits] → exerciseRest
   //
   // setRest → exerciseRest when currentSet == sets (all types)
-  // exerciseRest → getReady (next workout) or rep (next exercise) or null (session done)
+  // exerciseRest: progress already points to the next exercise on entry.
+  //   → rep (same workout) or getReady (new workout, exerciseIndex == 0) or null (session done)
   SessionProgress? _calculateNextState(SessionProgress p) {
     if (_activeSession == null) return null;
     final Workout workout = _activeSession!.workouts[p.workoutIndex];
@@ -412,7 +413,7 @@ class SessionStateProvider extends ChangeNotifier {
             // A single timed effort per set — skip repRest entirely.
             // Also skip setRest on the last set.
             if (p.currentSet >= exercise.sets) {
-              return p.copyWith(phase: TimerPhase.exerciseRest);
+              return _enterExerciseRest(p);
             }
             return p.copyWith(phase: TimerPhase.setRest);
           case ExerciseType.manual:
@@ -431,7 +432,7 @@ class SessionStateProvider extends ChangeNotifier {
         }
         // Last rep done — skip setRest if this was also the last set.
         if (p.currentSet >= exercise.sets) {
-          return p.copyWith(phase: TimerPhase.exerciseRest);
+          return _enterExerciseRest(p);
         }
         return p.copyWith(phase: TimerPhase.setRest);
 
@@ -443,30 +444,15 @@ class SessionStateProvider extends ChangeNotifier {
             phase: TimerPhase.rep,
           );
         }
-        return p.copyWith(phase: TimerPhase.exerciseRest);
+        return _enterExerciseRest(p);
 
       case TimerPhase.exerciseRest:
-        final nextExerciseIndex = p.exerciseIndex + 1;
-        if (nextExerciseIndex < workout.exercises.length) {
-          return SessionProgress(
-            workoutIndex: p.workoutIndex,
-            exerciseIndex: nextExerciseIndex,
-            currentSet: 1,
-            currentRep: 1,
-            phase: TimerPhase.rep,
-          );
-        }
-        final nextWorkoutIndex = p.workoutIndex + 1;
-        if (nextWorkoutIndex < _activeSession!.workouts.length) {
-          return SessionProgress(
-            workoutIndex: nextWorkoutIndex,
-            exerciseIndex: 0,
-            currentSet: 1,
-            currentRep: 1,
-            phase: TimerPhase.getReady,
-          );
-        }
-        return null;
+        // exerciseIndex already points to the next exercise (set on entry).
+        // If exerciseIndex == 0 it was a cross-workout transition → getReady,
+        // otherwise continue directly to rep within the same workout.
+        return p.copyWith(
+          phase: p.exerciseIndex == 0 ? TimerPhase.getReady : TimerPhase.rep,
+        );
       case TimerPhase.getReady:
         // Transition from GET READY to first rep of current exercise
         return p.copyWith(phase: TimerPhase.rep);
@@ -475,6 +461,37 @@ class SessionStateProvider extends ChangeNotifier {
       case TimerPhase.paused:
         return null;
     }
+  }
+
+  /// Advances to the next exercise and enters exerciseRest, so the UI
+  /// immediately shows the upcoming exercise during the rest period.
+  /// Returns null if there are no more exercises (session ends).
+  SessionProgress? _enterExerciseRest(SessionProgress progress) {
+    final workout = _activeSession!.workouts[progress.workoutIndex];
+    final nextExercise = progress.exerciseIndex + 1;
+
+    if (nextExercise < workout.exercises.length) {
+      return SessionProgress(
+        workoutIndex: progress.workoutIndex,
+        exerciseIndex: nextExercise,
+        currentSet: 1,
+        currentRep: 1,
+        phase: TimerPhase.exerciseRest,
+      );
+    }
+
+    final nextWorkout = progress.workoutIndex + 1;
+    if (nextWorkout < _activeSession!.workouts.length) {
+      return SessionProgress(
+        workoutIndex: nextWorkout,
+        exerciseIndex: 0,
+        currentSet: 1,
+        currentRep: 1,
+        phase: TimerPhase.exerciseRest,
+      );
+    }
+
+    return null;
   }
 
   /// Returns the duration for the current phase, derived from the active
