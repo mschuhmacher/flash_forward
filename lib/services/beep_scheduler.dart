@@ -45,9 +45,25 @@ class BeepScheduler {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await android?.requestNotificationsPermission();
-    // Android 12+ (API 31+): SCHEDULE_EXACT_ALARM can be revoked by the user
-    // in Settings. This opens the system settings page if it has been revoked.
-    // No-op if already granted.
+    // SCHEDULE_EXACT_ALARM is deferred to first session start so the user sees
+    // a rationale dialog before being sent to Settings. See BeepScheduler.
+    // requestExactAlarmPermission() and session_active_screen.dart.
+  }
+
+  /// Returns whether the app can schedule exact alarms on Android.
+  /// Always true on iOS (permission model is different).
+  Future<bool> canScheduleExactAlarms() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return true; // not Android
+    return await android.canScheduleExactNotifications() ?? true;
+  }
+
+  /// Opens the system settings page for SCHEDULE_EXACT_ALARM (Android 12+).
+  /// Call this after showing the user a rationale dialog.
+  Future<void> requestExactAlarmPermission() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await android?.requestExactAlarmsPermission();
   }
 
@@ -64,16 +80,22 @@ class BeepScheduler {
     for (var i = 0; i < capped.length; i++) {
       final beep = capped[i];
       if (beep.at.isBefore(DateTime.now())) continue;
-      await _plugin.zonedSchedule(
-        _baseId + i,
-        null,
-        null,
-        tz.TZDateTime.from(beep.at, tz.local),
-        _detailsFor(beep.type),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
+      try {
+        await _plugin.zonedSchedule(
+          _baseId + i,
+          null,
+          null,
+          tz.TZDateTime.from(beep.at, tz.local),
+          _detailsFor(beep.type),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      } catch (_) {
+        // Permission denied or revoked (e.g. SCHEDULE_EXACT_ALARM) —
+        // skip this beep silently. The session continues without audio cues.
+        break;
+      }
     }
   }
 

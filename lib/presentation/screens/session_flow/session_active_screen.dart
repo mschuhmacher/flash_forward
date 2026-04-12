@@ -16,6 +16,7 @@ import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'dart:io' show Platform;
 
 class ActiveSessionScreen extends StatefulWidget {
   final Session session;
@@ -63,7 +64,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         // Initialize the timer & keep screen awake once when the screen first builds.
         // Passes the session to start(), which deep-copies it internally.
         if (!_timerInitialized) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
             // Guard again in case the widget unmounted before the callback.
             if (!mounted || _timerInitialized) return;
             sessionStateData.start(widget.session);
@@ -71,6 +72,41 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
             // Start keeping screen awake
             WakelockPlus.enable();
+
+            // Android 12+: SCHEDULE_EXACT_ALARM lets us fire beep sounds
+            // exactly on time even when the screen is locked. Show a rationale
+            // dialog before sending the user to the system settings page.
+            // No-op on iOS and on Android where permission is already granted.
+            if (Platform.isAndroid) {
+              final canSchedule =
+                  await sessionStateData.canScheduleExactAlarms();
+              if (!canSchedule && context.mounted) {
+                await showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('Allow exact alarms'),
+                    content: const Text(
+                      'Flash Forward schedules audio beeps during your session '
+                      'so they fire on time even with the screen locked.\n\n'
+                      'Tap Allow to enable this in Settings.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('Not now'),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(dialogContext);
+                          await sessionStateData.requestExactAlarmPermission();
+                        },
+                        child: const Text('Allow'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            }
           });
         }
 

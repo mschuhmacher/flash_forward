@@ -106,6 +106,12 @@ class SessionStateProvider extends ChangeNotifier {
 
   void setBeepScheduler(BeepScheduler scheduler) => _beepScheduler = scheduler;
 
+  Future<bool> canScheduleExactAlarms() =>
+      _beepScheduler?.canScheduleExactAlarms() ?? Future.value(true);
+
+  Future<void> requestExactAlarmPermission() =>
+      _beepScheduler?.requestExactAlarmPermission() ?? Future.value();
+
   void incrementWeekIndex() {
     _weekIndex++;
     notifyListeners();
