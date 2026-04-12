@@ -27,12 +27,28 @@ class BeepScheduler {
       const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(
+          // iOS: triggers the system permission dialog on first launch if the
+          // user has never granted/denied notification permission for this app.
+          // Subsequent launches skip the dialog — existing grant/denial is
+          // preserved across updates.
           requestSoundPermission: true,
           requestAlertPermission: false,
           requestBadgePermission: false,
         ),
       ),
     );
+    // Android 13+ (API 33+): POST_NOTIFICATIONS is a runtime permission that
+    // must be explicitly requested. No-op on Android < 13.
+    // Existing users who had the app before upgrading to Android 13 are
+    // auto-granted this permission by the OS during the upgrade — they won't
+    // see a dialog. New installs on Android 13+ will see the dialog once.
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestNotificationsPermission();
+    // Android 12+ (API 31+): SCHEDULE_EXACT_ALARM can be revoked by the user
+    // in Settings. This opens the system settings page if it has been revoked.
+    // No-op if already granted.
+    await android?.requestExactAlarmsPermission();
   }
 
   /// Cancels all pending beeps, then schedules [beeps] in chronological order.
