@@ -93,7 +93,7 @@ class BeepScheduler {
         );
       } catch (_) {
         // Permission denied or revoked (e.g. SCHEDULE_EXACT_ALARM) —
-        // skip this beep silently. The session continues without audio cues.
+        // skip remaining beeps silently. The session continues without audio cues.
         break;
       }
     }
