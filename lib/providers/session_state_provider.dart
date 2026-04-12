@@ -507,14 +507,12 @@ class SessionStateProvider extends ChangeNotifier {
         }
       case TimerPhase.getReady:
       case TimerPhase.setRest:
-        // Countdown beeps at 3 / 2 / 1 s before phase end, then go beep at
-        // phase end. repRest intentionally excluded — no countdown for
-        // inter-rep rests.
-        for (final offset in [3, 2, 1]) {
-          final t = phaseEndAt.subtract(Duration(seconds: offset));
-          if (t.isAfter(now)) {
-            beeps.add(ScheduledBeep(at: t, type: BeepType.countdown));
-          }
+        // Single countdown notification at 3 s before phase end — the sound
+        // file itself contains three beeps (3, 2, 1). Go beep at phase end.
+        // repRest intentionally excluded — no countdown for inter-rep rests.
+        final t = phaseEndAt.subtract(const Duration(seconds: 3));
+        if (t.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: t, type: BeepType.countdown));
         }
         if (phaseEndAt.isAfter(now)) {
           beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
