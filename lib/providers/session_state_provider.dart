@@ -402,9 +402,15 @@ class SessionStateProvider extends ChangeNotifier {
       // resumes will have a large elapsed value (e.g. 45 s), which
       // _advanceByElapsed handles by fast-forwarding through however many
       // phases elapsed during that gap.
+      final prevProgress = _progress;
       _advanceByElapsed(now.difference(_lastTickAt!));
       _lastTickAt = now;
-      _scheduleAllFutureBeeps();
+      // Only reschedule when a phase transition occurred. Rescheduling every
+      // tick would cancel and recreate all 64 notifications at 1 Hz, flooding
+      // the OS notification API and causing beeps to miss their fire window.
+      if (!identical(_progress, prevProgress)) {
+        _scheduleAllFutureBeeps();
+      }
       notifyListeners();
     });
   }
