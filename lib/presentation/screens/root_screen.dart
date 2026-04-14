@@ -13,6 +13,8 @@ import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:provider/provider.dart';
@@ -246,6 +248,46 @@ class SettingsDrawer extends StatelessWidget {
                             color: context.colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Text('Sound', style: context.titleMedium),
+                            const SizedBox(width: 2),
+                            IconButton(
+                              icon: const Icon(Icons.info_outline_rounded),
+                              iconSize: 18,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _showSoundInfoDialog(context),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownMenu<SoundMode>(
+                          width: double.infinity,
+                          initialSelection: settings.soundMode,
+                          onSelected: (mode) {
+                            if (mode != null) settings.setSoundMode(mode);
+                          },
+                          dropdownMenuEntries: const [
+                            DropdownMenuEntry(
+                              value: SoundMode.both,
+                              label: 'Both',
+                            ),
+                            DropdownMenuEntry(
+                              value: SoundMode.soundsOnly,
+                              label: 'Sounds only',
+                            ),
+                            DropdownMenuEntry(
+                              value: SoundMode.notificationsOnly,
+                              label: 'Notifications only',
+                            ),
+                            DropdownMenuEntry(
+                              value: SoundMode.none,
+                              label: 'None',
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -439,6 +481,34 @@ class SettingsDrawer extends StatelessWidget {
         (route) => false,
       );
     }
+  }
+
+  void _showSoundInfoDialog(BuildContext context) {
+    final isIOS = Platform.isIOS;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Sound modes', style: dialogContext.h3),
+        content: Text(
+          isIOS
+              ? 'Both: Plays beeps in the app while your screen is on. Schedules notification sounds when the screen locks — note that iOS plays these with your device\'s notification settings, which may include vibration.\n\n'
+                'Sounds only: Beeps play in the app while the screen is on. No notifications when backgrounded.\n\n'
+                'Notifications only: No in-app sounds. Schedules notification sounds when the screen locks (with your device\'s notification settings, which may include vibration).\n\n'
+                'None: All sounds disabled. The timer runs silently.'
+              : 'Both: Plays beeps in the app while the screen is on. Schedules notification sounds when backgrounded — only the app\'s own sounds, no extra vibration.\n\n'
+                'Sounds only: Beeps play in the app while the screen is on. No notifications when backgrounded.\n\n'
+                'Notifications only: No in-app sounds. Schedules notification sounds when backgrounded — only the app\'s own sounds, no extra vibration.\n\n'
+                'None: All sounds disabled. The timer runs silently.',
+          style: dialogContext.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showClearLogsPopUp(BuildContext context) {

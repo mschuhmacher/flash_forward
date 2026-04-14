@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum SoundMode { both, soundsOnly, notificationsOnly, none }
+
 /// Responsibilities:
 /// - Holds in-memory state for user preferences (weight unit, grade system).
 /// - Provides getters for UI to read current preferences.
@@ -15,17 +17,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsProvider extends ChangeNotifier {
   static const _keyWeightUnit  = 'pref_weight_unit';
   static const _keyGradeSystem = 'pref_grade_system';
+  static const _keySoundMode   = 'pref_sound_mode';
 
   String _weightUnit  = 'kg';
   String _gradeSystem = 'fontainebleau';
+  SoundMode _soundMode = SoundMode.soundsOnly;
 
   String get weightUnit  => _weightUnit;
   String get gradeSystem => _gradeSystem;
+  SoundMode get soundMode => _soundMode;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _weightUnit  = prefs.getString(_keyWeightUnit)  ?? 'kg';
     _gradeSystem = prefs.getString(_keyGradeSystem) ?? 'fontainebleau';
+    final stored = prefs.getString(_keySoundMode);
+    _soundMode = stored != null
+        ? SoundMode.values.byName(stored)
+        : SoundMode.soundsOnly;
     notifyListeners();
   }
 
@@ -41,5 +50,12 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyGradeSystem, system);
+  }
+
+  Future<void> setSoundMode(SoundMode mode) async {
+    _soundMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keySoundMode, mode.name);
   }
 }

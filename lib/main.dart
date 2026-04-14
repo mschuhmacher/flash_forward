@@ -12,6 +12,7 @@ import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
+import 'package:flash_forward/services/audio_beep_player.dart';
 import 'package:flash_forward/services/beep_scheduler.dart';
 import 'package:flash_forward/themes/app_theme.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -31,8 +32,14 @@ void main() async {
   // Initialize BeepScheduler for OS-level timer beep notifications.
   final beepScheduler = BeepScheduler(FlutterLocalNotificationsPlugin());
   await beepScheduler.init();
+
+  // Initialize AudioBeepPlayer for in-app audio playback when foregrounded.
+  final audioPlayer = AudioBeepPlayer();
+  await audioPlayer.init();
+
   final sessionStateProvider = SessionStateProvider()
-    ..setBeepScheduler(beepScheduler);
+    ..setBeepScheduler(beepScheduler)
+    ..setAudioBeepPlayer(audioPlayer);
 
   final packageInfo = await PackageInfo.fromPlatform();
 

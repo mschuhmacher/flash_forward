@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/providers/settings_provider.dart';
+import 'package:flash_forward/services/audio_beep_player.dart';
 import 'package:flash_forward/services/beep_scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_forward/models/session.dart';
@@ -89,6 +91,12 @@ class SessionStateProvider extends ChangeNotifier {
   DateTime? _lastTickAt;
   // Injected scheduler — null until setBeepScheduler() is called.
   BeepScheduler? _beepScheduler;
+  // Injected in-app audio player — null until setAudioBeepPlayer() is called.
+  AudioBeepPlayer? _audioPlayer;
+  // Whether the app is currently in the foreground (screen on, app visible).
+  bool _isForegrounded = true;
+  // Current sound mode — synced from SettingsProvider at session start.
+  SoundMode _soundMode = SoundMode.soundsOnly;
 
   TimerPhase _rememberCurrentPhaseForPausing = TimerPhase.getReady;
 
@@ -105,6 +113,28 @@ class SessionStateProvider extends ChangeNotifier {
   Session? get activeSession => _activeSession;
 
   void setBeepScheduler(BeepScheduler scheduler) => _beepScheduler = scheduler;
+
+  void setAudioBeepPlayer(AudioBeepPlayer player) => _audioPlayer = player;
+
+  void setSoundMode(SoundMode mode) {
+    _soundMode = mode;
+    _rescheduleSound();
+  }
+
+  /// Called by [ActiveSessionScreen] on app lifecycle changes. On going to
+  /// background, schedules notifications if the sound mode requires them. On
+  /// returning to foreground, cancels pending notifications and reconciles
+  /// elapsed time.
+  void setForegrounded(bool foregrounded) {
+    if (_isForegrounded == foregrounded) return;
+    _isForegrounded = foregrounded;
+    if (foregrounded) {
+      _beepScheduler?.cancelAll();
+      reconcileAfterBackground();
+    } else {
+      _rescheduleSound();
+    }
+  }
 
   Future<bool> canScheduleExactAlarms() =>
       _beepScheduler?.canScheduleExactAlarms() ?? Future.value(true);
@@ -166,7 +196,7 @@ class SessionStateProvider extends ChangeNotifier {
       phase: TimerPhase.rep,
     );
     _remaining = _getDurationForPhase(_progress);
-    _scheduleAllFutureBeeps();
+    _rescheduleSound();
     notifyListeners();
   }
 
@@ -191,7 +221,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
-      _scheduleAllFutureBeeps();
+      _rescheduleSound();
       notifyListeners();
     }
     // When within range of list of exercises of workout, go to previous or next
@@ -206,7 +236,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
-      _scheduleAllFutureBeeps();
+      _rescheduleSound();
       notifyListeners();
     }
     // When at the last exercise of a workout and not the final exercise of session, go to first exercise of next workout
@@ -223,7 +253,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.getReady,
       );
       _remaining = _getDurationForPhase(_progress);
-      _scheduleAllFutureBeeps();
+      _rescheduleSound();
       notifyListeners();
     }
   }
@@ -240,7 +270,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.rep,
       );
       _remaining = _getDurationForPhase(_progress);
-      _scheduleAllFutureBeeps();
+      _rescheduleSound();
       notifyListeners();
     } else if (index > 0 &&
         index <=
@@ -256,7 +286,7 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.rep,
       );
       _remaining = _getDurationForPhase(_progress);
-      _scheduleAllFutureBeeps();
+      _rescheduleSound();
       notifyListeners();
     } else if (index >
         _activeSession!
@@ -314,7 +344,7 @@ class SessionStateProvider extends ChangeNotifier {
     _remaining = _getDurationForPhase(_progress);
     _isPaused = false;
     _startTicker();
-    _scheduleAllFutureBeeps();
+    _rescheduleSound();
     notifyListeners();
   }
 
@@ -326,7 +356,7 @@ class SessionStateProvider extends ChangeNotifier {
     _lastTickAt = null;
     _rememberCurrentPhaseForPausing = _progress.phase;
     _progress = _progress.copyWith(phase: TimerPhase.paused);
-    _scheduleAllFutureBeeps(); // cancels because _isPaused is true
+    _rescheduleSound(); // cancels because _isPaused is true
     notifyListeners();
   }
 
@@ -335,7 +365,7 @@ class SessionStateProvider extends ChangeNotifier {
     _isPaused = false;
     _progress = _progress.copyWith(phase: _rememberCurrentPhaseForPausing);
     _startTicker();
-    _scheduleAllFutureBeeps();
+    _rescheduleSound();
     notifyListeners();
   }
 
@@ -364,7 +394,7 @@ class SessionStateProvider extends ChangeNotifier {
     final now = DateTime.now();
     _advanceByElapsed(now.difference(_lastTickAt!));
     _lastTickAt = now;
-    _scheduleAllFutureBeeps();
+    _rescheduleSound();
     notifyListeners();
   }
 
@@ -384,7 +414,7 @@ class SessionStateProvider extends ChangeNotifier {
       _progress = _progress.copyWith(phase: TimerPhase.exerciseRest);
     }
     _remaining = _getDurationForPhase(_progress);
-    _scheduleAllFutureBeeps();
+    _rescheduleSound();
     notifyListeners();
   }
 
@@ -403,13 +433,42 @@ class SessionStateProvider extends ChangeNotifier {
       // _advanceByElapsed handles by fast-forwarding through however many
       // phases elapsed during that gap.
       final prevProgress = _progress;
+      final previousRemaining = _remaining;
       _advanceByElapsed(now.difference(_lastTickAt!));
       _lastTickAt = now;
+
+      final playInApp = _isForegrounded &&
+          (_soundMode == SoundMode.soundsOnly || _soundMode == SoundMode.both);
+
+      if (playInApp) {
+        // Countdown: fire when remaining crosses from >3 s to ≤3 s during
+        // getReady or setRest. The sound file contains the full 3-2-1 cadence.
+        if ((prevProgress.phase == TimerPhase.getReady ||
+                prevProgress.phase == TimerPhase.setRest) &&
+            previousRemaining > const Duration(seconds: 3) &&
+            _remaining <= const Duration(seconds: 3) &&
+            _remaining > Duration.zero) {
+          _audioPlayer?.play(BeepType.countdown);
+        }
+      }
+
       // Only reschedule when a phase transition occurred. Rescheduling every
       // tick would cancel and recreate all 64 notifications at 1 Hz, flooding
       // the OS notification API and causing beeps to miss their fire window.
       if (!identical(_progress, prevProgress)) {
-        _scheduleAllFutureBeeps();
+        _rescheduleSound();
+        if (playInApp) {
+          // Go beep: entering a rep (from getReady, setRest, or repRest).
+          if (_progress.phase == TimerPhase.rep &&
+              prevProgress.phase != TimerPhase.rep) {
+            _audioPlayer?.play(BeepType.go);
+          }
+          // Stop beep: leaving a rep phase into any rest or completion.
+          else if (prevProgress.phase == TimerPhase.rep &&
+              _progress.phase != TimerPhase.rep) {
+            _audioPlayer?.play(BeepType.stop);
+          }
+        }
       }
       notifyListeners();
     });
@@ -450,14 +509,20 @@ class SessionStateProvider extends ChangeNotifier {
     }
   }
 
-  /// Cancels all pending beeps and reschedules from the current position.
-  /// No-op if the scheduler is not set or the session is paused/inactive.
-  void _scheduleAllFutureBeeps() {
-    if (_beepScheduler == null || _isPaused || _activeSession == null) {
+  /// Cancels or reschedules notifications based on the current sound mode and
+  /// foreground state. In-app audio is driven directly by the ticker and does
+  /// not need scheduling here.
+  void _rescheduleSound() {
+    final useNotifications = !_isForegrounded &&
+        !_isPaused &&
+        _activeSession != null &&
+        (_soundMode == SoundMode.both ||
+            _soundMode == SoundMode.notificationsOnly);
+    if (useNotifications && _beepScheduler != null) {
+      _beepScheduler!.scheduleAll(_calculateFutureBeeps());
+    } else {
       _beepScheduler?.cancelAll();
-      return;
     }
-    _beepScheduler!.scheduleAll(_calculateFutureBeeps());
   }
 
   /// Simulates the remaining state machine from the current position and

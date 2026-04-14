@@ -13,6 +13,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_bottom_bar.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -52,8 +53,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final provider = context.read<SessionStateProvider>();
     if (state == AppLifecycleState.resumed) {
-      context.read<SessionStateProvider>().reconcileAfterBackground();
+      provider.setForegrounded(true);
+    } else if (state == AppLifecycleState.paused) {
+      provider.setForegrounded(false);
     }
   }
 
@@ -68,6 +72,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
             // Guard again in case the widget unmounted before the callback.
             if (!mounted || _timerInitialized) return;
             sessionStateData.start(widget.session);
+            sessionStateData.setSoundMode(
+              context.read<SettingsProvider>().soundMode,
+            );
             _timerInitialized = true;
 
             // Start keeping screen awake
