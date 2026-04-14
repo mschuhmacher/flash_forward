@@ -9,6 +9,7 @@ Workout _findWorkout(String title) {
 
 final List<Session> kDefaultSessions = [
   Session(
+    id: 'projecting-session',
     title: 'Projecting session',
     description: 'Flash tries and projecting',
     label: 'Limit',
@@ -19,6 +20,7 @@ final List<Session> kDefaultSessions = [
     ],
   ),
   Session(
+    id: 'powerendurance-training',
     title: 'Powerendurance training',
     description: 'Powerendurance',
     label: 'Powerendurance',
@@ -30,6 +32,7 @@ final List<Session> kDefaultSessions = [
     ],
   ),
   Session(
+    id: 'power-session',
     title: 'Power',
     description: 'Training power',
     label: 'Power',
@@ -41,6 +44,7 @@ final List<Session> kDefaultSessions = [
     ],
   ),
   Session(
+    id: 'volume-session',
     title: 'Volume',
     description: 'Lots of easy climbing',
     label: 'Endurance',
@@ -51,6 +55,7 @@ final List<Session> kDefaultSessions = [
     ],
   ),
   Session(
+    id: 'full-body-strength-session',
     title: 'Full body strength training',
     description: 'No climbing, just strength and finger training',
     label: 'Strength',
@@ -63,18 +68,21 @@ final List<Session> kDefaultSessions = [
     ],
   ),
   Session(
+    id: 'daily-fingerboard-stretching',
     title: 'Daily fingerboard and stretching',
     description: 'Quick light fingerboard and stretching',
     label: 'Daily maintenance',
     workouts: [_findWorkout('Daily Mobility & Light Hangs')],
   ),
   Session(
+    id: 'daily-evening-stretch',
     title: 'Daily evening stretch',
     description: 'Relaxed stretching at the end of the day',
     label: 'Daily maintenance',
     workouts: [_findWorkout('Evening Stretch & Recovery')],
   ),
   Session(
+    id: 'quick-fingerboarding-session',
     title: 'Quick fingerboarding',
     description: 'As you\'re passing the fingerboard ',
     label: 'Daily maintenance',

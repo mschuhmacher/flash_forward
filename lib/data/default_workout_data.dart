@@ -14,6 +14,7 @@ List<Workout> kDefaultWorkouts = [
   // WARM-UPS
   // ============================================================================
   Workout(
+    id: 'climbing-warm-up',
     title: 'Climbing Warm-up',
     label: 'Warm-up',
     description: 'Finger and major muscle groups warm-up',
@@ -30,6 +31,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'general-warm-up',
     title: 'General Warm-up',
     label: 'Warm-up',
     description: 'Complete warm-up for any training session',
@@ -47,6 +49,7 @@ List<Workout> kDefaultWorkouts = [
 
 
   Workout(
+    id: 'strength-training-warm-up',
     title: 'Strength Training Warm-up',
     label: 'Warm-up',
     description: 'Dynamic warm-up for pull-ups, dips, and strength work',
@@ -65,6 +68,7 @@ List<Workout> kDefaultWorkouts = [
   // TECHNIQUE DRILLS
   // ============================================================================
   Workout(
+    id: 'footwork-fundamentals',
     title: 'Footwork Fundamentals',
     label: 'Technique',
     description: 'Develop precise and quiet footwork',
@@ -79,6 +83,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'body-positioning-and-movement',
     title: 'Body Positioning & Movement',
     label: 'Technique',
     description: 'Practice efficient body positioning techniques',
@@ -94,6 +99,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'dynamic-movement-practice',
     title: 'Dynamic Movement Practice',
     label: 'Technique',
     description: 'Develop power and coordination for dynamic moves',
@@ -104,6 +110,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'advanced-technique-drills',
     title: 'Advanced Technique Drills',
     label: 'Technique',
     description: 'Challenge balance and body awareness',
@@ -121,6 +128,7 @@ List<Workout> kDefaultWorkouts = [
   // STRENGTH TRAINING
   // ============================================================================
   Workout(
+    id: 'pull-focused-strength',
     title: 'Pull-Focused Strength',
     label: 'Strength',
     description: 'Comprehensive pulling strength for climbing',
@@ -136,6 +144,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'advanced-pull-strength',
     title: 'Advanced Pull Strength',
     label: 'Strength',
     description: 'High-intensity pulling exercises for experienced climbers',
@@ -151,6 +160,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'push-and-antagonist-training',
     title: 'Push & Antagonist Training',
     label: 'Strength',
     description: 'Balance pulling muscles with pushing exercises',
@@ -167,6 +177,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'core-strength-builder',
     title: 'Core Strength Builder',
     label: 'Strength',
     description: 'Complete core workout for climbing stability',
@@ -183,6 +194,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'advanced-core-strength',
     title: 'Advanced Core Strength',
     label: 'Strength',
     description: 'High-level core exercises for power and control',
@@ -198,6 +210,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'full-body-strength-workout',
     title: 'Full-Body Strength Workout',
     label: 'Strength',
     description: 'Balanced full-body workout combining push, pull, and core',
@@ -214,6 +227,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'beginner-strength-foundation',
     title: 'Beginner Strength Foundation',
     label: 'Strength',
     description: 'Build base strength for climbing progression',
@@ -229,6 +243,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'barbell-strength-training',
     title: 'Barbell Strength Training',
     label: 'Strength',
     description: 'Traditional compound lifts for overall strength',
@@ -243,6 +258,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'pull-ups-and-pick-ups-set',
     title: 'Pull-ups & Pick-ups Set',
     label: 'Strength',
     description: 'Superset of 3 exercises',
@@ -257,6 +273,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'dips-and-front-lever',
     title: 'Dips and front lever',
     label: 'Strength',
     description: 'Superset of 2',
@@ -267,6 +284,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'general-upper-body-strength',
     title: 'General Upper-body Strength',
     label: 'Strength',
     description: 'Upper-body strength exercises with push and pulls',
@@ -286,6 +304,7 @@ List<Workout> kDefaultWorkouts = [
   // POWER TRAINING
   // ============================================================================
   Workout(
+    id: 'campus-board-power',
     title: 'Campus Board Power',
     label: 'Power',
     description: 'Build explosive finger and pulling power',
@@ -300,6 +319,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'dynamic-climbing-power',
     title: 'Dynamic Climbing Power',
     label: 'Power',
     description: 'Develop explosive movement on the wall',
@@ -314,6 +334,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'upper-body-power',
     title: 'Upper-body Power',
     label: 'Power',
     description: 'Explosive pulling and pushing movements',
@@ -328,6 +349,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'lower-body-power',
     title: 'Lower Body Power',
     label: 'Power',
     description: 'Explosive leg strength and coordination',
@@ -338,6 +360,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'mixed-power-training',
     title: 'Mixed Power Training',
     label: 'Power',
     description: 'Combine campus work and bodyweight power',
@@ -355,6 +378,7 @@ List<Workout> kDefaultWorkouts = [
   // POWER ENDURANCE
   // ============================================================================
   Workout(
+    id: 'campus-board-power-endurance',
     title: 'Campus Board Power Endurance',
     label: 'Powerendurance',
     description: 'Build powerful endurance through campus training',
@@ -365,6 +389,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: '4x4-boulder-circuits',
     title: '4x4 Boulder Circuits',
     label: 'Powerendurance',
     description: 'Classic power endurance training on boulder problems',
@@ -375,6 +400,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'linked-problems-power',
     title: 'Linked Problems Power',
     label: 'Powerendurance',
     description: 'Build endurance by linking boulder problems',
@@ -385,6 +411,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'boulder-pyramid-endurance',
     title: 'Boulder Pyramid Endurance',
     label: 'Powerendurance',
     description: 'Pyramid protocol for sustained power',
@@ -395,6 +422,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: '6-in-6-power-endurance',
     title: '6 in 6 Power Endurance',
     label: 'Powerendurance',
     description: 'High-intensity boulder circuit in time limit',
@@ -408,6 +436,7 @@ List<Workout> kDefaultWorkouts = [
   // FINGER STRENGTH
   // ============================================================================
   Workout(
+    id: 'max-pick-ups-and-min-edge-hangs',
     title: 'Max Pick-ups & Min Edge Hangs',
     label: 'Finger strength',
     description: 'Maximum finger strength development',
@@ -418,6 +447,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'max-hangs-and-min-edge-hangs',
     title: 'Max Hangs & Min Edge Hangs',
     label: 'Finger strength',
     description: 'Maximum finger strength development',
@@ -428,6 +458,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'fingerboard-strength-builder',
     title: 'Fingerboard Strength Builder',
     label: 'Finger strength',
     description: 'Build finger strength with various grips',
@@ -442,6 +473,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'beginner-finger-strength',
     title: 'Beginner Finger Strength',
     label: 'Finger strength',
     description: 'Safe introduction to hangboard training',
@@ -455,6 +487,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'combined-limit-strength',
     title: 'Combined Limit Strength',
     label: 'Limit',
     description:
@@ -473,6 +506,7 @@ List<Workout> kDefaultWorkouts = [
   // ENDURANCE
   // ============================================================================
   Workout(
+    id: 'arc-endurance-training',
     title: 'ARC Endurance Training',
     label: 'Endurance',
     description: 'Continuous easy climbing for aerobic capacity',
@@ -483,6 +517,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'route-laps-endurance',
     title: 'Route Laps Endurance',
     label: 'Endurance',
     description: 'Build muscular endurance through repeated laps',
@@ -496,6 +531,7 @@ List<Workout> kDefaultWorkouts = [
   // FLEXIBILITY & MOBILITY
   // ============================================================================
   Workout(
+    id: 'post-climb-cooldown-and-stretch',
     title: 'Post-Climb Cooldown & Stretch',
     label: 'Flexibility',
     description: 'Full-body stretching routine after climbing',
@@ -512,6 +548,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'deep-flexibility-session',
     title: 'Deep Flexibility Session',
     label: 'Flexibility',
     description: 'Extended stretching for mobility development',
@@ -529,6 +566,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'hamstring-and-hip-flexibility',
     title: 'Hamstring & Hip Flexibility',
     label: 'Flexibility',
     description: 'Focus on lower body mobility for high steps',
@@ -548,6 +586,7 @@ List<Workout> kDefaultWorkouts = [
   // CALISTHENICS SKILLS
   // ============================================================================
   Workout(
+    id: 'handstand-training',
     title: 'Handstand Training',
     label: 'Skills',
     description: 'General handstand practice',
@@ -557,6 +596,7 @@ List<Workout> kDefaultWorkouts = [
     exercises: [_findInstance('freestanding-handstand'), _findInstance('crow-pose')],
   ),
   Workout(
+    id: 'handstand-progression-training',
     title: 'Handstand Progression Training',
     label: 'Skills',
     description: 'Develop handstand strength and balance',
@@ -572,6 +612,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'advanced-handstand-skills',
     title: 'Advanced Handstand Skills',
     label: 'Skills',
     description: 'High-level handstand and balance work',
@@ -587,6 +628,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'planche-progression-training',
     title: 'Planche Progression Training',
     label: 'Skills',
     description: 'Build toward planche with progressions',
@@ -602,6 +644,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'elite-planche-training',
     title: 'Elite Planche Training',
     label: 'Skills',
     description: 'Advanced planche variations',
@@ -616,6 +659,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'lever-progressions',
     title: 'Lever Progressions',
     label: 'Skills',
     description: 'Front and back lever skill development',
@@ -630,6 +674,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'muscle-up-development',
     title: 'Muscle-up Development',
     label: 'Skills',
     description: 'Build strength for muscle-ups',
@@ -645,6 +690,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'single-leg-strength',
     title: 'Single Leg Strength',
     label: 'Skills',
     description: 'Develop unilateral leg strength and balance',
@@ -655,6 +701,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'dynamic-calisthenics-skills',
     title: 'Dynamic Calisthenics Skills',
     label: 'Skills',
     description: 'Explosive movements and transitions',
@@ -672,6 +719,7 @@ List<Workout> kDefaultWorkouts = [
   // DAILY MAINTENANCE
   // ============================================================================
   Workout(
+    id: 'quick-fingerboarding',
     title: 'Quick Fingerboarding',
     label: 'Daily maintenance',
     description: 'Quick, light fingerboarding for in between',
@@ -682,6 +730,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'daily-mobility-and-light-hangs',
     title: 'Daily Mobility & Light Hangs',
     label: 'Daily maintenance',
     description: 'Quick daily routine for light fingerboarding and mobility',
@@ -697,6 +746,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'evening-stretch-and-recovery',
     title: 'Evening Stretch & Recovery',
     label: 'Daily maintenance',
     description: '15-minute evening routine for recovery and relaxation',
@@ -711,6 +761,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'antagonist-maintenance',
     title: 'Antagonist Maintenance',
     label: 'Daily maintenance',
     description: '10-minute antagonist work for injury prevention',
@@ -726,6 +777,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'finger-care-and-maintenance',
     title: 'Finger Care & Maintenance',
     label: 'Daily maintenance',
     description: '12-minute routine for finger health and strength maintenance',
@@ -741,6 +793,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'quick-core-maintenance',
     title: 'Quick Core Maintenance',
     label: 'Daily maintenance',
     description: '8-minute daily core activation',
@@ -756,6 +809,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'shoulder-health-routine',
     title: 'Shoulder Health Routine',
     label: 'Daily maintenance',
     description: '10-minute shoulder mobility and stability work',
@@ -774,6 +828,7 @@ List<Workout> kDefaultWorkouts = [
   // LIMIT
   // ============================================================================
   Workout(
+    id: 'flash-and-limit-bouldering',
     title: 'Flash and limit bouldering',
     label: 'Limit',
     description: 'Focussing on trying hard',
@@ -784,6 +839,7 @@ List<Workout> kDefaultWorkouts = [
   ),
 
   Workout(
+    id: 'projecting',
     title: 'Projecting',
     label: 'Limit',
     description: 'Focussing on trying hard',
