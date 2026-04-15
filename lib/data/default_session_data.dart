@@ -7,6 +7,9 @@ Workout _findWorkout(String title) {
   return kDefaultWorkouts.firstWhere((e) => e.title == title);
 }
 
+// IMPORTANT: IDs are stable keys persisted to SharedPreferences (_hiddenDefaultIds).
+// Do NOT change an existing id: value after it ships — doing so breaks hide-by-ID
+// for existing users. When adding a new session, pick a unique kebab-case ID.
 final List<Session> kDefaultSessions = [
   Session(
     id: 'projecting-session',

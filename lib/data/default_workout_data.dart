@@ -9,6 +9,10 @@ Exercise _findInstance(String id) {
   return template.deepCopy();
 }
 
+// IMPORTANT: IDs are stable keys persisted to SharedPreferences (_hiddenDefaultIds).
+// Do NOT change an existing id: value after it ships — doing so breaks hide-by-ID
+// for existing users (the old ID will no longer match and the item will reappear).
+// When adding a new workout, pick a unique kebab-case ID derived from the title.
 List<Workout> kDefaultWorkouts = [
   // ============================================================================
   // WARM-UPS
