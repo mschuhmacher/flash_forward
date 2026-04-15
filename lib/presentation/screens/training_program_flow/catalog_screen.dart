@@ -203,13 +203,13 @@ class ProgramListviewCard extends StatelessWidget {
     required this.itemType,
     required this.onCopy,
     required this.isDefault,
-    this.onDelete,
+    required this.onDelete,
   });
 
   final dynamic filteredListItem;
   final ItemType itemType;
   final VoidCallback onCopy;
-  final VoidCallback? onDelete;
+  final VoidCallback onDelete;
   final bool isDefault;
 
   @override
@@ -266,17 +266,15 @@ class ProgramListviewCard extends StatelessWidget {
                 icon: Icons.copy_rounded,
                 label: 'Copy',
               ),
-              if (onDelete != null) ...[
-                SizedBox(width: 8),
-                SlidableAction(
-                  borderRadius: BorderRadius.circular(12),
-                  onPressed: (_) => onDelete!(),
-                  backgroundColor: context.colorScheme.error,
-                  foregroundColor: context.colorScheme.onError,
-                  icon: Icons.delete_rounded,
-                  label: 'Delete',
-                ),
-              ],
+              SizedBox(width: 8),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (_) => onDelete(),
+                backgroundColor: context.colorScheme.error,
+                foregroundColor: context.colorScheme.onError,
+                icon: Icons.delete_rounded,
+                label: 'Delete',
+              ),
             ],
           ),
           child: Container(
