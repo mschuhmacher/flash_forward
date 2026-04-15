@@ -75,16 +75,48 @@ class _ProgramListviewState extends State<ProgramListview> {
     }
   }
 
-  Future<void> _deleteItem(dynamic item) async {
+  Future<void> _hideOrDeleteItem(dynamic item) async {
     final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    switch (widget.itemType) {
-      case ItemType.sessions:
-        await presetProvider.deleteUserPresetSession((item as Session).id);
-      case ItemType.workouts:
-        await presetProvider.deleteUserPresetWorkout((item as Workout).id);
-      case ItemType.exercises:
-        await presetProvider.deleteUserPresetExercise((item as Exercise).id);
+    final isDefault = presetProvider.isDefaultItem(item.id);
+
+    if (isDefault) {
+      // Default items cannot be deleted outright — they are hidden so the user
+      // can restore them later via Settings > Restore defaults.
+      final confirm = await _showHideDefaultDialog(item.title);
+      if (confirm != true) return;
+      await presetProvider.hideDefaultItem(item.id);
+    } else {
+      switch (widget.itemType) {
+        case ItemType.sessions:
+          await presetProvider.deleteUserPresetSession(item.id);
+        case ItemType.workouts:
+          await presetProvider.deleteUserPresetWorkout(item.id);
+        case ItemType.exercises:
+          await presetProvider.deleteUserPresetExercise(item.id);
+      }
     }
+  }
+
+  Future<bool?> _showHideDefaultDialog(String title) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove from catalog?'),
+        content: Text(
+          '"$title" is a default item. You can restore it anytime via Settings > Restore defaults.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -144,25 +176,14 @@ class _ProgramListviewState extends State<ProgramListview> {
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   itemBuilder: (BuildContext context, int index) {
                     final item = filteredListItems[index];
-
-                    final bool isUserDefined;
-                    switch (widget.itemType) {
-                      case ItemType.sessions:
-                        isUserDefined = presetData.presetUserSessionIDs
-                            .contains(item.id);
-                      case ItemType.workouts:
-                        isUserDefined = presetData.presetUserWorkoutsIDs
-                            .contains(item.id);
-                      case ItemType.exercises:
-                        isUserDefined = presetData.presetUserExerciseIDs
-                            .contains(item.id);
-                    }
+                    final bool isDefault = presetData.isDefaultItem(item.id);
 
                     return ProgramListviewCard(
                       filteredListItem: item,
                       itemType: widget.itemType,
                       onCopy: () => _copyItem(item),
-                      onDelete: isUserDefined ? () => _deleteItem(item) : null,
+                      onDelete: () => _hideOrDeleteItem(item),
+                      isDefault: isDefault,
                     );
                   },
                 ),
@@ -181,6 +202,7 @@ class ProgramListviewCard extends StatelessWidget {
     required this.filteredListItem,
     required this.itemType,
     required this.onCopy,
+    required this.isDefault,
     this.onDelete,
   });
 
@@ -188,6 +210,7 @@ class ProgramListviewCard extends StatelessWidget {
   final ItemType itemType;
   final VoidCallback onCopy;
   final VoidCallback? onDelete;
+  final bool isDefault;
 
   @override
   Widget build(BuildContext context) {
@@ -278,14 +301,41 @@ class ProgramListviewCard extends StatelessWidget {
                 ),
               ),
               title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    filteredListItem.title,
-                    style: context.titleMedium,
-                    overflow: TextOverflow.ellipsis,
+                  Expanded(
+                    child: Text(
+                      filteredListItem.title,
+                      style: context.titleMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  // Icon(Icons.circle),
+                  if (isDefault)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
+                      child: Text(
+                        'DEFAULT',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               subtitle: Column(
