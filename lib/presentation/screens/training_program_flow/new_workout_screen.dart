@@ -14,6 +14,8 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 class NewWorkoutScreen extends StatefulWidget {
   final Workout? workout;
@@ -35,8 +37,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
   bool get _isNew => widget.workout == null;
 
-  bool get _canEditMetadata =>
-      widget.workout == null || widget.workout!.userId != null;
+  bool get _isEditingDefault {
+    if (widget.workout == null) return false;
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    return presetProvider.isDefaultItem(widget.workout!.id);
+  }
 
   late Workout _workout =
       widget.workout ??
@@ -84,14 +89,52 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           context,
           listen: false,
         );
+        final isDefault = widget.workout != null &&
+            presetProvider.isDefaultItem(widget.workout!.id);
+
         if (_isNew) {
           await presetProvider.addPresetWorkout(workout);
+        } else if (isDefault) {
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final userCopy = workout.copyWith(
+            id: const Uuid().v4(),
+            userId: authProvider.userId,
+            templateId: widget.workout!.id,
+          );
+          await presetProvider.addPresetWorkout(userCopy);
+          await presetProvider.hideDefaultItem(widget.workout!.id);
+          await _showDefaultEditTipIfNeeded();
         } else {
           await presetProvider.updatePresetWorkout(workout);
         }
       }
       if (mounted) Navigator.pop(context, workout);
     }
+  }
+
+  Future<void> _showDefaultEditTipIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('pref_seen_default_edit_tip') == true) return;
+    await prefs.setBool('pref_seen_default_edit_tip', true);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Default item customized'),
+        content: const Text(
+          "You just edited a default item. Your changes were saved as a personal "
+          "copy — the original default has been hidden from your catalog. "
+          "You can bring all default content back anytime via "
+          "Settings > Restore defaults.",
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
   }
 
   _copyExercise(Exercise exercise) {
@@ -112,10 +155,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     final workout = _workout;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    final existingWorkoutTitles =
-        presetProvider.presetWorkouts.map((w) => w.title).toList();
-
     final Set<String> existingExerciseIds = {};
 
     if (workout.exercises.isNotEmpty) {
@@ -157,7 +196,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                     flex: 3,
                     child: TextFormField(
                       controller: _titleController,
-                      enabled: _canEditMetadata,
                       maxLength: FieldLimits.workoutTitleMaxLength,
                       decoration: InputDecoration(
                         fillColor: context.colorScheme.surfaceBright,
@@ -168,37 +206,30 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator:
-                          _canEditMetadata
-                              ? (v) => FieldValidators.workoutTitle(
-                                v,
-                                existingTitles: existingWorkoutTitles,
-                                ownTitle: widget.workout?.title,
-                              )
-                              : null,
+                      validator: (v) {
+                        final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+                        final existingTitles = _isEditingDefault
+                            ? presetProvider.allKnownWorkoutTitles
+                            : presetProvider.presetWorkouts.map((w) => w.title).toList();
+                        final ownTitle = _isEditingDefault ? null : widget.workout?.title;
+                        return FieldValidators.workoutTitle(v, existingTitles: existingTitles, ownTitle: ownTitle);
+                      },
                     ),
                   ),
                   SizedBox(width: 8),
                   Expanded(
                     flex: 2,
-                    child: Opacity(
-                      opacity: _canEditMetadata ? 1.0 : 0.5,
-                      child: IgnorePointer(
-                        ignoring: !_canEditMetadata,
-                        child: MyLabelDropdownButton(
-                          value:
-                              _itemLabelController.text.isNotEmpty
-                                  ? _itemLabelController.text
-                                  : null,
-                          onChanged: (value) {
-                            setState(() {
-                              _itemLabelController.text = value ?? '';
-                            });
-                          },
-                          validator:
-                              _canEditMetadata ? FieldValidators.label : null,
-                        ),
-                      ),
+                    child: MyLabelDropdownButton(
+                      value:
+                          _itemLabelController.text.isNotEmpty
+                              ? _itemLabelController.text
+                              : null,
+                      onChanged: (value) {
+                        setState(() {
+                          _itemLabelController.text = value ?? '';
+                        });
+                      },
+                      validator: FieldValidators.label,
                     ),
                   ),
                 ],
@@ -209,7 +240,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _descriptionController,
-                      enabled: _canEditMetadata,
                       maxLength: FieldLimits.workoutDescriptionMaxLength,
                       maxLines: null,
                       decoration: InputDecoration(
@@ -221,10 +251,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator:
-                          _canEditMetadata
-                              ? FieldValidators.workoutDescription
-                              : null,
+                      validator: FieldValidators.workoutDescription,
                     ),
                   ),
                   // if (widget.itemName == 'workout') ...[],

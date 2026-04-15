@@ -10,6 +10,8 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 class NewExerciseScreen extends StatefulWidget {
   final Exercise? exercise;
@@ -75,9 +77,15 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   bool get _isNew => widget.exercise == null;
 
-  // Catalog exercises have no userId — title/label/description are locked.
-  bool get _canEditMetadata =>
-      widget.exercise == null || widget.exercise!.userId != null;
+  // When editing a default, the save path creates a user-owned copy instead of
+  // mutating the default in place. The copy must have a UNIQUE title because
+  // after restoreAllDefaults() the original returns and two items with the same
+  // title would be ambiguous.
+  bool get _isEditingDefault {
+    if (widget.exercise == null) return false;
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    return presetProvider.isDefaultItem(widget.exercise!.id);
+  }
 
   @override
   void dispose() {
@@ -130,13 +138,32 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                 : _notesController.text.trim(),
       );
       if (widget.persistToProvider) {
-        final presetProvider = Provider.of<PresetProvider>(
-          context,
-          listen: false,
-        );
+        final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+        // Recompute here (not using _isEditingDefault) to avoid build-vs-save
+        // context inconsistency.
+        final isDefault = widget.exercise != null &&
+            presetProvider.isDefaultItem(widget.exercise!.id);
+
         if (_isNew) {
+          // Brand new user exercise — straight add.
           await presetProvider.addPresetExercise(exercise);
+        } else if (isDefault) {
+          // Copy-on-edit: create a user-owned copy carrying a templateId that
+          // points back to the original default. This templateId is the marker
+          // used by isModifiedDefault() and restoreAllDefaults() to find and
+          // clean up these copies when the user chooses to restore defaults.
+          // After adding the copy, hide the original so both don't appear.
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final userCopy = exercise.copyWith(
+            id: const Uuid().v4(),
+            userId: authProvider.userId,
+            templateId: widget.exercise!.id,
+          );
+          await presetProvider.addPresetExercise(userCopy);
+          await presetProvider.hideDefaultItem(widget.exercise!.id);
+          await _showDefaultEditTipIfNeeded();
         } else {
+          // Regular edit of a user item — mutate in place.
           await presetProvider.updatePresetExercise(exercise);
         }
       }
@@ -144,12 +171,44 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
     }
   }
 
+  /// Shows a one-time educational dialog the first time the user edits a default
+  /// item. After it has been shown once, it never appears again (tracked via
+  /// SharedPreferences key `pref_seen_default_edit_tip`).
+  ///
+  /// Rationale: the copy-on-edit flow is silent by design, but that silence
+  /// hides two important facts from the user — (1) their edit became a new
+  /// personal copy, not an in-place modification of the default, and (2) the
+  /// original can be brought back via Settings > Restore defaults. Showing
+  /// this once builds the user's mental model for the whole feature.
+  Future<void> _showDefaultEditTipIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('pref_seen_default_edit_tip') == true) return;
+    // Persist before showing so even if the user force-quits mid-dialog we
+    // don't annoy them with it again on next launch.
+    await prefs.setBool('pref_seen_default_edit_tip', true);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Default item customized'),
+        content: const Text(
+          "You just edited a default item. Your changes were saved as a personal "
+          "copy — the original default has been hidden from your catalog. "
+          "You can bring all default content back anytime via "
+          "Settings > Restore defaults.",
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    final existingExerciseTitles =
-        presetProvider.presetExercises.map((e) => e.title).toList();
-
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -187,7 +246,6 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                     child: TextFormField(
                       controller: _titleController,
                       autofocus: _isNew,
-                      enabled: _canEditMetadata,
                       maxLength: FieldLimits.exerciseTitleMaxLength,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
@@ -199,29 +257,23 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator: _canEditMetadata
-                          ? (v) => FieldValidators.exerciseTitle(
-                              v,
-                              existingTitles: existingExerciseTitles,
-                              ownTitle: widget.exercise?.title,
-                            )
-                          : null,
+                      validator: (value) {
+                        final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+                        final existingTitles = _isEditingDefault
+                            ? presetProvider.allKnownExerciseTitles
+                            : presetProvider.presetExercises.map((e) => e.title).toList();
+                        final ownTitle = _isEditingDefault ? null : widget.exercise?.title;
+                        return FieldValidators.exerciseTitle(value, existingTitles: existingTitles, ownTitle: ownTitle);
+                      },
                     ),
                   ),
                   SizedBox(width: 8),
                   Expanded(
                     flex: 2,
-                    child: Opacity(
-                      opacity: _canEditMetadata ? 1.0 : 0.5,
-                      child: IgnorePointer(
-                        ignoring: !_canEditMetadata,
-                        child: MyLabelDropdownButton(
-                          value: _label,
-                          onChanged: (value) => setState(() => _label = value),
-                          validator:
-                              _canEditMetadata ? FieldValidators.label : null,
-                        ),
-                      ),
+                    child: MyLabelDropdownButton(
+                      value: _label,
+                      onChanged: (value) => setState(() => _label = value),
+                      validator: FieldValidators.label,
                     ),
                   ),
                 ],
@@ -231,7 +283,6 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
               // ── Description ────────────────────────────────────
               TextFormField(
                 controller: _descriptionController,
-                enabled: _canEditMetadata,
                 maxLength: FieldLimits.exerciseDescriptionMaxLength,
                 maxLines: null,
                 textInputAction: TextInputAction.next,
@@ -244,10 +295,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                     horizontal: 8,
                   ),
                 ),
-                validator:
-                    _canEditMetadata
-                        ? FieldValidators.exerciseDescription
-                        : null,
+                validator: FieldValidators.exerciseDescription,
               ),
               SizedBox(height: 20),
 

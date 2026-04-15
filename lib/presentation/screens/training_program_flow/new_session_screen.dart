@@ -15,6 +15,8 @@ import 'package:flash_forward/utils/nullable.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 class NewSessionScreen extends StatefulWidget {
   final Session? session;
@@ -34,6 +36,16 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool get _isNew => widget.session == null;
+
+  // When editing a default, the save path creates a user-owned copy instead of
+  // mutating the default in place. The copy must have a UNIQUE title because
+  // after restoreAllDefaults() the original returns and two items with the same
+  // title would be ambiguous.
+  bool get _isEditingDefault {
+    if (widget.session == null) return false;
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    return presetProvider.isDefaultItem(widget.session!.id);
+  }
 
   // Title, label, workouts are required fields, so session must be initialized with them
   late Session _session =
@@ -85,12 +97,27 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         return;
       }
 
-      final presetProvider = Provider.of<PresetProvider>(
-        context,
-        listen: false,
-      );
+      final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+      final isDefault = widget.session != null &&
+          presetProvider.isDefaultItem(widget.session!.id);
+
       if (_isNew) {
         await presetProvider.addPresetSession(session);
+      } else if (isDefault) {
+        // Copy-on-edit: create a user-owned copy carrying a templateId that
+        // points back to the original default. This templateId is the marker
+        // used by isModifiedDefault() and restoreAllDefaults() to find and
+        // clean up these copies when the user chooses to restore defaults.
+        // After adding the copy, hide the original so both don't appear.
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final userCopy = session.copyWith(
+          id: const Uuid().v4(),
+          userId: authProvider.userId,
+          templateId: widget.session!.id,
+        );
+        await presetProvider.addPresetSession(userCopy);
+        await presetProvider.hideDefaultItem(widget.session!.id);
+        await _showDefaultEditTipIfNeeded();
       } else {
         await presetProvider.updatePresetSession(session);
       }
@@ -114,12 +141,54 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
     });
   }
 
+  /// Shows a one-time educational dialog the first time the user edits a default
+  /// item. After it has been shown once, it never appears again (tracked via
+  /// SharedPreferences key `pref_seen_default_edit_tip`).
+  ///
+  /// Rationale: the copy-on-edit flow is silent by design, but that silence
+  /// hides two important facts from the user — (1) their edit became a new
+  /// personal copy, not an in-place modification of the default, and (2) the
+  /// original can be brought back via Settings > Restore defaults. Showing
+  /// this once builds the user's mental model for the whole feature.
+  Future<void> _showDefaultEditTipIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('pref_seen_default_edit_tip') == true) return;
+    // Persist before showing so even if the user force-quits mid-dialog we
+    // don't annoy them with it again on next launch.
+    await prefs.setBool('pref_seen_default_edit_tip', true);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Default item customized'),
+        content: const Text(
+          "You just edited a default item. Your changes were saved as a personal "
+          "copy — the original default has been hidden from your catalog. "
+          "You can bring all default content back anytime via "
+          "Settings > Restore defaults.",
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = _session;
     final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    final existingSessionTitles =
-        presetProvider.presetSessions.map((s) => s.title).toList();
+    // When editing a default we use the UNFILTERED list (including the hidden
+    // original) and omit ownTitle so the validator sees the original's title
+    // as taken — forcing the user to pick a new name. This prevents collisions
+    // after restoreAllDefaults() brings the original back.
+    final existingSessionTitles = _isEditingDefault
+        ? presetProvider.allKnownSessionTitles
+        : presetProvider.presetSessions.map((s) => s.title).toList();
+    final sessionOwnTitle = _isEditingDefault ? null : widget.session?.title;
     final Set<String> existingWorkoutIds = {};
 
     if (session.workouts.isNotEmpty) {
@@ -175,7 +244,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           (v) => FieldValidators.sessionTitle(
                             v,
                             existingTitles: existingSessionTitles,
-                            ownTitle: widget.session?.title,
+                            ownTitle: sessionOwnTitle,
                           ),
                     ),
                   ),
