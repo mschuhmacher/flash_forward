@@ -14,7 +14,7 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flash_forward/utils/default_edit_tip.dart';
 import 'package:uuid/uuid.dart';
 
 class NewWorkoutScreen extends StatefulWidget {
@@ -103,38 +103,13 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           );
           await presetProvider.addPresetWorkout(userCopy);
           await presetProvider.hideDefaultItem(widget.workout!.id);
-          await _showDefaultEditTipIfNeeded();
+          if (mounted) await showDefaultEditTipIfNeeded(context);
         } else {
           await presetProvider.updatePresetWorkout(workout);
         }
       }
       if (mounted) Navigator.pop(context, workout);
     }
-  }
-
-  Future<void> _showDefaultEditTipIfNeeded() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool('pref_seen_default_edit_tip') == true) return;
-    await prefs.setBool('pref_seen_default_edit_tip', true);
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Default item customized'),
-        content: const Text(
-          "You just edited a default item. Your changes were saved as a personal "
-          "copy — the original default has been hidden from your catalog. "
-          "You can bring all default content back anytime via "
-          "Settings > Restore defaults.",
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
   }
 
   _copyExercise(Exercise exercise) {

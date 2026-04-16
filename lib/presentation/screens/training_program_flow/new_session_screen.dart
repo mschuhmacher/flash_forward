@@ -11,11 +11,11 @@ import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
+import 'package:flash_forward/utils/default_edit_tip.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class NewSessionScreen extends StatefulWidget {
@@ -117,7 +117,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         );
         await presetProvider.addPresetSession(userCopy);
         await presetProvider.hideDefaultItem(widget.session!.id);
-        await _showDefaultEditTipIfNeeded();
+        if (mounted) await showDefaultEditTipIfNeeded(context);
       } else {
         await presetProvider.updatePresetSession(session);
       }
@@ -139,42 +139,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       final index = _session.workouts.indexOf(workout);
       _session.workouts.removeAt(index);
     });
-  }
-
-  /// Shows a one-time educational dialog the first time the user edits a default
-  /// item. After it has been shown once, it never appears again (tracked via
-  /// SharedPreferences key `pref_seen_default_edit_tip`).
-  ///
-  /// Rationale: the copy-on-edit flow is silent by design, but that silence
-  /// hides two important facts from the user — (1) their edit became a new
-  /// personal copy, not an in-place modification of the default, and (2) the
-  /// original can be brought back via Settings > Restore defaults. Showing
-  /// this once builds the user's mental model for the whole feature.
-  Future<void> _showDefaultEditTipIfNeeded() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool('pref_seen_default_edit_tip') == true) return;
-    // Persist before showing so even if the user force-quits mid-dialog we
-    // don't annoy them with it again on next launch.
-    await prefs.setBool('pref_seen_default_edit_tip', true);
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Default item customized'),
-        content: const Text(
-          "You just edited a default item. Your changes were saved as a personal "
-          "copy — the original default has been hidden from your catalog. "
-          "You can bring all default content back anytime via "
-          "Settings > Restore defaults.",
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
