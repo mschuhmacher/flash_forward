@@ -5,9 +5,7 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
-
-/// TODO: add in eventLoader func. to add a marker (e.g. a dot) to each day on which a session was completed
-/// TODO: add in 'today' button in the header
+import 'package:intl/intl.dart';
 
 class MyCalendar extends StatefulWidget {
   const MyCalendar({super.key});
@@ -18,12 +16,19 @@ class MyCalendar extends StatefulWidget {
 
 class _MyCalendarState extends State<MyCalendar> {
   DateTime _focusedDay = DateTime.now();
-  StartingDayOfWeek _startingDayOfWeek = StartingDayOfWeek.monday;
+  final StartingDayOfWeek _startingDayOfWeek = StartingDayOfWeek.monday;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<SessionLogProvider>(
       builder: (BuildContext context, sessionData, Widget? child) {
+        final headerButtonTextStyle = TextStyle(
+          fontSize: 14.0,
+          fontWeight: FontWeight.normal,
+          letterSpacing: 0,
+          color: context.colorScheme.primary,
+        );
+
         // Build a Set of dates with logged sessions (for fast lookup)
         final Set<DateTime> datesWithSessions = {};
 
@@ -57,12 +62,52 @@ class _MyCalendarState extends State<MyCalendar> {
 
           headerStyle: HeaderStyle(
             titleTextStyle: context.titleLarge,
+            formatButtonTextStyle: headerButtonTextStyle,
             formatButtonDecoration: BoxDecoration(
               border: Border.fromBorderSide(
                 BorderSide(color: context.colorScheme.secondary, width: 1.5),
               ),
               borderRadius: BorderRadius.all(Radius.circular(12.0)),
             ),
+          ),
+
+          calendarBuilders: CalendarBuilders(
+            headerTitleBuilder: (context, day) {
+              final title = DateFormat('MMMM yyyy').format(day);
+              return Row(
+                children: [
+                  Text(title, style: context.titleLarge),
+                  Spacer(),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10.0,
+                        vertical: 4.0,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      side: BorderSide(
+                        color: context.colorScheme.secondary,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _focusedDay = DateTime.now();
+                      });
+                      sessionData.updateSelectedSessionsCalendarFormat(
+                        focusedDay: _focusedDay,
+                      );
+                    },
+                    child: Text('Today', style: headerButtonTextStyle),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              );
+            },
           ),
 
           calendarStyle: CalendarStyle(
