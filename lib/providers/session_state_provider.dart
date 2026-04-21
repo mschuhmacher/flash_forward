@@ -499,6 +499,7 @@ class SessionStateProvider extends ChangeNotifier {
       if (next == null) {
         _progress = _progress.copyWith(phase: TimerPhase.workoutComplete);
         _remaining = Duration.zero;
+        _beepScheduler?.cancelAll();
         return;
       }
       // _remaining is negative here (the overshoot past phase end).

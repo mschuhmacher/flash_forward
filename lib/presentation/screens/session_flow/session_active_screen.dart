@@ -514,7 +514,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    SessionStateProvider().reset();
+                    context.read<SessionStateProvider>().reset();
                     Navigator.of(context).pop(); // Close the dialog
                     Navigator.of(context).pop(); // Close the session screen
                   },

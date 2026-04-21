@@ -307,7 +307,8 @@ class ProgramListviewCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (isDefault)
+                  if (isDefault) 
+                  //TODO: change to something nicer
                     Container(
                       margin: const EdgeInsets.only(left: 6),
                       padding: const EdgeInsets.symmetric(
@@ -324,7 +325,7 @@ class ProgramListviewCard extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'DEFAULT',
+                        'D',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Theme.of(
                             context,
