@@ -86,6 +86,8 @@ class _ProgramListviewState extends State<ProgramListview> {
       if (confirm != true) return;
       await presetProvider.hideDefaultItem(item.id);
     } else {
+      final confirm = await _showDeleteConfirmationDialog(item.title);
+      if (confirm != true) return;
       switch (widget.itemType) {
         case ItemType.sessions:
           await presetProvider.deleteUserPresetSession(item.id);
@@ -100,22 +102,46 @@ class _ProgramListviewState extends State<ProgramListview> {
   Future<bool?> _showHideDefaultDialog(String title) {
     return showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove from catalog?'),
-        content: Text(
-          '"$title" is a default item. You can restore it anytime via Settings > Restore defaults.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Remove from catalog?'),
+            content: Text(
+              '"$title" is a default item. You can restore it anytime via Settings > Restore defaults.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Remove'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Remove'),
+    );
+  }
+
+  Future<bool?> _showDeleteConfirmationDialog(String title) {
+    return showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Remove from catalog?'),
+            content: Text(
+              '"$title" is a user-created item. Deleting this item is permanent.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Remove'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -307,8 +333,8 @@ class ProgramListviewCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (isDefault) 
-                  //TODO: change to something nicer
+                  if (isDefault)
+                    //TODO: change to something nicer looking
                     Container(
                       margin: const EdgeInsets.only(left: 6),
                       padding: const EdgeInsets.symmetric(
@@ -316,9 +342,8 @@ class ProgramListviewCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHigh,
+                        color:
+                            Theme.of(context).colorScheme.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: Theme.of(context).colorScheme.outlineVariant,
@@ -327,9 +352,7 @@ class ProgramListviewCard extends StatelessWidget {
                       child: Text(
                         'D',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.5,
                         ),
