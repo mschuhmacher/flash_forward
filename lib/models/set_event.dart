@@ -8,7 +8,7 @@ class SetEvent {
   final Duration interRepRestTime;
   final int repsCompleted;
 
-  SetEvent({
+  const SetEvent({
     required this.workoutIndex,
     required this.exerciseIndex,
     required this.setIndex,
