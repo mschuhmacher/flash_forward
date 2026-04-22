@@ -1,4 +1,7 @@
 import 'package:flash_forward/models/grade_entry.dart';
+import 'package:flash_forward/models/rest_event.dart';
+import 'package:flash_forward/models/session_summary.dart';
+import 'package:flash_forward/models/set_event.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:uuid/uuid.dart';
@@ -18,6 +21,9 @@ class Session {
     this.maxGradeClimbed,
     this.maxGradeFlashed,
     this.bodyWeightKg,
+    this.setEvents,
+    this.restEvents,
+    this.summary,
   }) : id = id ?? const Uuid().v4();
 
   final String id;
@@ -33,6 +39,9 @@ class Session {
   final GradeEntry? maxGradeClimbed;
   final GradeEntry? maxGradeFlashed;
   final double? bodyWeightKg;
+  final List<SetEvent>? setEvents;
+  final List<RestEvent>? restEvents;
+  final SessionSummary? summary;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -48,6 +57,9 @@ class Session {
     'maxGradeClimbed': maxGradeClimbed?.toJson(),
     'maxGradeFlashed': maxGradeFlashed?.toJson(),
     'bodyWeightKg': bodyWeightKg,
+    'setEvents': setEvents?.map((s) => s.toJson()).toList(),
+    'restEvents': restEvents?.map((r) => r.toJson()).toList(),
+    'summary': summary?.toJson(),
   };
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -57,23 +69,40 @@ class Session {
     label: json['label'] ?? 'Other',
     description: json['description'],
     // Backward-compatible: handle old 'date' key
-    completedAt: (json['completedAt'] ?? json['date']) != null
-        ? DateTime.tryParse(json['completedAt'] ?? json['date'])
-        : null,
+    completedAt:
+        (json['completedAt'] ?? json['date']) != null
+            ? DateTime.tryParse(json['completedAt'] ?? json['date'])
+            : null,
     // Backward-compatible: handle old 'list' key
-    workouts: ((json['workouts'] ?? json['list']) as List<dynamic>? ?? [])
-        .map((w) => Workout.fromJson(w as Map<String, dynamic>))
-        .toList(),
+    workouts:
+        ((json['workouts'] ?? json['list']) as List<dynamic>? ?? [])
+            .map((w) => Workout.fromJson(w as Map<String, dynamic>))
+            .toList(),
     userId: json['userId'],
     notes: json['notes'],
     rpe: json['rpe'],
-    maxGradeClimbed: json['maxGradeClimbed'] != null
-        ? GradeEntry.fromJson(json['maxGradeClimbed'] as Map<String, dynamic>)
-        : null,
-    maxGradeFlashed: json['maxGradeFlashed'] != null
-        ? GradeEntry.fromJson(json['maxGradeFlashed'] as Map<String, dynamic>)
-        : null,
+    maxGradeClimbed:
+        json['maxGradeClimbed'] != null
+            ? GradeEntry.fromJson(
+              json['maxGradeClimbed'] as Map<String, dynamic>,
+            )
+            : null,
+    maxGradeFlashed:
+        json['maxGradeFlashed'] != null
+            ? GradeEntry.fromJson(
+              json['maxGradeFlashed'] as Map<String, dynamic>,
+            )
+            : null,
     bodyWeightKg: (json['bodyWeightKg'] as num?)?.toDouble(),
+    setEvents: (json['setEvents'] as List<dynamic>?)
+        ?.map((e) => SetEvent.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    restEvents: (json['restEvents'] as List<dynamic>?)
+        ?.map((e) => RestEvent.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    summary: json['summary'] != null
+        ? SessionSummary.fromJson(json['summary'] as Map<String, dynamic>)
+        : null,
   );
 
   // Nullable<T> parameters let callers distinguish "not provided" (omit the
@@ -94,6 +123,9 @@ class Session {
     Nullable<GradeEntry>? maxGradeClimbed,
     Nullable<GradeEntry>? maxGradeFlashed,
     Nullable<double>? bodyWeightKg,
+    List<SetEvent>? setEvents,
+    List<RestEvent>? restEvents,
+    SessionSummary? summary,
   }) => Session(
     id: id ?? this.id,
     templateId: templateId ?? this.templateId,
@@ -105,9 +137,14 @@ class Session {
     userId: userId ?? this.userId,
     notes: notes == null ? this.notes : notes.value,
     rpe: rpe == null ? this.rpe : rpe.value,
-    maxGradeClimbed: maxGradeClimbed == null ? this.maxGradeClimbed : maxGradeClimbed.value,
-    maxGradeFlashed: maxGradeFlashed == null ? this.maxGradeFlashed : maxGradeFlashed.value,
+    maxGradeClimbed:
+        maxGradeClimbed == null ? this.maxGradeClimbed : maxGradeClimbed.value,
+    maxGradeFlashed:
+        maxGradeFlashed == null ? this.maxGradeFlashed : maxGradeFlashed.value,
     bodyWeightKg: bodyWeightKg == null ? this.bodyWeightKg : bodyWeightKg.value,
+    setEvents: setEvents ?? this.setEvents,
+    restEvents: restEvents ?? this.restEvents,
+    summary: summary ?? this.summary,
   );
 
   /// Creates an independent copy with a new UUID and deep-copied workouts.
@@ -121,5 +158,6 @@ class Session {
     userId: userId,
     // maxGradeClimbed, maxGradeFlashed, bodyWeightKg intentionally omitted —
     // these are set post-completion and are not part of the preset.
+    // Same for setEvents, restEvents, summary.
   );
 }

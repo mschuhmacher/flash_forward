@@ -9,9 +9,9 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 ## Task List Overview
 
 ### Phase 1 — Models
-- [ ] Task 1 of 26: Create `SetEvent` model ⚡ Your turn (first of 3 similar model tasks)
-- [ ] Task 2 of 26: Create `RestEvent` + `RestKind` model *(Claude handles after Task 1 review)*
-- [ ] Task 3 of 26: Create `SessionSummary` model *(Claude handles after Task 1 review)*
+- [x] Task 1 of 26: Create `SetEvent` model
+- [x] Task 2 of 26: Create `RestEvent` + `RestType` model
+- [x] Task 3 of 26: Create `SessionSummary` model
 - [ ] Task 4 of 26: Extend `Session` with nullable event/summary fields + JSON round-trip tests
 
 ### Phase 2 — Settings
