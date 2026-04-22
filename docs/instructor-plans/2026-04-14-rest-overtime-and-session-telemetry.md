@@ -15,7 +15,7 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 - [x] Task 4 of 26: Extend `Session` with nullable event/summary fields + JSON round-trip tests
 
 ### Phase 2 — Settings
-- [ ] Task 5 of 26: Add `restOvertimeOnBackground` to `SettingsProvider`
+- [x] Task 5 of 26: Add `restOvertimeOnBackground` to `SettingsProvider`
 
 ### Phase 3 — Overtime state machine
 - [ ] Task 6 of 26: Add `TimerPhase.overtime` + overtime state fields + getter

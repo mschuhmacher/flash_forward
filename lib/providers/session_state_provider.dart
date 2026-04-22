@@ -15,6 +15,7 @@ enum TimerPhase {
   repRest,
   setRest,
   exerciseRest,
+  overtime,
   workoutComplete,
   paused,
   getReady,
@@ -97,6 +98,10 @@ class SessionStateProvider extends ChangeNotifier {
   bool _isForegrounded = true;
   // Current sound mode — synced from SettingsProvider at session start.
   SoundMode _soundMode = SoundMode.soundsOnly;
+  //
+  Duration _overtimeElapsed = Duration.zero;
+  bool _overtimeWasAutomatic = false;
+  bool _restOvertimeOnBackground = false;
 
   TimerPhase _rememberCurrentPhaseForPausing = TimerPhase.getReady;
 
@@ -108,6 +113,7 @@ class SessionStateProvider extends ChangeNotifier {
   Duration get remaining => _remaining;
   TimerPhase get phase => _progress.phase;
   bool get isPaused => _isPaused;
+  Duration get overtimeElapsed => _overtimeElapsed;
 
   /// The active session copy. Non-null while a session is running.
   Session? get activeSession => _activeSession;
@@ -120,6 +126,9 @@ class SessionStateProvider extends ChangeNotifier {
     _soundMode = mode;
     _rescheduleSound();
   }
+
+  void setRestOvertimeOnBackground(bool value) =>
+      _restOvertimeOnBackground = value;
 
   /// Called by [ActiveSessionScreen] on app lifecycle changes. On going to
   /// background, schedules notifications if the sound mode requires them. On
@@ -316,11 +325,16 @@ class SessionStateProvider extends ChangeNotifier {
 
     // Clamp progress if the user reduced sets/reps below current position.
     final clampedSet = _progress.currentSet.clamp(1, updated.sets);
-    final clampedRep = updated.reps != null
-        ? _progress.currentRep.clamp(1, updated.reps!)
-        : _progress.currentRep;
-    if (clampedSet != _progress.currentSet || clampedRep != _progress.currentRep) {
-      _progress = _progress.copyWith(currentSet: clampedSet, currentRep: clampedRep);
+    final clampedRep =
+        updated.reps != null
+            ? _progress.currentRep.clamp(1, updated.reps!)
+            : _progress.currentRep;
+    if (clampedSet != _progress.currentSet ||
+        clampedRep != _progress.currentRep) {
+      _progress = _progress.copyWith(
+        currentSet: clampedSet,
+        currentRep: clampedRep,
+      );
     }
 
     notifyListeners();
@@ -437,7 +451,8 @@ class SessionStateProvider extends ChangeNotifier {
       _advanceByElapsed(now.difference(_lastTickAt!));
       _lastTickAt = now;
 
-      final playInApp = _isForegrounded &&
+      final playInApp =
+          _isForegrounded &&
           (_soundMode == SoundMode.soundsOnly || _soundMode == SoundMode.both);
 
       if (playInApp) {
@@ -487,8 +502,9 @@ class SessionStateProvider extends ChangeNotifier {
       // Manual exercises wait for the user to tap advanceManually() — never
       // auto-advance.
       if (_activeSession != null) {
-        final exercise = _activeSession!
-            .workouts[_progress.workoutIndex].exercises[_progress.exerciseIndex];
+        final exercise =
+            _activeSession!.workouts[_progress.workoutIndex].exercises[_progress
+                .exerciseIndex];
         if (exercise.type == ExerciseType.manual &&
             _progress.phase == TimerPhase.rep) {
           _remaining = Duration.zero;
@@ -514,7 +530,8 @@ class SessionStateProvider extends ChangeNotifier {
   /// foreground state. In-app audio is driven directly by the ticker and does
   /// not need scheduling here.
   void _rescheduleSound() {
-    final useNotifications = !_isForegrounded &&
+    final useNotifications =
+        !_isForegrounded &&
         !_isPaused &&
         _activeSession != null &&
         (_soundMode == SoundMode.both ||
@@ -544,8 +561,9 @@ class SessionStateProvider extends ChangeNotifier {
 
       // Manual rep phase: duration unknown — cannot predict further.
       if (_activeSession != null) {
-        final exercise = _activeSession!
-            .workouts[next.workoutIndex].exercises[next.exerciseIndex];
+        final exercise =
+            _activeSession!.workouts[next.workoutIndex].exercises[next
+                .exerciseIndex];
         if (exercise.type == ExerciseType.manual &&
             next.phase == TimerPhase.rep) {
           break;
