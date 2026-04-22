@@ -608,7 +608,7 @@ class SessionStateProvider extends ChangeNotifier {
           beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
         }
       default:
-        break; // exerciseRest, workoutComplete, paused — no beeps
+        break; // exerciseRest, workoutComplete, paused, overtime: no beeps
     }
   }
 
@@ -683,6 +683,8 @@ class SessionStateProvider extends ChangeNotifier {
       case TimerPhase.getReady:
         // Transition from GET READY to first rep of current exercise
         return p.copyWith(phase: TimerPhase.rep);
+      case TimerPhase.overtime:
+        return null;
       case TimerPhase.workoutComplete:
         return null;
       case TimerPhase.paused:
@@ -743,6 +745,8 @@ class SessionStateProvider extends ChangeNotifier {
         return Duration(seconds: exercise.timeBetweenSets);
       case TimerPhase.exerciseRest:
         return Duration(seconds: workout.timeBetweenExercises);
+      case TimerPhase.overtime:
+        return Duration.zero;
       case TimerPhase.workoutComplete:
         return Duration.zero;
       case TimerPhase.paused:
