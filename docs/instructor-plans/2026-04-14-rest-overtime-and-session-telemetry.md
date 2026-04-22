@@ -12,7 +12,7 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 - [x] Task 1 of 26: Create `SetEvent` model
 - [x] Task 2 of 26: Create `RestEvent` + `RestType` model
 - [x] Task 3 of 26: Create `SessionSummary` model
-- [ ] Task 4 of 26: Extend `Session` with nullable event/summary fields + JSON round-trip tests
+- [x] Task 4 of 26: Extend `Session` with nullable event/summary fields + JSON round-trip tests
 
 ### Phase 2 — Settings
 - [ ] Task 5 of 26: Add `restOvertimeOnBackground` to `SettingsProvider`

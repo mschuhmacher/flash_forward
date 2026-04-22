@@ -15,27 +15,31 @@ enum SoundMode { both, soundsOnly, notificationsOnly, none }
 /// provider avoids duplicating state and keeps both widgets in sync.
 
 class SettingsProvider extends ChangeNotifier {
-  static const _keyWeightUnit  = 'pref_weight_unit';
+  static const _keyWeightUnit = 'pref_weight_unit';
   static const _keyGradeSystem = 'pref_grade_system';
-  static const _keySoundMode   = 'pref_sound_mode';
+  static const _keySoundMode = 'pref_sound_mode';
+  static const _keyOvertime = 'pref_overtime';
 
-  String _weightUnit  = 'kg';
+  String _weightUnit = 'kg';
   String _gradeSystem = 'fontainebleau';
   SoundMode _soundMode = SoundMode.soundsOnly;
+  bool _restOvertimeOnBackground = false;
 
-  String get weightUnit  => _weightUnit;
+  String get weightUnit => _weightUnit;
   String get gradeSystem => _gradeSystem;
   SoundMode get soundMode => _soundMode;
+  bool get restOvertimeOnBackground => _restOvertimeOnBackground;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _weightUnit  = prefs.getString(_keyWeightUnit)  ?? 'kg';
+    _weightUnit = prefs.getString(_keyWeightUnit) ?? 'kg';
     _gradeSystem = prefs.getString(_keyGradeSystem) ?? 'fontainebleau';
-    final stored = prefs.getString(_keySoundMode);
-    _soundMode = stored != null
-        ? SoundMode.values.byName(stored)
-        : SoundMode.soundsOnly;
+    final storedSoundMode = prefs.getString(_keySoundMode);
+    _soundMode =
+        storedSoundMode != null ? SoundMode.values.byName(storedSoundMode) : SoundMode.soundsOnly;
+    _restOvertimeOnBackground = prefs.getBool(_keyOvertime) ?? false;
     notifyListeners();
+
   }
 
   Future<void> setWeightUnit(String unit) async {
