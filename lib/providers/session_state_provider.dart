@@ -442,6 +442,15 @@ class SessionStateProvider extends ChangeNotifier {
     _lastTickAt = DateTime.now();
     _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_isPaused || _progress.phase == TimerPhase.workoutComplete) return;
+
+      if (_progress.phase == TimerPhase.overtime) {
+        final now = DateTime.now();
+        _overtimeElapsed += now.difference(_lastTickAt!);
+        _lastTickAt = now;
+        notifyListeners();
+        return;
+      }
+
       final now = DateTime.now();
       // Use actual wall-clock elapsed instead of a fixed 1 s decrement.
       // When the OS suspends the isolate (screen locked), the ticker stops
@@ -451,6 +460,7 @@ class SessionStateProvider extends ChangeNotifier {
       // phases elapsed during that gap.
       final prevProgress = _progress;
       final previousRemaining = _remaining;
+
       _advanceByElapsed(now.difference(_lastTickAt!));
       _lastTickAt = now;
 

@@ -22,7 +22,7 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 - [x] Task 7 of 26: Handle `TimerPhase.overtime` in all switch statements
 - [x] Task 8 of 26: Implement `_enterOvertime` private method
 - [x] Task 9 of 26: Implement `requestManualOvertime` public method + tests
-- [ ] Task 10 of 26: Implement `exitOvertime` + session-end guard + tests
+- [x] Task 10 of 26: Implement `exitOvertime` + session-end guard + tests
 - [ ] Task 11 of 26: Ticker increments overtime elapsed while in overtime
 
 ### Phase 4 — Background auto-trigger

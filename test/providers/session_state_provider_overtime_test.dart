@@ -111,6 +111,14 @@ void main() {
         p.exitOvertime();
         expect(p.phase, TimerPhase.setRest);
       });
+      test('ticker increments overtimeElapsed', () async {
+        final p = SessionStateProvider()..start(fixture);
+        p.debugSetPhase(TimerPhase.setRest);
+        p.requestManualOvertime();
+        expect(p.overtimeElapsed, Duration.zero);
+        await Future.delayed(const Duration(milliseconds: 1200));
+        expect(p.overtimeElapsed.inMilliseconds, greaterThan(800));
+      });
     });
   });
 }
