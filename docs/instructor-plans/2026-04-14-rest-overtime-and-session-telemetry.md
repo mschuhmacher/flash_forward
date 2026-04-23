@@ -19,7 +19,7 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 
 ### Phase 3 — Overtime state machine
 - [x] Task 6 of 26: Add `TimerPhase.overtime` + overtime state fields + getter
-- [ ] Task 7 of 26: Handle `TimerPhase.overtime` in all switch statements
+- [x] Task 7 of 26: Handle `TimerPhase.overtime` in all switch statements
 - [ ] Task 8 of 26: Implement `_enterOvertime` private method
 - [ ] Task 9 of 26: Implement `requestManualOvertime` public method + tests
 - [ ] Task 10 of 26: Implement `exitOvertime` + session-end guard + tests

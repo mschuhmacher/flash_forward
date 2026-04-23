@@ -723,6 +723,23 @@ class SessionStateProvider extends ChangeNotifier {
     return null;
   }
 
+  bool _isOvertimeEligible(TimerPhase p) {
+    return (p == TimerPhase.setRest ||
+        p == TimerPhase.exerciseRest ||
+        p == TimerPhase.getReady);
+  }
+
+  void _enterOvertime({required bool automatic}) {
+    _overtimeElapsed = Duration.zero;
+    _overtimeWasAutomatic = automatic;
+    _remaining = Duration.zero;
+    _rescheduleSound();
+
+    _progress = _progress.copyWith(phase: TimerPhase.overtime);
+
+    notifyListeners();
+  }
+
   /// Returns the duration for the current phase, derived from the active
   /// exercise/workout. Values are stored as seconds in the models.
   Duration _getDurationForPhase(SessionProgress p) {
