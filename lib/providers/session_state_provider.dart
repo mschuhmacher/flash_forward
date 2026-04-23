@@ -424,8 +424,9 @@ class SessionStateProvider extends ChangeNotifier {
     final Duration gap = now.difference(_lastTickAt!);
     if (_restOvertimeOnBackground &&
         (_progress.phase == TimerPhase.setRest ||
-            _progress.phase == TimerPhase.exerciseRest) &&
-        (gap > _remaining)) {
+            _progress.phase == TimerPhase.exerciseRest ||
+            _progress.phase == TimerPhase.getReady) &&
+        (gap >= _remaining)) {
       Duration overshoot = gap - _remaining;
       _remaining = Duration.zero;
       _lastTickAt = now;
@@ -434,9 +435,9 @@ class SessionStateProvider extends ChangeNotifier {
       exitOvertime();
       return;
     }
-
-    _advanceByElapsed(gap);
+    
     _lastTickAt = now;
+    _advanceByElapsed(gap);
     _rescheduleSound();
     notifyListeners();
   }
