@@ -409,7 +409,33 @@ class SessionStateProvider extends ChangeNotifier {
   void reconcileAfterBackground() {
     if (_isPaused || _activeSession == null || _lastTickAt == null) return;
     final now = DateTime.now();
-    _advanceByElapsed(now.difference(_lastTickAt!));
+
+    if (_progress.phase == TimerPhase.overtime) {
+      _overtimeElapsed += now.difference(_lastTickAt!);
+      _lastTickAt = now;
+      if (_overtimeWasAutomatic) {
+        exitOvertime();
+        return;
+      } else {
+        notifyListeners();
+        return;
+      }
+    }
+    final Duration gap = now.difference(_lastTickAt!);
+    if (_restOvertimeOnBackground &&
+        (_progress.phase == TimerPhase.setRest ||
+            _progress.phase == TimerPhase.exerciseRest) &&
+        (gap > _remaining)) {
+      Duration overshoot = gap - _remaining;
+      _remaining = Duration.zero;
+      _lastTickAt = now;
+      _enterOvertime(automatic: true);
+      _overtimeElapsed = overshoot;
+      exitOvertime();
+      return;
+    }
+
+    _advanceByElapsed(gap);
     _lastTickAt = now;
     _rescheduleSound();
     notifyListeners();
@@ -793,6 +819,9 @@ class SessionStateProvider extends ChangeNotifier {
     _remaining = _getDurationForPhase(_progress);
     notifyListeners();
   }
+
+  @visibleForTesting
+  void debugSetLastTickAt(DateTime t) => _lastTickAt = t;
 
   /// Returns the duration for the current phase, derived from the active
   /// exercise/workout. Values are stored as seconds in the models.

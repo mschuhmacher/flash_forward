@@ -20,6 +20,7 @@ void main() {
               label: 'Other',
               sets: 2,
               reps: 10,
+              timeBetweenSets: 10,
             ),
           ],
           timeBetweenExercises: 100,
@@ -118,6 +119,32 @@ void main() {
         expect(p.overtimeElapsed, Duration.zero);
         await Future.delayed(const Duration(milliseconds: 1200));
         expect(p.overtimeElapsed.inMilliseconds, greaterThan(800));
+      });
+    });
+
+    group('reconcileAfterBackground', () {
+      test('auto-enters and exits overtime when rest expires in background', () {
+        final p = SessionStateProvider()
+          ..setRestOvertimeOnBackground(true)
+          ..start(fixture);
+        p.debugSetPhase(TimerPhase.setRest);
+        p.debugSetLastTickAt(
+          DateTime.now().subtract(const Duration(seconds: 30)),
+        );
+        p.reconcileAfterBackground();
+        expect(p.phase, TimerPhase.getReady);
+      });
+
+      test('manual overtime survives backgrounding', () {
+        final p = SessionStateProvider()..start(fixture);
+        p.debugSetPhase(TimerPhase.setRest);
+        p.requestManualOvertime();
+        p.debugSetLastTickAt(
+          DateTime.now().subtract(const Duration(seconds: 30)),
+        );
+        p.reconcileAfterBackground();
+        expect(p.phase, TimerPhase.overtime);
+        expect(p.overtimeElapsed.inSeconds, greaterThanOrEqualTo(29));
       });
     });
   });

@@ -23,7 +23,7 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 - [x] Task 8 of 26: Implement `_enterOvertime` private method
 - [x] Task 9 of 26: Implement `requestManualOvertime` public method + tests
 - [x] Task 10 of 26: Implement `exitOvertime` + session-end guard + tests
-- [ ] Task 11 of 26: Ticker increments overtime elapsed while in overtime
+- [x] Task 11 of 26: Ticker increments overtime elapsed while in overtime
 
 ### Phase 4 — Background auto-trigger
 - [ ] Task 12 of 26: Update `reconcileAfterBackground` for auto-overtime + tests
