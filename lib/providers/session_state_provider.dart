@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 
+import 'package:meta/meta.dart';
+
 /// Describes which part of the timer is active. Kept minimal so UI can branch
 /// on a single enum instead of separate booleans.
 enum TimerPhase {
@@ -723,6 +725,15 @@ class SessionStateProvider extends ChangeNotifier {
     return null;
   }
 
+  bool requestManualOvertime() {
+    if (_isOvertimeEligible(_progress.phase)) {
+      _enterOvertime(automatic: false);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   bool _isOvertimeEligible(TimerPhase p) {
     return (p == TimerPhase.setRest ||
         p == TimerPhase.exerciseRest ||
@@ -737,6 +748,14 @@ class SessionStateProvider extends ChangeNotifier {
 
     _progress = _progress.copyWith(phase: TimerPhase.overtime);
 
+    notifyListeners();
+  }
+
+  // Force the provider into a specific phase for testing
+  @visibleForTesting
+  void debugSetPhase(TimerPhase phase) {
+    _progress = _progress.copyWith(phase: phase);
+    _remaining = _getDurationForPhase(_progress);
     notifyListeners();
   }
 
