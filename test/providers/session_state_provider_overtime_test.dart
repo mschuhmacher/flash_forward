@@ -5,7 +5,7 @@ import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('Request manual overtime', () {
+  group('Overtime tests', () {
     final fixture = Session(
       title: 'test',
       label: 'other',
@@ -27,7 +27,7 @@ void main() {
       ],
     );
 
-    group('return true for eligible phases', () {
+    group('RequestManualOvertime return true for eligible phases', () {
       test('setRest', () {
         final p = SessionStateProvider()..start(fixture);
         p.debugSetPhase(TimerPhase.setRest);
@@ -52,7 +52,7 @@ void main() {
         expect(p.remaining, Duration.zero);
       });
     });
-    group('return false for ineligible phases', () {
+    group('RequestManualOvertime return false for ineligible phases', () {
       test('rep', () {
         final p = SessionStateProvider()..start(fixture);
         p.debugSetPhase(TimerPhase.rep);
@@ -77,6 +77,39 @@ void main() {
         final p = SessionStateProvider()..start(fixture);
         p.debugSetPhase(TimerPhase.overtime);
         expect(p.requestManualOvertime(), false);
+      });
+    });
+
+    group('ExitOvertime tests', () {
+      test('setRest', () {
+        final p = SessionStateProvider()..start(fixture);
+        p.debugSetPhase(TimerPhase.setRest);
+        p.requestManualOvertime();
+        p.exitOvertime();
+        expect(p.phase, TimerPhase.getReady);
+        expect(p.remaining, Duration(seconds: 10));
+      });
+      test('exerciseRest', () {
+        final p = SessionStateProvider()..start(fixture);
+        p.debugSetPhase(TimerPhase.exerciseRest);
+        p.requestManualOvertime();
+        p.exitOvertime();
+        expect(p.phase, TimerPhase.getReady);
+        expect(p.remaining, Duration(seconds: 10));
+      });
+      test('getReady', () {
+        final p = SessionStateProvider()..start(fixture);
+        p.debugSetPhase(TimerPhase.getReady);
+        p.requestManualOvertime();
+        p.exitOvertime();
+        expect(p.phase, TimerPhase.getReady);
+        expect(p.remaining, const Duration(seconds: 10));
+      });
+      test('not in overtime', () {
+        final p = SessionStateProvider()..start(fixture);
+        p.debugSetPhase(TimerPhase.setRest);
+        p.exitOvertime();
+        expect(p.phase, TimerPhase.setRest);
       });
     });
   });

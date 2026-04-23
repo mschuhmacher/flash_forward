@@ -104,6 +104,7 @@ class SessionStateProvider extends ChangeNotifier {
   Duration _overtimeElapsed = Duration.zero;
   bool _overtimeWasAutomatic = false;
   bool _restOvertimeOnBackground = false;
+  TimerPhase _overtimeSourcePhase = TimerPhase.getReady;
 
   TimerPhase _rememberCurrentPhaseForPausing = TimerPhase.getReady;
 
@@ -741,6 +742,7 @@ class SessionStateProvider extends ChangeNotifier {
   }
 
   void _enterOvertime({required bool automatic}) {
+    _overtimeSourcePhase = _progress.phase;
     _overtimeElapsed = Duration.zero;
     _overtimeWasAutomatic = automatic;
     _remaining = Duration.zero;
@@ -748,6 +750,29 @@ class SessionStateProvider extends ChangeNotifier {
 
     _progress = _progress.copyWith(phase: TimerPhase.overtime);
 
+    notifyListeners();
+  }
+
+  void exitOvertime() {
+    if (_progress.phase != TimerPhase.overtime) return;
+
+    SessionProgress? _nextState = _calculateNextState(
+      _progress.copyWith(phase: _overtimeSourcePhase),
+    );
+    if (_nextState == null) {
+      _progress = _progress.copyWith(phase: TimerPhase.workoutComplete);
+      _remaining = Duration.zero;
+      _beepScheduler?.cancelAll();
+    } else {
+      _progress = _progress.copyWith(phase: TimerPhase.getReady);
+
+      _remaining = const Duration(seconds: 10);
+      _startTicker();
+      _rescheduleSound();
+    }
+
+    _overtimeElapsed = Duration.zero;
+    _overtimeWasAutomatic = false;
     notifyListeners();
   }
 
