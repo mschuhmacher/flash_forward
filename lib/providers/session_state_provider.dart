@@ -435,7 +435,7 @@ class SessionStateProvider extends ChangeNotifier {
       exitOvertime();
       return;
     }
-    
+
     _lastTickAt = now;
     _advanceByElapsed(gap);
     _rescheduleSound();
@@ -598,6 +598,12 @@ class SessionStateProvider extends ChangeNotifier {
 
       final next = _calculateNextState(simProgress);
       if (next == null) break;
+
+      if (_restOvertimeOnBackground &&
+          (simProgress.phase == TimerPhase.setRest ||
+              simProgress.phase == TimerPhase.exerciseRest)) {
+        break;
+      }
 
       // Manual rep phase: duration unknown — cannot predict further.
       if (_activeSession != null) {
