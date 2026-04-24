@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/rest_event.dart';
+import 'package:flash_forward/models/session_summary.dart';
+import 'package:flash_forward/models/set_event.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/services/audio_beep_player.dart';
 import 'package:flash_forward/services/beep_scheduler.dart';
@@ -107,6 +110,21 @@ class SessionStateProvider extends ChangeNotifier {
   TimerPhase _overtimeSourcePhase = TimerPhase.getReady;
 
   TimerPhase _rememberCurrentPhaseForPausing = TimerPhase.getReady;
+
+  // Event log — accumulated during an active session.
+  final List<SetEvent> _setEvents = [];
+  final List<RestEvent> _restEvents = [];
+
+  // In-progress drafts. Null when no set/rest is currently open.
+  _OpenSetDraft? _openSetDraft;
+  _OpenRestDraft? _openRestDraft;
+
+  // Updated on every phase transition for slice attribution.
+  DateTime? _currentPhaseEnteredAt;
+
+  // Per-set accumulators — reset when a new set opens.
+  Duration _currentSetActiveAccum = Duration.zero;
+  Duration _currentSetRepRestAccum = Duration.zero;
 
   int get weekIndex => _weekIndex;
   int get sessionIndex => _sessionIndex;
@@ -784,6 +802,30 @@ class SessionStateProvider extends ChangeNotifier {
         p == TimerPhase.getReady);
   }
 
+  bool _isRestPhase(TimerPhase p) =>
+      p == TimerPhase.getReady ||
+      p == TimerPhase.setRest ||
+      p == TimerPhase.exerciseRest ||
+      p == TimerPhase.overtime ||
+      p == TimerPhase.paused;
+
+  RestType _matchRestTypeToTimerPhase(TimerPhase p) {
+    switch (p) {
+      case TimerPhase.getReady:
+        return RestType.getReady;
+      case TimerPhase.setRest:
+        return RestType.setRest;
+      case TimerPhase.exerciseRest:
+        return RestType.exerciseRest;
+      case TimerPhase.overtime:
+        return RestType.overtime;
+      case TimerPhase.paused:
+        return RestType.paused;
+      default:
+        throw StateError('Not a rest phase: $p');
+    }
+  }
+
   void _enterOvertime({required bool automatic}) {
     _overtimeSourcePhase = _progress.phase;
     _overtimeElapsed = Duration.zero;
@@ -862,4 +904,36 @@ class SessionStateProvider extends ChangeNotifier {
         return const Duration(seconds: 10);
     }
   }
+}
+
+class _OpenSetDraft {
+  final int workoutIndex;
+  final int exerciseIndex;
+  final int setIndex;
+  final DateTime startAt;
+
+  _OpenSetDraft({
+    required this.workoutIndex,
+    required this.exerciseIndex,
+    required this.setIndex,
+    required this.startAt,
+  });
+}
+
+class _OpenRestDraft {
+  final RestType restType;
+  final int workoutIndex;
+  final int exerciseIndex;
+  final int? setIndex;
+  final DateTime startAt;
+  final Duration plannedDuration;
+
+  _OpenRestDraft({
+    required this.restType,
+    required this.workoutIndex,
+    required this.exerciseIndex,
+    required this.setIndex,
+    required this.startAt,
+    required this.plannedDuration,
+  });
 }

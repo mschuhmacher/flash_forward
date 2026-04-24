@@ -29,7 +29,7 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 - [x] Task 12 of 26: Update `reconcileAfterBackground` for auto-overtime + tests
 
 ### Phase 5 — Beep scheduler
-- [ ] Task 13 of 26: Truncate future beep simulation when overtime setting is on
+- [x] Task 13 of 26: Truncate future beep simulation when overtime setting is on
 
 ### Phase 6 — Event log instrumentation
 - [ ] Task 14 of 26: Add event log state fields + helper predicates
