@@ -116,8 +116,8 @@ class SessionStateProvider extends ChangeNotifier {
   final List<RestEvent> _restEvents = [];
 
   // In-progress drafts. Null when no set/rest is currently open.
-  _OpenSetDraft? _openSetDraft;
-  _OpenRestDraft? _openRestDraft;
+  _OpenSetDraft? _activeSetDraft;
+  _OpenRestDraft? _activeRestDraft;
 
   // Updated on every phase transition for slice attribution.
   DateTime? _currentPhaseEnteredAt;
@@ -823,6 +823,146 @@ class SessionStateProvider extends ChangeNotifier {
         return RestType.paused;
       default:
         throw StateError('Not a rest phase: $p');
+    }
+  }
+
+  void _startSetDraft(SessionProgress progress) {
+    _activeSetDraft = _OpenSetDraft(
+      workoutIndex: progress.workoutIndex,
+      exerciseIndex: progress.exerciseIndex,
+      setIndex: progress.currentSet,
+      startAt: DateTime.now(),
+    );
+    _currentSetActiveAccum = Duration.zero;
+    _currentSetRepRestAccum = Duration.zero;
+  }
+
+  void _closeSetDraft({required int repsCompleted}) {
+    if (_activeSetDraft == null) return;
+
+    _setEvents.add(
+      SetEvent(
+        workoutIndex: _activeSetDraft!.workoutIndex,
+        exerciseIndex: _activeSetDraft!.exerciseIndex,
+        setIndex: _activeSetDraft!.setIndex,
+        startAt: _activeSetDraft!.startAt,
+        endAt: DateTime.now(),
+        activeTime: _currentSetActiveAccum,
+        interRepRestTime: _currentSetRepRestAccum,
+        repsCompleted: repsCompleted,
+      ),
+    );
+    _activeSetDraft = null;
+    _currentSetActiveAccum = Duration.zero;
+    _currentSetRepRestAccum = Duration.zero;
+  }
+
+  void _startRestDraft(RestType restType, SessionProgress progress) {
+    Duration plannedDuration = Duration.zero;
+    int? setIndex;
+
+    if (restType != RestType.overtime && restType != RestType.paused) {
+      plannedDuration = _getDurationForPhase(progress);
+    }
+    if (restType == RestType.setRest) {
+      setIndex = progress.currentSet;
+    }
+
+    _activeRestDraft = _OpenRestDraft(
+      restType: restType,
+      workoutIndex: progress.workoutIndex,
+      exerciseIndex: progress.exerciseIndex,
+      setIndex: setIndex,
+      startAt: DateTime.now(),
+      plannedDuration: plannedDuration,
+    );
+  }
+
+  void _closeRestDraft() {
+    if (_activeRestDraft == null) return;
+
+    Duration actual = DateTime.now().difference(_activeRestDraft!.startAt);
+    Duration overtimeDuration = Duration.zero;
+
+    if (_activeRestDraft!.restType == RestType.overtime) {
+      overtimeDuration = actual;
+    }
+
+    _restEvents.add(
+      RestEvent(
+        restType: _activeRestDraft!.restType,
+        workoutIndex: _activeRestDraft!.workoutIndex,
+        exerciseIndex: _activeRestDraft!.exerciseIndex,
+        setIndex: _activeRestDraft!.setIndex,
+        startAt: _activeRestDraft!.startAt,
+        endAt: DateTime.now(),
+        plannedDuration: _activeRestDraft!.plannedDuration,
+        actualDuration: actual,
+        overtimeDuration: overtimeDuration,
+      ),
+    );
+
+    _activeRestDraft = null;
+  }
+
+  void _discardDrafts() {
+    _activeRestDraft = null;
+    _activeSetDraft = null;
+    _currentSetActiveAccum = Duration.zero;
+    _currentSetRepRestAccum = Duration.zero;
+    _currentPhaseEnteredAt = null;
+  }
+
+  /// Central hook called on every phase change. Keeps the event log consistent
+  /// without each call site having to reason about it.
+  ///
+  /// Must be called BEFORE committing the new phase to [_progress], so [from]
+  /// still reflects the phase being exited and [newProgress] carries the
+  /// incoming phase.
+  void _onPhaseTransition(
+    TimerPhase from,
+    TimerPhase to,
+    SessionProgress newProgress,
+  ) {
+    // 1. Attribute the time spent in the exiting phase to the correct
+    //    set-level accumulator. Only rep and repRest contribute to set
+    //    telemetry — other phases are tracked as their own rest events.
+    //    Skip if this is the very first transition (no prior timestamp yet).
+    if (_currentPhaseEnteredAt != null) {
+      Duration slice = DateTime.now().difference(_currentPhaseEnteredAt!);
+      if (from == TimerPhase.rep) _currentSetActiveAccum += slice;
+      if (from == TimerPhase.repRest) _currentSetRepRestAccum += slice;
+      _currentPhaseEnteredAt = DateTime.now();
+    }
+
+    // 2. Close the open rest event when leaving any rest-like phase.
+    //    Each rest phase (getReady, setRest, exerciseRest, overtime, paused)
+    //    has its own RestEvent — closing it stamps the end time.
+    if (_isRestPhase(from)) _closeRestDraft();
+
+    // 3. Close the open set event when leaving a rep for anything that ends
+    //    the set. We keep it open across repRest (inter-rep rest is part of
+    //    the same set) and across paused (the set spans the pause).
+    if (from == TimerPhase.rep &&
+        to != TimerPhase.repRest &&
+        to != TimerPhase.paused) {
+      _closeSetDraft(repsCompleted: newProgress.currentRep);
+    }
+
+    // 4. Open a new set event when entering a rep from a phase that starts a
+    //    new set. We do NOT open one when coming from repRest (already open)
+    //    or paused (resuming an existing set).
+    if (to == TimerPhase.rep &&
+        from != TimerPhase.repRest &&
+        from != TimerPhase.paused) {
+      _startSetDraft(newProgress);
+    }
+
+    // 5. Open a new rest event whenever entering any rest-like phase.
+    //    This includes overtime and paused — each gets its own RestEvent so
+    //    the log shows exactly how long each segment lasted.
+    if (_isRestPhase(to)) {
+      _startRestDraft(_matchRestTypeToTimerPhase(to), newProgress);
     }
   }
 
