@@ -367,6 +367,11 @@ class SessionStateProvider extends ChangeNotifier {
   // duplicating durations inside the provider.
 
   void start(Session session) {
+    // Clear
+    _setEvents.clear();
+    _restEvents.clear();
+    _discardDrafts();
+
     // Deep copy the preset so mid-session edits never affect it
     _activeSession = session.deepCopy();
     _progress = const SessionProgress(
@@ -376,6 +381,14 @@ class SessionStateProvider extends ChangeNotifier {
       currentRep: 1,
       phase: TimerPhase.getReady,
     );
+
+    _onPhaseTransition(
+      TimerPhase.workoutComplete,
+      _progress.phase, //getReady
+      _progress,
+    );
+    _currentPhaseEnteredAt = DateTime.now(); // Start time for the first slice
+
     _remaining = _getDurationForPhase(_progress);
     _isPaused = false;
     _startTicker();
@@ -571,6 +584,11 @@ class SessionStateProvider extends ChangeNotifier {
       }
       final next = _calculateNextState(_progress);
       if (next == null) {
+        _onPhaseTransition(
+          _progress.phase,
+          TimerPhase.workoutComplete,
+          _progress,
+        );
         _progress = _progress.copyWith(phase: TimerPhase.workoutComplete);
         _remaining = Duration.zero;
         _beepScheduler?.cancelAll();
@@ -580,6 +598,8 @@ class SessionStateProvider extends ChangeNotifier {
       // Adding the next phase's full duration keeps the overshoot as a debt,
       // so rapid successive phases consume the correct total elapsed time.
       _remaining = _getDurationForPhase(next) + _remaining;
+
+      _onPhaseTransition(_progress.phase, next.phase, next);
       _progress = next;
     }
   }

@@ -33,7 +33,7 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 
 ### Phase 6 — Event log instrumentation
 - [x] Task 14 of 26: Add event log state fields + helper predicates
-- [ ] Task 15 of 26: Implement `_onPhaseTransition` dispatcher
+- [x] Task 15 of 26: Implement `_onPhaseTransition` dispatcher
 - [ ] Task 16 of 26: Wire dispatcher into `_advanceByElapsed` and `start`
 - [ ] Task 17 of 26: Wire dispatcher into `pause`/`resume` + tests
 - [ ] Task 18 of 26: Wire dispatcher into `advanceManually`, jumps, `_enterOvertime`, `exitOvertime`, `reset`
