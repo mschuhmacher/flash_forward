@@ -288,6 +288,25 @@ class SettingsDrawer extends StatelessWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 20),
+                        Text('Session', style: context.titleMedium),
+                        const SizedBox(height: 4),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'Hold rest on background',
+                            style: context.bodyMedium,
+                          ),
+                          subtitle: Text(
+                            'Automatically extend rest when the app is backgrounded.',
+                            style: context.bodyMedium.copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          value: settings.restOvertimeOnBackground,
+                          onChanged: (value) =>
+                              settings.setRestOvertimeOnBackground(value),
+                        ),
                       ],
                     ),
                   ),

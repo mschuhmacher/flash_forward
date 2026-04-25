@@ -71,9 +71,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             // Guard again in case the widget unmounted before the callback.
             if (!mounted || _timerInitialized) return;
+            final settings = context.read<SettingsProvider>();
             sessionStateData.start(widget.session);
-            sessionStateData.setSoundMode(
-              context.read<SettingsProvider>().soundMode,
+            sessionStateData.setSoundMode(settings.soundMode);
+            sessionStateData.setRestOvertimeOnBackground(
+              settings.restOvertimeOnBackground,
             );
             _timerInitialized = true;
 

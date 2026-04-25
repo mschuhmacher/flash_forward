@@ -62,4 +62,11 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keySoundMode, mode.name);
   }
+
+  Future<void> setRestOvertimeOnBackground(bool value) async {
+    _restOvertimeOnBackground = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyOvertime, value);
+  }
 }
