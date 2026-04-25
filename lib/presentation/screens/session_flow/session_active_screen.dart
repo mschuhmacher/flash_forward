@@ -356,28 +356,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                             ),
                             Positioned(
                               right: 20,
-                              child: _SessionCard(
-                                width: 44,
-                                height: 44,
-                                shadow: false,
-                                child:
-                                    sessionStateData.isPaused
-                                        ? IconButton(
-                                          onPressed: () {
-                                            sessionStateData.resume();
-                                            WakelockPlus.enable();
-                                          },
-                                          icon: Icon(Icons.play_arrow_rounded),
-                                          color: context.colorScheme.onPrimary,
-                                        )
-                                        : IconButton(
-                                          onPressed: () {
-                                            sessionStateData.pause();
-                                            WakelockPlus.disable();
-                                          },
-                                          icon: Icon(Icons.pause_rounded),
-                                          color: context.colorScheme.onPrimary,
-                                        ),
+                              child: _PauseResumeOvertimeButton(
+                                sessionStateData: sessionStateData,
                               ),
                             ),
                           ],
@@ -389,8 +369,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // REPS
-                            _SessionCard(
+                            _RoundedBox(
                               width: 150,
+                              borderColor: context.colorScheme.onPrimary,
                               child: Text(
                                 repsText,
                                 style: context.titleLarge.copyWith(
@@ -401,8 +382,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                               ),
                             ),
                             // LOAD
-                            _SessionCard(
+                            _RoundedBox(
                               width: 180,
+                              borderColor: context.colorScheme.onPrimary,
                               child: Text(
                                 'Load: ${activeExercise.load.toString()} kg',
                                 style: context.titleLarge.copyWith(
@@ -424,25 +406,33 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                             // MINUS
                             if (sessionStateData.phase !=
                                 TimerPhase.exerciseRest)
-                              _SessionCard(
+                              _RoundedBox(
                                 width: 50,
+                                borderColor: sessionStateData.phase == TimerPhase.overtime
+                                    ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                    : context.colorScheme.onPrimary,
                                 child: IconButton(
-                                  onPressed: () {
-                                    sessionStateData.jumpToSet(
-                                      progress.currentSet - 1,
-                                    );
-                                  },
+                                  onPressed: sessionStateData.phase == TimerPhase.overtime
+                                      ? null
+                                      : () {
+                                          sessionStateData.jumpToSet(
+                                            progress.currentSet - 1,
+                                          );
+                                        },
                                   icon: Icon(
                                     Icons.remove_rounded,
-                                    color: context.colorScheme.onPrimary,
+                                    color: sessionStateData.phase == TimerPhase.overtime
+                                        ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                        : context.colorScheme.onPrimary,
                                     size: 24,
                                   ),
                                 ),
                               ),
                             SizedBox(width: 8),
                             // SETS
-                            _SessionCard(
+                            _RoundedBox(
                               width: 150,
+                              borderColor: context.colorScheme.onPrimary,
                               child: Text(
                                 '${progress.currentSet} / ${activeExercise.sets}   sets',
                                 style: context.titleLarge.copyWith(
@@ -456,38 +446,52 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                             // PLUS
                             if (sessionStateData.phase !=
                                 TimerPhase.exerciseRest)
-                              _SessionCard(
+                              _RoundedBox(
                                 width: 50,
+                                borderColor: sessionStateData.phase == TimerPhase.overtime
+                                    ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                    : context.colorScheme.onPrimary,
                                 child: IconButton(
-                                  onPressed: () {
-                                    sessionStateData.jumpToSet(
-                                      progress.currentSet + 1,
-                                    );
-                                  },
+                                  onPressed: sessionStateData.phase == TimerPhase.overtime
+                                      ? null
+                                      : () {
+                                          sessionStateData.jumpToSet(
+                                            progress.currentSet + 1,
+                                          );
+                                        },
                                   icon: Icon(
                                     Icons.add_rounded,
-                                    color: context.colorScheme.onPrimary,
+                                    color: sessionStateData.phase == TimerPhase.overtime
+                                        ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                        : context.colorScheme.onPrimary,
                                     size: 24,
                                   ),
                                 ),
                               ),
                             Spacer(),
                             //EDIT
-                            _SessionCard(
+                            _RoundedBox(
                               width: 50,
+                              borderColor: sessionStateData.phase == TimerPhase.overtime
+                                  ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                  : context.colorScheme.onPrimary,
                               child: IconButton(
-                                onPressed: () {
-                                  _showEditExerciseDialog(
-                                    context,
-                                    activeExercise,
-                                    sessionStateData,
-                                    progress.workoutIndex,
-                                    progress.exerciseIndex,
-                                  );
-                                },
+                                onPressed: sessionStateData.phase == TimerPhase.overtime
+                                    ? null
+                                    : () {
+                                        _showEditExerciseDialog(
+                                          context,
+                                          activeExercise,
+                                          sessionStateData,
+                                          progress.workoutIndex,
+                                          progress.exerciseIndex,
+                                        );
+                                      },
                                 icon: Icon(
                                   Icons.edit,
-                                  color: context.colorScheme.onPrimary,
+                                  color: sessionStateData.phase == TimerPhase.overtime
+                                      ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                      : context.colorScheme.onPrimary,
                                   size: 24,
                                 ),
                               ),
@@ -1088,6 +1092,53 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
   }
 }
 
+class _PauseResumeOvertimeButton extends StatelessWidget {
+  final SessionStateProvider sessionStateData;
+
+  const _PauseResumeOvertimeButton({required this.sessionStateData});
+
+  @override
+  Widget build(BuildContext context) {
+    IconData icon = Icons.pause_rounded;
+    Color widgetColor = context.colorScheme.onPrimary;
+    VoidCallback onTap = () {
+      sessionStateData.pause();
+      WakelockPlus.disable();
+    };
+    VoidCallback onLongPress = () {};
+
+    if (sessionStateData.phase == TimerPhase.setRest ||
+        sessionStateData.phase == TimerPhase.exerciseRest ||
+        sessionStateData.phase == TimerPhase.getReady) {
+      onLongPress = sessionStateData.requestManualOvertime;
+    }
+
+    if (sessionStateData.phase == TimerPhase.overtime) {
+      icon = Icons.skip_next_rounded;
+      widgetColor = context.colorScheme.secondary;
+      onTap = sessionStateData.exitOvertime;
+    } else if (sessionStateData.isPaused) {
+      icon = Icons.play_arrow_rounded;
+      onTap = () {
+        sessionStateData.resume();
+        WakelockPlus.enable();
+      };
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: _RoundedBox(
+        width: 44,
+        height: 44,
+        shadow: false,
+        borderColor: widgetColor,
+        child: Icon(icon, color: widgetColor),
+      ),
+    );
+  }
+}
+
 // ── Private helper widgets for the edit bottom sheet ────────────────────────
 
 class _SessionEditSectionHeader extends StatelessWidget {
@@ -1228,18 +1279,20 @@ class _SessionEditDivider extends StatelessWidget {
 /// A styled card used throughout the active session screen.
 /// Renders a fixed-size box with the primary color, rounded corners, a border,
 /// and an optional medium shadow. The child is automatically centered.
-class _SessionCard extends StatelessWidget {
-  const _SessionCard({
+class _RoundedBox extends StatelessWidget {
+  const _RoundedBox({
     required this.width,
     required this.child,
     this.height = 50,
     this.shadow = true,
+    required this.borderColor,
   });
 
   final double width;
   final double height;
   final bool shadow;
   final Widget child;
+  final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1250,7 +1303,7 @@ class _SessionCard extends StatelessWidget {
         color: context.colorScheme.primary,
         boxShadow: shadow ? context.shadowMedium : null,
         borderRadius: BorderRadius.circular(16),
-        border: BoxBorder.all(color: context.colorScheme.onPrimary, width: 2),
+        border: BoxBorder.all(color: borderColor, width: 2),
       ),
       child: Center(child: child),
     );

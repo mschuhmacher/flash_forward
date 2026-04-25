@@ -64,15 +64,19 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                     (progress.exerciseIndex == 0 && progress.workoutIndex == 0)
                         ? SizedBox.shrink()
                         : GestureDetector(
-                          onTap: () {
-                            sessionStateData.jumpToExercise(
-                              sessionStateData.exerciseIndex - 1,
-                            );
-                          },
+                          onTap: sessionStateData.phase == TimerPhase.overtime
+                              ? null
+                              : () {
+                                  sessionStateData.jumpToExercise(
+                                    sessionStateData.exerciseIndex - 1,
+                                  );
+                                },
                           child: MyIconButton(
                             icon: Icons.arrow_back,
                             size: 40,
-                            foregroundColor: context.colorScheme.primary,
+                            foregroundColor: sessionStateData.phase == TimerPhase.overtime
+                                ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                : context.colorScheme.primary,
                           ),
                         ),
                     Expanded(
@@ -94,15 +98,19 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                                 progress.exerciseIndex + 1 <
                                     activeWorkout.exercises.length))
                         ? GestureDetector(
-                          onTap: () {
-                            sessionStateData.jumpToExercise(
-                              sessionStateData.exerciseIndex + 1,
-                            );
-                          },
+                          onTap: sessionStateData.phase == TimerPhase.overtime
+                              ? null
+                              : () {
+                                  sessionStateData.jumpToExercise(
+                                    sessionStateData.exerciseIndex + 1,
+                                  );
+                                },
                           child: MyIconButton(
                             icon: Icons.arrow_forward,
                             size: 40,
-                            foregroundColor: context.colorScheme.primary,
+                            foregroundColor: sessionStateData.phase == TimerPhase.overtime
+                                ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                : context.colorScheme.primary,
                           ),
                         )
                         : GestureDetector(
