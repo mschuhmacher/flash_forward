@@ -400,6 +400,20 @@ class SessionStateProvider extends ChangeNotifier {
     if (_isPaused) {
       return; // idempotent — second call would corrupt _rememberCurrentPhaseForPausing
     }
+
+    if (_currentPhaseEnteredAt != null) {
+      Duration slice = DateTime.now().difference(_currentPhaseEnteredAt!);
+      if (_progress.phase == TimerPhase.rep) {
+        _currentSetActiveAccum += slice;
+      }
+      if (_progress.phase == TimerPhase.repRest) {
+        _currentSetRepRestAccum += slice;
+      }
+      _currentPhaseEnteredAt = DateTime.now();
+    }
+
+    _onPhaseTransition(_progress.phase, TimerPhase.paused, _progress);
+
     _isPaused = true;
     _lastTickAt = null;
     _rememberCurrentPhaseForPausing = _progress.phase;
@@ -411,7 +425,12 @@ class SessionStateProvider extends ChangeNotifier {
   void resume() {
     if (!_isPaused) return;
     _isPaused = false;
-    _progress = _progress.copyWith(phase: _rememberCurrentPhaseForPausing);
+
+    SessionProgress targetProgress = _progress.copyWith(
+      phase: _rememberCurrentPhaseForPausing,
+    );
+    _onPhaseTransition(TimerPhase.paused, targetProgress.phase, targetProgress);
+    _progress = targetProgress;
     _startTicker();
     _rescheduleSound();
     notifyListeners();
@@ -1024,13 +1043,22 @@ class SessionStateProvider extends ChangeNotifier {
   // Force the provider into a specific phase for testing
   @visibleForTesting
   void debugSetPhase(TimerPhase phase) {
-    _progress = _progress.copyWith(phase: phase);
+    final next = _progress.copyWith(phase: phase);
+    _onPhaseTransition(_progress.phase, next.phase, next);
+    _progress = next;
     _remaining = _getDurationForPhase(_progress);
     notifyListeners();
   }
 
   @visibleForTesting
   void debugSetLastTickAt(DateTime t) => _lastTickAt = t;
+
+  @visibleForTesting
+  int debugRestEventCount() => _restEvents.length;
+
+  @visibleForTesting
+  List<RestType> debugRestEventTypes() =>
+      _restEvents.map((e) => e.restType).toList();
 
   /// Returns the duration for the current phase, derived from the active
   /// exercise/workout. Values are stored as seconds in the models.
