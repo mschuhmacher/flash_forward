@@ -35,15 +35,15 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 - [x] Task 14 of 26: Add event log state fields + helper predicates
 - [x] Task 15 of 26: Implement `_onPhaseTransition` dispatcher
 - [x] Task 16 of 26: Wire dispatcher into `_advanceByElapsed` and `start`
-- [ ] Task 17 of 26: Wire dispatcher into `pause`/`resume` + tests
-- [ ] Task 18 of 26: Wire dispatcher into `advanceManually`, jumps, `_enterOvertime`, `exitOvertime`, `reset`
-- [ ] Task 19 of 26: Implement `_computeSummary` + `finalizeSession` + smoke test
+- [x] Task 17 of 26: Wire dispatcher into `pause`/`resume` + tests
+- [x] Task 18 of 26: Wire dispatcher into `advanceManually`, jumps, `_enterOvertime`, `exitOvertime`, `reset`
+- [x] Task 19 of 26: Implement `_computeSummary` + `finalizeSession` + smoke test
 
 ### Phase 7 — Persistence
-- [ ] Task 20 of 26: Finalize session before log + update Supabase sync payload
+- [x] Task 20 of 26: Finalize session before log + update Supabase sync payload
 
 ### Phase 8 — UI
-- [ ] Task 21 of 26: Overtime branch in timer color/value + phase label
+- [~] Task 21 of 26: Overtime branch in timer color/value + phase label
 - [ ] Task 22 of 26: Pause button transforms during overtime + long-press to enter
 - [ ] Task 23 of 26: Jump buttons disabled and greyed during overtime
 - [ ] Task 24 of 26: Settings drawer toggle + sync to provider

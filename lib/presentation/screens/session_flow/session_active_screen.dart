@@ -90,27 +90,29 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
               if (!canSchedule && context.mounted) {
                 await showDialog<void>(
                   context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    title: const Text('Allow exact alarms'),
-                    content: const Text(
-                      'Flash Forward schedules audio beeps during your session '
-                      'so they fire on time even with the screen locked.\n\n'
-                      'Tap Allow to enable this in Settings.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialogContext),
-                        child: const Text('Not now'),
+                  builder:
+                      (dialogContext) => AlertDialog(
+                        title: const Text('Allow exact alarms'),
+                        content: const Text(
+                          'Flash Forward schedules audio beeps during your session '
+                          'so they fire on time even with the screen locked.\n\n'
+                          'Tap Allow to enable this in Settings.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text('Not now'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(dialogContext);
+                              await sessionStateData
+                                  .requestExactAlarmPermission();
+                            },
+                            child: const Text('Allow'),
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.pop(dialogContext);
-                          await sessionStateData.requestExactAlarmPermission();
-                        },
-                        child: const Text('Allow'),
-                      ),
-                    ],
-                  ),
                 );
               }
             }
@@ -203,6 +205,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
             );
           case TimerPhase.getReady:
             phaseText = 'get ready';
+            phaseTextStyle = context.h2.copyWith(
+              color: context.colorScheme.secondary,
+            );
+          case TimerPhase.overtime:
+            phaseText = 'overtime';
             phaseTextStyle = context.h2.copyWith(
               color: context.colorScheme.secondary,
             );
@@ -310,7 +317,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                           children: [
                             Center(
                               child: Text(
-                                formatDuration(sessionStateData.remaining),
+                                sessionStateData.phase == TimerPhase.overtime
+                                    ? formatDuration(
+                                      sessionStateData.overtimeElapsed,
+                                    )
+                                    : formatDuration(
+                                      sessionStateData.remaining,
+                                    ),
                                 style: context.h1.copyWith(
                                   color: () {
                                     if (sessionStateData.isPaused) {
@@ -321,6 +334,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                     } else if (sessionStateData.phase ==
                                         TimerPhase.rep) {
                                       return context.colorScheme.onPrimary;
+                                    } else if (sessionStateData.phase ==
+                                        TimerPhase.overtime) {
+                                      return context.colorScheme.secondary;
                                     } else if ((sessionStateData.phase ==
                                                 TimerPhase.repRest ||
                                             sessionStateData.phase ==
@@ -1009,12 +1025,14 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                       value: localRpe.clamp(1, 10),
                                       minimum: 1,
                                       decrement: () {
-                                        if (localRpe > 1)
-                                          {setDialogState(() => localRpe--);}
+                                        if (localRpe > 1) {
+                                          setDialogState(() => localRpe--);
+                                        }
                                       },
                                       increment: () {
-                                        if (localRpe < 10)
-                                          {setDialogState(() => localRpe++);}
+                                        if (localRpe < 10) {
+                                          setDialogState(() => localRpe++);
+                                        }
                                       },
                                     ),
                                   ],
