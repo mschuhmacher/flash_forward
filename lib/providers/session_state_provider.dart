@@ -217,6 +217,7 @@ class SessionStateProvider extends ChangeNotifier {
   void jumpToWorkout(int index) {
     if (_activeSession == null) return;
     if (index < 0 || index >= _activeSession!.workouts.length) return;
+    _discardDrafts();
     _workoutIndex = index;
     _progress = SessionProgress(
       workoutIndex: index,
@@ -225,6 +226,9 @@ class SessionStateProvider extends ChangeNotifier {
       currentRep: 1,
       phase: TimerPhase.rep,
     );
+    // workoutComplete is a sentinel meaning "no prior phase" — drafts were
+    // already discarded above, so the dispatcher has nothing to close.
+    _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
     _remaining = _getDurationForPhase(_progress);
     _rescheduleSound();
     notifyListeners();
@@ -234,6 +238,7 @@ class SessionStateProvider extends ChangeNotifier {
   /// Keeps the timer in sync with navigation actions in the UI.
   void jumpToExercise(int index) {
     if (_activeSession == null) return;
+    _discardDrafts();
     // Return statement (is this needed?)
     if (index < -1) {
       return;
@@ -250,6 +255,7 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.getReady,
       );
+      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       notifyListeners();
@@ -265,6 +271,7 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.getReady,
       );
+      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       notifyListeners();
@@ -282,6 +289,7 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.getReady,
       );
+      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       notifyListeners();
@@ -289,6 +297,7 @@ class SessionStateProvider extends ChangeNotifier {
   }
 
   void jumpToSet(int index) {
+    _discardDrafts();
     if (index < 0) {
       return;
     } else if (index == 0) {
@@ -299,6 +308,7 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.rep,
       );
+      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       notifyListeners();
@@ -315,6 +325,7 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.rep,
       );
+      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       notifyListeners();
@@ -441,6 +452,9 @@ class SessionStateProvider extends ChangeNotifier {
     _lastTickAt = null;
     _beepScheduler?.cancelAll();
     _activeSession = null;
+    _setEvents.clear();
+    _restEvents.clear();
+    _discardDrafts();
     _progress = const SessionProgress(
       workoutIndex: 0,
       exerciseIndex: 0,
@@ -503,9 +517,13 @@ class SessionStateProvider extends ChangeNotifier {
     if (_progress.phase != TimerPhase.rep) return;
 
     if (_progress.currentSet < exercise.sets) {
-      _progress = _progress.copyWith(phase: TimerPhase.setRest);
+      final next = _progress.copyWith(phase: TimerPhase.setRest);
+      _onPhaseTransition(_progress.phase, next.phase, next);
+      _progress = next;
     } else {
-      _progress = _progress.copyWith(phase: TimerPhase.exerciseRest);
+      final next = _progress.copyWith(phase: TimerPhase.exerciseRest);
+      _onPhaseTransition(_progress.phase, next.phase, next);
+      _progress = next;
     }
     _remaining = _getDurationForPhase(_progress);
     _rescheduleSound();
@@ -1010,10 +1028,10 @@ class SessionStateProvider extends ChangeNotifier {
     _overtimeElapsed = Duration.zero;
     _overtimeWasAutomatic = automatic;
     _remaining = Duration.zero;
+    final next = _progress.copyWith(phase: TimerPhase.overtime);
+    _onPhaseTransition(_progress.phase, next.phase, next);
+    _progress = next;
     _rescheduleSound();
-
-    _progress = _progress.copyWith(phase: TimerPhase.overtime);
-
     notifyListeners();
   }
 
@@ -1024,12 +1042,14 @@ class SessionStateProvider extends ChangeNotifier {
       _progress.copyWith(phase: _overtimeSourcePhase),
     );
     if (_nextState == null) {
+      _onPhaseTransition(TimerPhase.overtime, TimerPhase.workoutComplete, _progress);
       _progress = _progress.copyWith(phase: TimerPhase.workoutComplete);
       _remaining = Duration.zero;
       _beepScheduler?.cancelAll();
     } else {
-      _progress = _progress.copyWith(phase: TimerPhase.getReady);
-
+      final target = _progress.copyWith(phase: TimerPhase.getReady);
+      _onPhaseTransition(TimerPhase.overtime, target.phase, target);
+      _progress = target;
       _remaining = const Duration(seconds: 10);
       _startTicker();
       _rescheduleSound();
