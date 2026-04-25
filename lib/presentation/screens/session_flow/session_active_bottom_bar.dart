@@ -445,6 +445,11 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                                 }).toList();
 
                         // Upon start, activeSession is newly created with deepCopy, call copyWith here for adding the label, description, and completion time
+                        final telemetry =
+                            Provider.of<SessionStateProvider>(
+                              context,
+                              listen: false,
+                            ).finalizeSession();
                         final finishedSession = activeSession.copyWith(
                           workouts: updatedWorkouts,
                           label: labelController.text,
@@ -457,6 +462,9 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           maxGradeClimbed: Nullable(selectedGradeClimbed),
                           maxGradeFlashed: Nullable(selectedGradeFlashed),
                           bodyWeightKg: Nullable(bodyWeightKg),
+                          setEvents: telemetry.setEvents,
+                          restEvents: telemetry.restEvents,
+                          summary: telemetry.summary,
                         );
 
                         Navigator.of(dialogContext).pop();
