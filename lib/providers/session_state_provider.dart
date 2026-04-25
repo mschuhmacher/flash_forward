@@ -385,6 +385,8 @@ class SessionStateProvider extends ChangeNotifier {
 
     // Deep copy the preset so mid-session edits never affect it
     _activeSession = session.deepCopy();
+    _workoutIndex = 0;
+    _exerciseIndex = 0;
     _progress = const SessionProgress(
       workoutIndex: 0,
       exerciseIndex: 0,
