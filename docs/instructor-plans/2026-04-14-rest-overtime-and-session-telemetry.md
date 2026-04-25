@@ -43,16 +43,16 @@ Source plan: `docs/superpowers/plans/2026-04-14-rest-overtime-and-session-teleme
 - [x] Task 20 of 26: Finalize session before log + update Supabase sync payload
 
 ### Phase 8 — UI
-- [~] Task 21 of 26: Overtime branch in timer color/value + phase label
-- [ ] Task 22 of 26: Pause button transforms during overtime + long-press to enter
-- [ ] Task 23 of 26: Jump buttons disabled and greyed during overtime
-- [ ] Task 24 of 26: Settings drawer toggle + sync to provider
+- [x] Task 21 of 26: Overtime branch in timer color/value + phase label
+- [x] Task 22 of 26: Pause button transforms during overtime + long-press to enter
+- [x] Task 23 of 26: Jump buttons disabled and greyed during overtime
+- [x] Task 24 of 26: Settings drawer toggle + sync to provider
 
 ### Phase 9 — Supabase migration
-- [ ] Task 25 of 26: Add JSONB columns to Supabase schema
+- [x] Task 25 of 26: Add JSONB columns to Supabase schema
 
 ### Phase 10 — Validation
-- [ ] Task 26 of 26: Manual end-to-end verification
+- [x] Task 26 of 26: Manual end-to-end verification
 
 ---
 

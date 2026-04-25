@@ -1109,7 +1109,7 @@ class SessionStateProvider extends ChangeNotifier {
       _remaining = Duration.zero;
       _beepScheduler?.cancelAll();
     } else {
-      final target = _progress.copyWith(phase: TimerPhase.getReady);
+      final target = _nextState.copyWith(phase: TimerPhase.getReady);
       _onPhaseTransition(TimerPhase.overtime, target.phase, target);
       _progress = target;
       _remaining = const Duration(seconds: 10);

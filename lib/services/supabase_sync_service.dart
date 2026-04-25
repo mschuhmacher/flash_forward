@@ -41,6 +41,9 @@ class SupabaseSyncService {
         'description': session.description,
         'completed_at': session.completedAt?.toIso8601String(),
         'workouts': session.workouts.map((w) => w.toJson()).toList(),
+        'set_events': session.setEvents?.map((e) => e.toJson()).toList(),
+        'rest_events': session.restEvents?.map((e) => e.toJson()).toList(),
+        'summary': session.summary?.toJson(),
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
