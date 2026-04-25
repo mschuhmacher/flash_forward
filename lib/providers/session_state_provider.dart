@@ -447,6 +447,68 @@ class SessionStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  SessionSummary _computeSummary() {
+    var activeTime = Duration.zero;
+    var interRepRestTime = Duration.zero;
+    for (final e in _setEvents) {
+      activeTime += e.activeTime;
+      interRepRestTime += e.interRepRestTime;
+    }
+
+    var setRestTime = Duration.zero;
+    var exerciseRestTime = Duration.zero;
+    var getReadyTime = Duration.zero;
+    var overtime = Duration.zero;
+    var pausedTime = Duration.zero;
+    for (final e in _restEvents) {
+      switch (e.restType) {
+        case RestType.setRest:
+          setRestTime += e.actualDuration;
+        case RestType.exerciseRest:
+          exerciseRestTime += e.actualDuration;
+        case RestType.getReady:
+          getReadyTime += e.actualDuration;
+        case RestType.overtime:
+          overtime += e.actualDuration;
+        case RestType.paused:
+          pausedTime += e.actualDuration;
+      }
+    }
+
+    final totalTime = activeTime +
+        interRepRestTime +
+        setRestTime +
+        exerciseRestTime +
+        getReadyTime +
+        overtime +
+        pausedTime;
+
+    return SessionSummary(
+      totalTime: totalTime,
+      activeTime: activeTime,
+      interRepRestTime: interRepRestTime,
+      setRestTime: setRestTime,
+      exerciseRestTime: exerciseRestTime,
+      getReadyTime: getReadyTime,
+      overtime: overtime,
+      pausedTime: pausedTime,
+    );
+  }
+
+  /// Closes any open drafts, computes telemetry, and returns the active session
+  /// populated with event logs and a summary. Does not reset state — call
+  /// [reset] separately after persisting.
+  Session finalizeSession() {
+    _closeSetDraft(repsCompleted: _progress.currentRep);
+    _closeRestDraft();
+    final summary = _computeSummary();
+    return _activeSession!.copyWith(
+      setEvents: List.unmodifiable(_setEvents),
+      restEvents: List.unmodifiable(_restEvents),
+      summary: summary,
+    );
+  }
+
   void reset() {
     _ticker?.cancel();
     _lastTickAt = null;
