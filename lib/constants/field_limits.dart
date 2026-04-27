@@ -92,24 +92,30 @@ class FieldValidators {
   }
 
   static String? sessionDescription(String? value) {
-    if (value != null &&
-        value.length > FieldLimits.sessionDescriptionMaxLength) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter a description';
+    }
+    if (value.length > FieldLimits.sessionDescriptionMaxLength) {
       return 'Description must be ${FieldLimits.sessionDescriptionMaxLength} characters or less';
     }
     return null;
   }
 
   static String? workoutDescription(String? value) {
-    if (value != null &&
-        value.length > FieldLimits.workoutDescriptionMaxLength) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter a description';
+    }
+    if (value.length > FieldLimits.workoutDescriptionMaxLength) {
       return 'Description must be ${FieldLimits.workoutDescriptionMaxLength} characters or less';
     }
     return null;
   }
 
   static String? exerciseDescription(String? value) {
-    if (value != null &&
-        value.length > FieldLimits.exerciseDescriptionMaxLength) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter a description';
+    }
+    if (value.length > FieldLimits.exerciseDescriptionMaxLength) {
       return 'Description must be ${FieldLimits.exerciseDescriptionMaxLength} characters or less';
     }
     return null;

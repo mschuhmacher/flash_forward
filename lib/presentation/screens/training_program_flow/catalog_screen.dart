@@ -53,6 +53,15 @@ class _ProgramListviewState extends State<ProgramListview> {
   String _query = '';
   String _filterLabel = '';
 
+  List<dynamic> sortListItems(List<dynamic> items) {
+    final labelOrder = kDefaultLabels.keys.toList();
+    return items..sort((a, b) {
+      final labelCompare = labelOrder.indexOf(a.label).compareTo(labelOrder.indexOf(b.label));
+      if (labelCompare != 0) return labelCompare;
+      return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+    });
+  }
+
   Future<void> _copyItem(dynamic item) async {
     final presetProvider = Provider.of<PresetProvider>(context, listen: false);
     final userId = supabase.auth.currentUser?.id;
@@ -178,6 +187,7 @@ class _ProgramListviewState extends State<ProgramListview> {
 
               return matchesTitle && matchesLabel;
             }).toList();
+        sortListItems(filteredListItems);
 
         final scrollController = ScrollController();
 
@@ -204,7 +214,7 @@ class _ProgramListviewState extends State<ProgramListview> {
                     final item = filteredListItems[index];
                     final bool isDefault = presetData.isDefaultItem(item.id);
 
-                    return ProgramListviewCard(
+                    return CatalogListviewCard(
                       filteredListItem: item,
                       itemType: widget.itemType,
                       onCopy: () => _copyItem(item),
@@ -222,8 +232,8 @@ class _ProgramListviewState extends State<ProgramListview> {
   }
 }
 
-class ProgramListviewCard extends StatelessWidget {
-  const ProgramListviewCard({
+class CatalogListviewCard extends StatelessWidget {
+  const CatalogListviewCard({
     super.key,
     required this.filteredListItem,
     required this.itemType,
@@ -312,9 +322,9 @@ class ProgramListviewCard extends StatelessWidget {
             child: ListTile(
               contentPadding: EdgeInsets.fromLTRB(6, 0, 16, 0),
               minVerticalPadding: 6,
-              minTileHeight: 90,
+              minTileHeight: 80,
 
-              horizontalTitleGap: 4,
+              horizontalTitleGap: 6,
               leading: SizedBox(
                 width: 32,
                 height: 32,
@@ -334,27 +344,25 @@ class ProgramListviewCard extends StatelessWidget {
                     ),
                   ),
                   if (isDefault)
-                    //TODO: change to something nicer looking
                     Container(
-                      margin: const EdgeInsets.only(left: 6),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            Theme.of(context).colorScheme.surfaceContainerHigh,
+                        color: context.colorScheme.secondary.withAlpha(38),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.outlineVariant,
+                          color: context.colorScheme.secondary,
                         ),
                       ),
                       child: Text(
-                        'D',
+                        'DEFAULT',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
+                          color: context.colorScheme.onSecondary,
+                          fontWeight: FontWeight.w400,
+                          fontSize: 9,
+                          letterSpacing: 0.4,
                         ),
                       ),
                     ),
@@ -363,6 +371,7 @@ class ProgramListviewCard extends StatelessWidget {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  SizedBox(height: 4),
                   filteredListItem.description != null
                       ? Text(
                         filteredListItem.description!,
