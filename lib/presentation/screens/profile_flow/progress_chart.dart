@@ -84,7 +84,7 @@ Widget Function(double, TitleMeta) _dataAwareXLabelBuilder({
     if (value == meta.min || value == meta.max) {
       return const SizedBox.shrink();
     }
-    if (dataPointDayKeys.length <= 7) {
+    if (dataPointDayKeys.length <= 4) {
       final utcDate =
           DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true);
       if (!dataPointDayKeys.contains(_dayKey(utcDate))) {

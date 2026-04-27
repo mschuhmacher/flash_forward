@@ -1,4 +1,4 @@
-import 'package:flash_forward/presentation/widgets/progress_chart.dart';
+import 'package:flash_forward/presentation/screens/profile_flow/progress_chart.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/services/progress_extractor.dart';
