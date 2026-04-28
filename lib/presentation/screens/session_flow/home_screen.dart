@@ -16,6 +16,7 @@ import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,13 +82,21 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Expanded(
               child:
+              // Nested ternary: first check if empty, then check calendarFormat
                   selectedSessions.isEmpty
-                      ? Center(
-                        child: Text(
-                          'No climbing sessions logged yet.',
-                          style: context.bodyLarge,
-                        ),
-                      )
+                      ? sessionLogData.calendarFormat == CalendarFormat.week
+                          ? Center(
+                            child: Text(
+                              'No climbing sessions logged this week.',
+                              style: context.bodyLarge,
+                            ),
+                          )
+                          : Center(
+                            child: Text(
+                              'No climbing sessions logged this month.',
+                              style: context.bodyLarge,
+                            ),
+                          )
                       : _buildListView(selectedSessions),
             ),
           ],
@@ -129,23 +138,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: (context) async {
                     final confirmed = await showDialog<bool>(
                       context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: Text('Delete session?', style: ctx.h3),
-                        content: Text(
-                          'This will permanently delete this session.',
-                          style: ctx.bodyMedium,
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(false),
-                            child: const Text('Cancel'),
+                      builder:
+                          (ctx) => AlertDialog(
+                            title: Text('Delete session?', style: ctx.h3),
+                            content: Text(
+                              'This will permanently delete this session.',
+                              style: ctx.bodyMedium,
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                child: const Text('Delete'),
+                              ),
+                            ],
                           ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.of(ctx).pop(true),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
                     );
                     if (confirmed == true && context.mounted) {
                       await context
@@ -324,7 +334,7 @@ class _StatChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colorScheme.surfaceBright,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: context.shadowSmall
+        boxShadow: context.shadowSmall,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
