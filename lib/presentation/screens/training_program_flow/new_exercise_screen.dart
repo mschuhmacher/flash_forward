@@ -3,6 +3,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -165,6 +166,26 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
         } else {
           // Regular edit of a user item — mutate in place.
           await presetProvider.updatePresetExercise(exercise);
+          // Offer to propagate the catalog edit to embedded copies inside
+          // session-template workouts. Only on the in-place update path:
+          // brand new exercises have nothing to propagate, and the
+          // copy-on-edit-default path produced a brand new id that no
+          // session template references yet.
+          final paths =
+              presetProvider.sessionWorkoutPathsUsingExercise(exercise.id);
+          if (paths.isNotEmpty && mounted) {
+            final yes = await showPropagateChangesDialog(
+              context: context,
+              itemKind: 'exercise',
+              affectedItemLabels: paths
+                  .map((p) => '${p.sessionTitle} → ${p.workoutTitle}')
+                  .toList(),
+            );
+            if (yes == true) {
+              await presetProvider
+                  .propagateExerciseToSessionTemplates(exercise);
+            }
+          }
         }
       }
       if (mounted) Navigator.pop(context, exercise);

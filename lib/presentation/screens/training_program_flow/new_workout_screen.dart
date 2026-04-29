@@ -6,6 +6,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -106,6 +107,23 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           if (mounted) await showDefaultEditTipIfNeeded(context);
         } else {
           await presetProvider.updatePresetWorkout(workout);
+          // Offer to propagate the catalog edit to embedded copies in session
+          // templates. Only on the in-place update path: new workouts have
+          // nothing to propagate, and the copy-on-edit-default path produced a
+          // brand new id that no session template references yet.
+          final affected =
+              presetProvider.sessionTemplatesUsingWorkout(workout.id);
+          if (affected.isNotEmpty && mounted) {
+            final yes = await showPropagateChangesDialog(
+              context: context,
+              itemKind: 'workout',
+              affectedItemLabels:
+                  affected.map((s) => s.title).toList(),
+            );
+            if (yes == true) {
+              await presetProvider.propagateWorkoutToSessionTemplates(workout);
+            }
+          }
         }
       }
       if (mounted) Navigator.pop(context, workout);
@@ -113,7 +131,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   }
 
   _copyExercise(Exercise exercise) {
-    final newExercise = exercise.copyWith();
+    final newExercise = exercise.deepCopy();
     setState(() {
       final index = _workout.exercises.indexOf(exercise);
       _workout.exercises.insert(index + 1, newExercise);

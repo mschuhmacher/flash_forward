@@ -125,7 +125,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   }
 
   _copyWorkout(Workout workout) {
-    final newWorkout = workout.copyWith();
+    final newWorkout = workout.deepCopy();
     setState(() {
       final index = _session.workouts.indexOf(workout);
       _session.workouts.insert(index + 1, newWorkout);

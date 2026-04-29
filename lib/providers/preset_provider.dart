@@ -480,6 +480,99 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Propagation: catalog edits → session templates ────────────────────────
+  //
+  // When a user edits a catalog workout/exercise, embedded copies in session
+  // templates do NOT auto-update. The save flow looks these up and offers the
+  // user a yes/no prompt to propagate. Matching is by id OR templateId because
+  // session templates can hold either: workouts added via AddItemScreen carry
+  // the catalog id directly; workouts produced by deepCopy carry the catalog
+  // id in templateId.
+
+  /// Session templates whose workouts list contains [workoutId]
+  /// (matched by id or templateId).
+  List<Session> sessionTemplatesUsingWorkout(String workoutId) {
+    return presetSessions
+        .where((s) => s.workouts.any(
+              (w) => w.id == workoutId || w.templateId == workoutId,
+            ))
+        .toList();
+  }
+
+  /// Session templates that contain a workout whose exercises list includes
+  /// [exerciseId] (matched by id or templateId).
+  List<Session> sessionTemplatesUsingExercise(String exerciseId) {
+    return presetSessions
+        .where((s) => s.workouts.any((w) => w.exercises.any(
+              (e) => e.id == exerciseId || e.templateId == exerciseId,
+            )))
+        .toList();
+  }
+
+  /// (sessionTitle, workoutTitle) pairs for every occurrence of an exercise
+  /// (matched by id or templateId) inside session-template workouts. Used by
+  /// the propagation dialog to show the user exactly where the change applies.
+  List<({String sessionTitle, String workoutTitle})>
+      sessionWorkoutPathsUsingExercise(String exerciseId) {
+    final result = <({String sessionTitle, String workoutTitle})>[];
+    for (final session in presetSessions) {
+      for (final workout in session.workouts) {
+        final hit = workout.exercises.any(
+          (e) => e.id == exerciseId || e.templateId == exerciseId,
+        );
+        if (hit) {
+          result.add((
+            sessionTitle: session.title,
+            workoutTitle: workout.title,
+          ));
+        }
+      }
+    }
+    return result;
+  }
+
+  /// Replaces every embedded copy of [updated] (matched by id or templateId)
+  /// inside session templates with a fresh deepCopy of [updated], then
+  /// persists each affected template. deepCopy ensures each template owns
+  /// independent objects (so future edits to one template don't bleed into
+  /// another) while preserving the templateId chain back to the catalog.
+  Future<void> propagateWorkoutToSessionTemplates(Workout updated) async {
+    final affected = sessionTemplatesUsingWorkout(updated.id);
+    for (final session in affected) {
+      final newWorkouts = session.workouts.map((w) {
+        if (w.id == updated.id || w.templateId == updated.id) {
+          return updated.deepCopy();
+        }
+        return w;
+      }).toList();
+      await updatePresetSession(session.copyWith(workouts: newWorkouts));
+    }
+  }
+
+  /// Replaces every embedded copy of [updated] (matched by id or templateId)
+  /// inside session-template workouts with a fresh deepCopy of [updated], then
+  /// persists each affected template. Each occurrence (even multiple inside the
+  /// same workout) gets its own independent deep copy.
+  Future<void> propagateExerciseToSessionTemplates(Exercise updated) async {
+    final affected = sessionTemplatesUsingExercise(updated.id);
+    for (final session in affected) {
+      final newWorkouts = session.workouts.map((w) {
+        final hasMatch = w.exercises.any(
+          (e) => e.id == updated.id || e.templateId == updated.id,
+        );
+        if (!hasMatch) return w;
+        final newExercises = w.exercises.map((e) {
+          if (e.id == updated.id || e.templateId == updated.id) {
+            return updated.deepCopy();
+          }
+          return e;
+        }).toList();
+        return w.copyWith(exercises: newExercises);
+      }).toList();
+      await updatePresetSession(session.copyWith(workouts: newWorkouts));
+    }
+  }
+
   /// Reset provider state on logout
   /// This allows re-initialization with a different user
   void reset() {
