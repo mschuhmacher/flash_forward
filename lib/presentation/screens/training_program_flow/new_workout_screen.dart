@@ -2,6 +2,7 @@ import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
@@ -52,6 +53,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         exercises: [],
         timeBetweenExercises: 120,
       );
+
+  /// Accumulates exercise edits made via nested NewExerciseScreen drilldowns.
+  /// Flushed to the provider on Save (standalone) or returned to the parent (nested).
+  final PendingChangeBag _pending = PendingChangeBag();
 
   late final _titleController = TextEditingController(
     text: widget.workout?.title,
@@ -290,14 +295,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                             if (newExercise != null) {
                               setState(() {
                                 _workout.exercises[index] = newExercise;
-                                // _workout.exercises.where((s) => s.id == exercise.id) = newExercise;
-                                // _workout = _workout.copyWith(
-                                //   exercises: [
-                                //     ..._workout.exercises,
-                                //     ...newExercise,
-                                //   ],
-                                // );
                               });
+                              // Track the exercise change so Save can propagate it.
+                              // Copies (from _copyExercise) are brand-new ids with
+                              // no existing consumers, so they are never added here.
+                              _pending.addExercise(newExercise);
                             }
                           },
                         );
