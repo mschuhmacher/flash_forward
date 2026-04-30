@@ -12,27 +12,6 @@ import '../models/session.dart';
 import '../data/default_session_data.dart';
 import '../models/pending_change.dart';
 
-/// Returned by [PresetProvider.commitChanges] so the edit screen can render a
-/// single combined "this also affects …" prompt covering every promoted item.
-/// Lists are already filtered by the optional excludes (the workout/session
-/// being edited is suppressed from its own consumer list).
-class CommitResult {
-  CommitResult({
-    required this.affectedSessionsByWorkoutId,
-    required this.affectedWorkoutsByExerciseId,
-  });
-
-  /// Workout id → sessions (other than the one being edited, if any) that use it.
-  final Map<String, List<Session>> affectedSessionsByWorkoutId;
-
-  /// Exercise id → workouts (other than the one being edited, if any) that use it.
-  final Map<String, List<Workout>> affectedWorkoutsByExerciseId;
-
-  bool get hasAny =>
-      affectedSessionsByWorkoutId.values.any((l) => l.isNotEmpty) ||
-      affectedWorkoutsByExerciseId.values.any((l) => l.isNotEmpty);
-}
-
 /// Responsibilities:
 /// - Holds in-memory state of all presets (sessions, workouts, exercises).
 /// - Provides getters for UI and business logic to access presets.
@@ -357,6 +336,9 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Legacy: use promoteAndUpdate* in new code. These methods will be removed
+  // once the default-fork cleanup ships and edit screens migrate to
+  // commitChanges().
   /// Save new user-added presets
   Future<void> addPresetSession(Session session) async {
     _userSessions.add(session);
@@ -702,10 +684,17 @@ class PresetProvider extends ChangeNotifier {
     }
   }
 
-  /// Single entry point from edit screens. Runs all promotes in dependency
-  /// order (exercises → workouts → session) and returns the propagation
-  /// surface so the caller can render one combined "this also affects …"
-  /// prompt covering every promoted item.
+  /// Single entry point edit screens call to commit a [PendingChangeBag].
+  /// Promotes happen in dependency order (exercises → workouts → session) and
+  /// the returned [CommitResult] describes other consumers affected, so the
+  /// caller can render the combined propagation prompt.
+  ///
+  /// Partial-failure semantics: if a promote mid-flight throws (e.g. disk or
+  /// network failure), some items may already be persisted while others
+  /// aren't. There is no automatic rollback; the caller must surface the error
+  /// to the user. (Each promoteAndUpdateX is itself best-effort with
+  /// Sentry-on-upload-failure; this note covers uncaught exceptions bubbling
+  /// up from the local-write step.)
   Future<CommitResult> commitChanges(
     PendingChangeBag bag, {
     String? excludeSessionId,
@@ -788,4 +777,25 @@ class PresetProvider extends ChangeNotifier {
     if (_syncService == null) return 0;
     return await _syncService!.processPendingSync();
   }
+}
+
+/// Returned by [PresetProvider.commitChanges] so the edit screen can render a
+/// single combined "this also affects …" prompt covering every promoted item.
+/// Lists are already filtered by the optional excludes (the workout/session
+/// being edited is suppressed from its own consumer list).
+class CommitResult {
+  CommitResult({
+    required this.affectedSessionsByWorkoutId,
+    required this.affectedWorkoutsByExerciseId,
+  });
+
+  /// Workout id → sessions (other than the one being edited, if any) that use it.
+  final Map<String, List<Session>> affectedSessionsByWorkoutId;
+
+  /// Exercise id → workouts (other than the one being edited, if any) that use it.
+  final Map<String, List<Workout>> affectedWorkoutsByExerciseId;
+
+  bool get hasAny =>
+      affectedSessionsByWorkoutId.values.any((l) => l.isNotEmpty) ||
+      affectedWorkoutsByExerciseId.values.any((l) => l.isNotEmpty);
 }
