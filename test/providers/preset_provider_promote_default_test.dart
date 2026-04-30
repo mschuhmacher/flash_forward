@@ -97,4 +97,160 @@ void main() {
       expect(titles, {'Default 2', 'Mine', 'Solo'});
     });
   });
+
+  group('promoteAndUpdate*', () {
+    test('promoteAndUpdateWorkout: promotes default into user list and shadows it',
+        () async {
+      provider.debugSeedDefaults(
+        workouts: [_workout(id: 'cat-w', title: 'Default')],
+      );
+
+      await provider.promoteAndUpdateWorkout(
+        _workout(id: 'cat-w', title: 'Mine'),
+      );
+
+      expect(provider.presetUserWorkoutsIDs, {'cat-w'});
+      final titles = provider.presetWorkouts.map((w) => w.title).toList();
+      expect(titles, ['Mine']);
+    });
+
+    test('promoteAndUpdateWorkout: subsequent edit updates in place', () async {
+      provider.debugSeedDefaults(
+        workouts: [_workout(id: 'cat-w', title: 'Default')],
+      );
+
+      await provider.promoteAndUpdateWorkout(
+        _workout(id: 'cat-w', title: 'First'),
+      );
+      await provider.promoteAndUpdateWorkout(
+        _workout(id: 'cat-w', title: 'Second'),
+      );
+
+      final userTitles = provider.presetWorkouts
+          .where((w) => w.id == 'cat-w')
+          .map((w) => w.title)
+          .toList();
+      expect(userTitles, ['Second']);
+      expect(provider.presetUserWorkoutsIDs.length, 1);
+    });
+
+    test('promoteAndUpdateWorkout: idempotent on retry', () async {
+      provider.debugSeedDefaults(
+        workouts: [_workout(id: 'cat-w', title: 'Default')],
+      );
+
+      final updated = _workout(id: 'cat-w', title: 'Mine');
+      await provider.promoteAndUpdateWorkout(updated);
+      await provider.promoteAndUpdateWorkout(updated);
+
+      expect(provider.presetUserWorkoutsIDs.length, 1);
+      expect(
+        provider.presetWorkouts.where((w) => w.id == 'cat-w').single.title,
+        'Mine',
+      );
+    });
+
+    test('promoteAndUpdateExercise: promotes default into user list and shadows it',
+        () async {
+      provider.debugSeedDefaults(
+        exercises: [_exercise(id: 'cat-e', title: 'Default')],
+      );
+
+      await provider.promoteAndUpdateExercise(
+        _exercise(id: 'cat-e', title: 'Mine'),
+      );
+
+      expect(provider.presetUserExerciseIDs, {'cat-e'});
+      final titles = provider.presetExercises.map((e) => e.title).toList();
+      expect(titles, ['Mine']);
+    });
+
+    test('promoteAndUpdateExercise: subsequent edit updates in place',
+        () async {
+      provider.debugSeedDefaults(
+        exercises: [_exercise(id: 'cat-e', title: 'Default')],
+      );
+
+      await provider.promoteAndUpdateExercise(
+        _exercise(id: 'cat-e', title: 'First'),
+      );
+      await provider.promoteAndUpdateExercise(
+        _exercise(id: 'cat-e', title: 'Second'),
+      );
+
+      final userTitles = provider.presetExercises
+          .where((e) => e.id == 'cat-e')
+          .map((e) => e.title)
+          .toList();
+      expect(userTitles, ['Second']);
+      expect(provider.presetUserExerciseIDs.length, 1);
+    });
+
+    test('promoteAndUpdateExercise: idempotent on retry', () async {
+      provider.debugSeedDefaults(
+        exercises: [_exercise(id: 'cat-e', title: 'Default')],
+      );
+
+      final updated = _exercise(id: 'cat-e', title: 'Mine');
+      await provider.promoteAndUpdateExercise(updated);
+      await provider.promoteAndUpdateExercise(updated);
+
+      expect(provider.presetUserExerciseIDs.length, 1);
+      expect(
+        provider.presetExercises.where((e) => e.id == 'cat-e').single.title,
+        'Mine',
+      );
+    });
+
+    test('promoteAndUpdateSession: promotes default into user list and shadows it',
+        () async {
+      provider.debugSeedDefaults(
+        sessions: [_session(id: 'cat-s', title: 'Default')],
+      );
+
+      await provider.promoteAndUpdateSession(
+        _session(id: 'cat-s', title: 'Mine'),
+      );
+
+      expect(provider.presetUserSessionIDs, {'cat-s'});
+      final titles = provider.presetSessions.map((s) => s.title).toList();
+      expect(titles, ['Mine']);
+    });
+
+    test('promoteAndUpdateSession: subsequent edit updates in place', () async {
+      provider.debugSeedDefaults(
+        sessions: [_session(id: 'cat-s', title: 'Default')],
+      );
+
+      await provider.promoteAndUpdateSession(
+        _session(id: 'cat-s', title: 'First'),
+      );
+      await provider.promoteAndUpdateSession(
+        _session(id: 'cat-s', title: 'Second'),
+      );
+
+      final userTitles = provider.presetSessions
+          .where((s) => s.id == 'cat-s')
+          .map((s) => s.title)
+          .toList();
+      expect(userTitles, ['Second']);
+      expect(provider.presetUserSessionIDs.length, 1);
+    });
+
+    test('promoteAndUpdateSession: idempotent on retry', () async {
+      provider.debugSeedDefaults(
+        sessions: [_session(id: 'cat-s', title: 'Default')],
+      );
+
+      final updated = _session(id: 'cat-s', title: 'Mine');
+      await provider.promoteAndUpdateSession(updated);
+      await provider.promoteAndUpdateSession(updated);
+
+      expect(provider.presetUserSessionIDs.length, 1);
+      expect(
+        provider.presetSessions.where((s) => s.id == 'cat-s').single.title,
+        'Mine',
+      );
+    });
+  });
 }

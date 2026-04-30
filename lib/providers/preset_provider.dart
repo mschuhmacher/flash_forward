@@ -508,6 +508,73 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Single entry point used by the edit flow: append on first save (promotes a
+  // default into the user list at the same id, where it shadows the default),
+  // replace in place on subsequent saves. Idempotent on retry.
+
+  Future<void> promoteAndUpdateWorkout(Workout updated) async {
+    final i = _userWorkouts.indexWhere((w) => w.id == updated.id);
+    if (i == -1) {
+      _userWorkouts.add(updated);
+    } else {
+      _userWorkouts[i] = updated;
+    }
+    await PresetLogger.savePresetToFile(
+      'user_preset_workouts.json',
+      _userWorkouts,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadWorkout(updated);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> promoteAndUpdateExercise(Exercise updated) async {
+    final i = _userExercises.indexWhere((e) => e.id == updated.id);
+    if (i == -1) {
+      _userExercises.add(updated);
+    } else {
+      _userExercises[i] = updated;
+    }
+    await PresetLogger.savePresetToFile(
+      'user_preset_exercises.json',
+      _userExercises,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadExercise(updated);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> promoteAndUpdateSession(Session updated) async {
+    final i = _userSessions.indexWhere((s) => s.id == updated.id);
+    if (i == -1) {
+      _userSessions.add(updated);
+    } else {
+      _userSessions[i] = updated;
+    }
+    await PresetLogger.savePresetToFile(
+      'user_preset_sessions.json',
+      _userSessions,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadSession(updated);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
   // ── Propagation: catalog edits → session templates ────────────────────────
   //
   // When a user edits a catalog workout/exercise, embedded copies in session
