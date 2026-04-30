@@ -1,0 +1,393 @@
+import 'dart:io';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/pending_change.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/providers/preset_provider.dart';
+
+class _FakePathProvider extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  _FakePathProvider(this._dir);
+  final String _dir;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => _dir;
+}
+
+Exercise _exercise({
+  required String id,
+  String? templateId,
+  String title = 'Ex',
+  int sets = 3,
+}) =>
+    Exercise(
+      id: id,
+      templateId: templateId,
+      title: title,
+      description: 'd',
+      label: 'push',
+      sets: sets,
+    );
+
+Workout _workout({
+  required String id,
+  String? templateId,
+  String title = 'W',
+  required List<Exercise> exercises,
+}) =>
+    Workout(
+      id: id,
+      templateId: templateId,
+      title: title,
+      label: 'push',
+      exercises: exercises,
+      timeBetweenExercises: 60,
+    );
+
+Session _session({
+  required String id,
+  String title = 'S',
+  required List<Workout> workouts,
+}) =>
+    Session(id: id, title: title, label: 'push', workouts: workouts);
+
+void main() {
+  late Directory tmpDir;
+  late PresetProvider provider;
+
+  setUp(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    tmpDir = await Directory.systemTemp.createTemp('preset_commit_');
+    PathProviderPlatform.instance = _FakePathProvider(tmpDir.path);
+    provider = PresetProvider();
+  });
+
+  tearDown(() async => tmpDir.delete(recursive: true));
+
+  group('commitChanges', () {
+    test(
+      'lists sessions affected by changed workouts and workouts affected by '
+      'changed exercises; excludeWorkoutId suppresses the parent workout',
+      () async {
+        // Catalog: one exercise, one workout containing it, one session containing
+        // that workout. Plus another (sibling) workout that also references the
+        // exercise — used to show that excludeWorkoutId only filters the parent.
+        final ex = _exercise(id: 'cat-e', title: 'Squat');
+        final parentWorkout = _workout(
+          id: 'cat-w',
+          title: 'Leg day',
+          exercises: [ex],
+        );
+        final siblingWorkout = _workout(
+          id: 'sibling-w',
+          title: 'Other day',
+          exercises: [_exercise(id: 'instance-e', templateId: 'cat-e')],
+        );
+        final sessionUsingParent = _session(
+          id: 'cat-s',
+          workouts: [parentWorkout],
+        );
+        final otherSession = _session(
+          id: 'other-s',
+          workouts: [siblingWorkout],
+        );
+
+        await provider.addPresetExercise(ex);
+        await provider.addPresetWorkout(parentWorkout);
+        await provider.addPresetWorkout(siblingWorkout);
+        await provider.addPresetSession(sessionUsingParent);
+        await provider.addPresetSession(otherSession);
+
+        // User edits both the exercise and its parent workout in the same flow.
+        final bag = PendingChangeBag()
+          ..addExercise(_exercise(id: 'cat-e', title: 'Squat v2', sets: 5))
+          ..addWorkout(_workout(
+            id: 'cat-w',
+            title: 'Leg day v2',
+            exercises: [_exercise(id: 'cat-e', title: 'Squat v2', sets: 5)],
+          ));
+
+        final result = await provider.commitChanges(
+          bag,
+          excludeWorkoutId: 'cat-w',
+        );
+
+        expect(result.hasAny, isTrue);
+
+        // Workout cat-w is used by sessionUsingParent → reported.
+        expect(
+          result.affectedSessionsByWorkoutId['cat-w']!.map((s) => s.id),
+          ['cat-s'],
+        );
+
+        // Exercise cat-e lives in parentWorkout AND siblingWorkout. With
+        // excludeWorkoutId='cat-w', only siblingWorkout should remain.
+        final affectedWorkouts =
+            result.affectedWorkoutsByExerciseId['cat-e']!;
+        expect(affectedWorkouts.map((w) => w.id), ['sibling-w']);
+      },
+    );
+
+    test('without excludeWorkoutId, all consuming workouts are listed',
+        () async {
+      final ex = _exercise(id: 'cat-e');
+      final parentWorkout = _workout(id: 'cat-w', exercises: [ex]);
+      final siblingWorkout = _workout(
+        id: 'sibling-w',
+        exercises: [_exercise(id: 'instance-e', templateId: 'cat-e')],
+      );
+
+      await provider.addPresetExercise(ex);
+      await provider.addPresetWorkout(parentWorkout);
+      await provider.addPresetWorkout(siblingWorkout);
+      // Each workout sits inside a session so usagesOfExercise can find them.
+      await provider.addPresetSession(
+        _session(id: 's1', workouts: [parentWorkout]),
+      );
+      await provider.addPresetSession(
+        _session(id: 's2', workouts: [siblingWorkout]),
+      );
+
+      final bag = PendingChangeBag()
+        ..addExercise(_exercise(id: 'cat-e', sets: 9));
+
+      final result = await provider.commitChanges(bag);
+
+      expect(
+        result.affectedWorkoutsByExerciseId['cat-e']!
+            .map((w) => w.id)
+            .toSet(),
+        {'cat-w', 'sibling-w'},
+      );
+    });
+
+    test('excludeSessionId suppresses the session being edited', () async {
+      final w = _workout(id: 'cat-w', exercises: []);
+      await provider.addPresetWorkout(w);
+      await provider.addPresetSession(_session(id: 's1', workouts: [w]));
+      await provider.addPresetSession(_session(id: 's2', workouts: [w]));
+
+      final bag = PendingChangeBag()
+        ..addWorkout(_workout(id: 'cat-w', title: 'Renamed', exercises: []));
+
+      final result =
+          await provider.commitChanges(bag, excludeSessionId: 's1');
+
+      expect(
+        result.affectedSessionsByWorkoutId['cat-w']!.map((s) => s.id),
+        ['s2'],
+      );
+    });
+
+    test('hasAny is false when there are no other consumers', () async {
+      // Edit a brand-new exercise/workout that nothing else references.
+      await provider.addPresetExercise(_exercise(id: 'lonely-e'));
+      await provider.addPresetWorkout(_workout(id: 'lonely-w', exercises: []));
+
+      final bag = PendingChangeBag()
+        ..addExercise(_exercise(id: 'lonely-e', sets: 4))
+        ..addWorkout(_workout(id: 'lonely-w', title: 'New', exercises: []));
+
+      final result = await provider.commitChanges(bag);
+
+      expect(result.hasAny, isFalse);
+      expect(result.affectedSessionsByWorkoutId, isEmpty);
+      expect(result.affectedWorkoutsByExerciseId, isEmpty);
+    });
+
+    test(
+      'promotes in dependency order: exercises before workouts before session',
+      () async {
+        provider.debugSeedDefaults(
+          exercises: [_exercise(id: 'cat-e', title: 'Default ex')],
+          workouts: [_workout(id: 'cat-w', title: 'Default w', exercises: [])],
+          sessions: [_session(id: 'cat-s', title: 'Default s', workouts: [])],
+        );
+
+        final bag = PendingChangeBag()
+          ..addExercise(_exercise(id: 'cat-e', title: 'My ex'))
+          ..addWorkout(_workout(id: 'cat-w', title: 'My w', exercises: []))
+          ..setSession(_session(id: 'cat-s', title: 'My s', workouts: []));
+
+        await provider.commitChanges(bag);
+
+        // All three were promoted (defaults shadowed).
+        expect(provider.presetUserExerciseIDs, contains('cat-e'));
+        expect(provider.presetUserWorkoutsIDs, contains('cat-w'));
+        expect(provider.presetUserSessionIDs, contains('cat-s'));
+
+        // And the user-list values reflect the bag's edits.
+        expect(
+          provider.presetExercises.firstWhere((e) => e.id == 'cat-e').title,
+          'My ex',
+        );
+        expect(
+          provider.presetWorkouts.firstWhere((w) => w.id == 'cat-w').title,
+          'My w',
+        );
+        expect(
+          provider.presetSessions.firstWhere((s) => s.id == 'cat-s').title,
+          'My s',
+        );
+      },
+    );
+  });
+
+  group('propagateBag', () {
+    test(
+      'runs exercise→sessions, exercise→workouts, and workout→sessions; '
+      'mutating one propagated copy does not bleed into another',
+      () async {
+        // An exercise lives in two user workouts AND in a session-template
+        // workout (referenced via templateId). Both consumers must be updated,
+        // each with an independent deep copy.
+        final originalEx = _exercise(id: 'cat-e', sets: 3, title: 'Squat');
+        final wA = _workout(
+          id: 'wA',
+          exercises: [originalEx],
+        );
+        final wB = _workout(
+          id: 'wB',
+          exercises: [_exercise(id: 'instance-e', templateId: 'cat-e', sets: 3)],
+        );
+
+        await provider.addPresetExercise(originalEx);
+        await provider.addPresetWorkout(wA);
+        await provider.addPresetWorkout(wB);
+        // Session template embeds wA so workout propagation has something to do.
+        await provider.addPresetSession(
+          _session(id: 's1', workouts: [wA.deepCopy()]),
+        );
+
+        final updatedEx = _exercise(id: 'cat-e', sets: 7, title: 'Squat v2');
+        final updatedW = _workout(
+          id: 'wA',
+          title: 'wA renamed',
+          exercises: [updatedEx],
+        );
+
+        final bag = PendingChangeBag()
+          ..addExercise(updatedEx)
+          ..addWorkout(updatedW);
+
+        // Commit first (so the catalog reflects the edit) then propagate.
+        await provider.commitChanges(bag);
+        await provider.propagateBag(bag);
+
+        // Both user workouts now carry the new exercise sets.
+        final wAAfter =
+            provider.presetWorkouts.firstWhere((w) => w.id == 'wA');
+        final wBAfter =
+            provider.presetWorkouts.firstWhere((w) => w.id == 'wB');
+        expect(wAAfter.exercises.single.sets, 7);
+        expect(wBAfter.exercises.single.sets, 7);
+
+        // Independent instances — mutating one's exercises list won't bleed.
+        expect(
+          identical(wAAfter.exercises.single, wBAfter.exercises.single),
+          isFalse,
+        );
+
+        // Session template was also updated by workout propagation: title
+        // matches the renamed catalog workout, and exercises are deep copies
+        // distinct from the user-workout copies.
+        final s1After = provider.presetSessions.firstWhere((s) => s.id == 's1');
+        expect(s1After.workouts.single.title, 'wA renamed');
+        expect(s1After.workouts.single.exercises.single.sets, 7);
+        expect(
+          identical(
+            s1After.workouts.single.exercises.single,
+            wAAfter.exercises.single,
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    test('session changes do not trigger any propagation', () async {
+      // A session with embedded workout/exercise. We change the session via
+      // the bag — propagateBag should not touch anything else.
+      final ex = _exercise(id: 'cat-e');
+      final w = _workout(id: 'cat-w', exercises: [ex]);
+      await provider.addPresetExercise(ex);
+      await provider.addPresetWorkout(w);
+      await provider.addPresetSession(_session(id: 'cat-s', workouts: [w]));
+
+      final bag = PendingChangeBag()
+        ..setSession(_session(id: 'cat-s', title: 'Renamed', workouts: [w]));
+
+      // Snapshot user lists pre-propagate.
+      final wBefore =
+          provider.presetWorkouts.firstWhere((x) => x.id == 'cat-w');
+      final eBefore =
+          provider.presetExercises.firstWhere((x) => x.id == 'cat-e');
+
+      await provider.propagateBag(bag);
+
+      // Identity preserved: nothing was rewritten.
+      expect(
+        identical(
+          provider.presetWorkouts.firstWhere((x) => x.id == 'cat-w'),
+          wBefore,
+        ),
+        isTrue,
+      );
+      expect(
+        identical(
+          provider.presetExercises.firstWhere((x) => x.id == 'cat-e'),
+          eBefore,
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('propagateExerciseToWorkouts', () {
+    test(
+      'replaces matching exercises in user workouts (by id and templateId) '
+      'and gives each workout an independent deep copy',
+      () async {
+        final original = _exercise(id: 'cat-e', sets: 3);
+        final w1 = _workout(id: 'w1', exercises: [original]);
+        final w2 = _workout(
+          id: 'w2',
+          exercises: [_exercise(id: 'instance-e', templateId: 'cat-e', sets: 3)],
+        );
+        final w3 = _workout(
+          id: 'w3',
+          exercises: [_exercise(id: 'unrelated-e')],
+        );
+
+        await provider.addPresetWorkout(w1);
+        await provider.addPresetWorkout(w2);
+        await provider.addPresetWorkout(w3);
+
+        final updated = _exercise(id: 'cat-e', sets: 9, title: 'New');
+
+        await provider.propagateExerciseToWorkouts(updated);
+
+        final w1After = provider.presetWorkouts.firstWhere((w) => w.id == 'w1');
+        final w2After = provider.presetWorkouts.firstWhere((w) => w.id == 'w2');
+        final w3After = provider.presetWorkouts.firstWhere((w) => w.id == 'w3');
+
+        // Affected workouts updated.
+        expect(w1After.exercises.single.sets, 9);
+        expect(w2After.exercises.single.sets, 9);
+        expect(w2After.exercises.single.templateId, 'cat-e');
+
+        // Unrelated workout untouched.
+        expect(w3After.exercises.single.id, 'unrelated-e');
+
+        // Independent instances.
+        expect(
+          identical(w1After.exercises.single, w2After.exercises.single),
+          isFalse,
+        );
+      },
+    );
+  });
+}

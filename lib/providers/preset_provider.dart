@@ -10,6 +10,28 @@ import 'package:flash_forward/services/supabase_sync_service.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
 import '../models/session.dart';
 import '../data/default_session_data.dart';
+import '../models/pending_change.dart';
+
+/// Returned by [PresetProvider.commitChanges] so the edit screen can render a
+/// single combined "this also affects …" prompt covering every promoted item.
+/// Lists are already filtered by the optional excludes (the workout/session
+/// being edited is suppressed from its own consumer list).
+class CommitResult {
+  CommitResult({
+    required this.affectedSessionsByWorkoutId,
+    required this.affectedWorkoutsByExerciseId,
+  });
+
+  /// Workout id → sessions (other than the one being edited, if any) that use it.
+  final Map<String, List<Session>> affectedSessionsByWorkoutId;
+
+  /// Exercise id → workouts (other than the one being edited, if any) that use it.
+  final Map<String, List<Workout>> affectedWorkoutsByExerciseId;
+
+  bool get hasAny =>
+      affectedSessionsByWorkoutId.values.any((l) => l.isNotEmpty) ||
+      affectedWorkoutsByExerciseId.values.any((l) => l.isNotEmpty);
+}
 
 /// Responsibilities:
 /// - Holds in-memory state of all presets (sessions, workouts, exercises).
@@ -654,6 +676,86 @@ class PresetProvider extends ChangeNotifier {
         return w.copyWith(exercises: newExercises);
       }).toList();
       await updatePresetSession(session.copyWith(workouts: newWorkouts));
+    }
+  }
+
+  /// Replaces every embedded copy of [updated] (matched by id or templateId)
+  /// inside user-list workouts with a fresh deepCopy of [updated], then
+  /// persists each affected workout. Why: catalog workouts are not the only
+  /// consumer of an exercise — user workouts (whether created from scratch or
+  /// promoted from a default) hold their own embedded exercise copies and need
+  /// to update too. deepCopy gives each workout an independent instance so
+  /// future edits don't cross-contaminate.
+  Future<void> propagateExerciseToWorkouts(Exercise updated) async {
+    for (final workout in List<Workout>.from(_userWorkouts)) {
+      final hasMatch = workout.exercises.any(
+        (e) => e.id == updated.id || e.templateId == updated.id,
+      );
+      if (!hasMatch) continue;
+      final newExercises = workout.exercises.map((e) {
+        if (e.id == updated.id || e.templateId == updated.id) {
+          return updated.deepCopy();
+        }
+        return e;
+      }).toList();
+      await promoteAndUpdateWorkout(workout.copyWith(exercises: newExercises));
+    }
+  }
+
+  /// Single entry point from edit screens. Runs all promotes in dependency
+  /// order (exercises → workouts → session) and returns the propagation
+  /// surface so the caller can render one combined "this also affects …"
+  /// prompt covering every promoted item.
+  Future<CommitResult> commitChanges(
+    PendingChangeBag bag, {
+    String? excludeSessionId,
+    String? excludeWorkoutId,
+  }) async {
+    // Promote in dependency order: exercises first, workouts next, session last.
+    for (final ec in bag.exercisesById.values) {
+      await promoteAndUpdateExercise(ec.exercise);
+    }
+    for (final wc in bag.workoutsById.values) {
+      await promoteAndUpdateWorkout(wc.workout);
+    }
+    if (bag.session != null) {
+      await promoteAndUpdateSession(bag.session!.session);
+    }
+
+    // Compute affected consumers AFTER promotion (so usagesOf reflects current state).
+    final sessionsByWorkout = <String, List<Session>>{};
+    final workoutsByExercise = <String, List<Workout>>{};
+    for (final wc in bag.workoutsById.values) {
+      final sessions = usagesOfWorkout(wc.workout.id)
+          .where((s) => s.id != excludeSessionId)
+          .toList();
+      if (sessions.isNotEmpty) sessionsByWorkout[wc.workout.id] = sessions;
+    }
+    for (final ec in bag.exercisesById.values) {
+      final workouts = usagesOfExercise(ec.exercise.id)
+          .map((u) => u.workout)
+          .where((w) => w.id != excludeWorkoutId)
+          .toSet() // dedupe: same workout may appear via multiple sessions
+          .toList();
+      if (workouts.isNotEmpty) workoutsByExercise[ec.exercise.id] = workouts;
+    }
+    return CommitResult(
+      affectedSessionsByWorkoutId: sessionsByWorkout,
+      affectedWorkoutsByExerciseId: workoutsByExercise,
+    );
+  }
+
+  /// Runs every propagation path implied by the bag. Called when the user
+  /// confirms the combined propagation prompt. Exercises propagate into both
+  /// session templates and user workouts; workouts propagate into session
+  /// templates. Session changes don't propagate (sessions are leaf consumers).
+  Future<void> propagateBag(PendingChangeBag bag) async {
+    for (final ec in bag.exercisesById.values) {
+      await propagateExerciseToSessionTemplates(ec.exercise);
+      await propagateExerciseToWorkouts(ec.exercise);
+    }
+    for (final wc in bag.workoutsById.values) {
+      await propagateWorkoutToSessionTemplates(wc.workout);
     }
   }
 
