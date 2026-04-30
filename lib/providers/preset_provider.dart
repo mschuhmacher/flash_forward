@@ -586,7 +586,7 @@ class PresetProvider extends ChangeNotifier {
 
   /// Session templates whose workouts list contains [workoutId]
   /// (matched by id or templateId).
-  List<Session> sessionTemplatesUsingWorkout(String workoutId) {
+  List<Session> usagesOfWorkout(String workoutId) {
     return presetSessions
         .where((s) => s.workouts.any(
               (w) => w.id == workoutId || w.templateId == workoutId,
@@ -594,32 +594,20 @@ class PresetProvider extends ChangeNotifier {
         .toList();
   }
 
-  /// Session templates that contain a workout whose exercises list includes
-  /// [exerciseId] (matched by id or templateId).
-  List<Session> sessionTemplatesUsingExercise(String exerciseId) {
-    return presetSessions
-        .where((s) => s.workouts.any((w) => w.exercises.any(
-              (e) => e.id == exerciseId || e.templateId == exerciseId,
-            )))
-        .toList();
-  }
-
-  /// (sessionTitle, workoutTitle) pairs for every occurrence of an exercise
-  /// (matched by id or templateId) inside session-template workouts. Used by
-  /// the propagation dialog to show the user exactly where the change applies.
-  List<({String sessionTitle, String workoutTitle})>
-      sessionWorkoutPathsUsingExercise(String exerciseId) {
-    final result = <({String sessionTitle, String workoutTitle})>[];
+  /// Each usage of an exercise is described by which session and which workout
+  /// inside that session contain the matching exercise. (Same exercise can
+  /// appear in multiple workouts; same workout can appear in multiple sessions.)
+  /// Matched by id or templateId.
+  List<({Session session, Workout workout})> usagesOfExercise(
+      String exerciseId) {
+    final result = <({Session session, Workout workout})>[];
     for (final session in presetSessions) {
       for (final workout in session.workouts) {
         final hit = workout.exercises.any(
           (e) => e.id == exerciseId || e.templateId == exerciseId,
         );
         if (hit) {
-          result.add((
-            sessionTitle: session.title,
-            workoutTitle: workout.title,
-          ));
+          result.add((session: session, workout: workout));
         }
       }
     }
@@ -632,7 +620,7 @@ class PresetProvider extends ChangeNotifier {
   /// independent objects (so future edits to one template don't bleed into
   /// another) while preserving the templateId chain back to the catalog.
   Future<void> propagateWorkoutToSessionTemplates(Workout updated) async {
-    final affected = sessionTemplatesUsingWorkout(updated.id);
+    final affected = usagesOfWorkout(updated.id);
     for (final session in affected) {
       final newWorkouts = session.workouts.map((w) {
         if (w.id == updated.id || w.templateId == updated.id) {
@@ -649,7 +637,8 @@ class PresetProvider extends ChangeNotifier {
   /// persists each affected template. Each occurrence (even multiple inside the
   /// same workout) gets its own independent deep copy.
   Future<void> propagateExerciseToSessionTemplates(Exercise updated) async {
-    final affected = sessionTemplatesUsingExercise(updated.id);
+    final affected =
+        usagesOfExercise(updated.id).map((u) => u.session).toSet();
     for (final session in affected) {
       final newWorkouts = session.workouts.map((w) {
         final hasMatch = w.exercises.any(

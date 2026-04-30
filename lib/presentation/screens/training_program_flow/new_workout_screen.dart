@@ -116,8 +116,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           // templates. Only on the in-place update path: new workouts have
           // nothing to propagate, and the copy-on-edit-default path produced a
           // brand new id that no session template references yet.
-          final affected =
-              presetProvider.sessionTemplatesUsingWorkout(workout.id);
+          final affected = presetProvider.usagesOfWorkout(workout.id);
           if (affected.isNotEmpty && mounted) {
             final yes = await showPropagateChangesDialog(
               context: context,

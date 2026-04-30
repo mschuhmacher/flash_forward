@@ -171,8 +171,11 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
           // brand new exercises have nothing to propagate, and the
           // copy-on-edit-default path produced a brand new id that no
           // session template references yet.
-          final paths =
-              presetProvider.sessionWorkoutPathsUsingExercise(exercise.id);
+          final paths = presetProvider
+              .usagesOfExercise(exercise.id)
+              .map((u) =>
+                  (sessionTitle: u.session.title, workoutTitle: u.workout.title))
+              .toList();
           if (paths.isNotEmpty && mounted) {
             final yes = await showPropagateChangesDialog(
               context: context,

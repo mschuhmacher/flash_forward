@@ -68,14 +68,14 @@ void main() {
 
   tearDown(() async => tmpDir.delete(recursive: true));
 
-  group('sessionTemplatesUsingWorkout', () {
+  group('usagesOfWorkout', () {
     test('matches by direct id (catalog workout dropped into a template)',
         () async {
       final w = _workout(id: 'cat-w', exercises: []);
       await provider.addPresetSession(_session(id: 's1', workouts: [w]));
       await provider.addPresetSession(_session(id: 's2', workouts: []));
 
-      final result = provider.sessionTemplatesUsingWorkout('cat-w');
+      final result = provider.usagesOfWorkout('cat-w');
 
       expect(result.map((s) => s.id), ['s1']);
     });
@@ -86,7 +86,7 @@ void main() {
       await provider
           .addPresetSession(_session(id: 's1', workouts: [embedded]));
 
-      final result = provider.sessionTemplatesUsingWorkout('cat-w');
+      final result = provider.usagesOfWorkout('cat-w');
 
       expect(result.map((s) => s.id), ['s1']);
     });
@@ -94,11 +94,11 @@ void main() {
     test('returns empty when no template uses the workout', () async {
       await provider.addPresetSession(_session(id: 's1', workouts: []));
 
-      expect(provider.sessionTemplatesUsingWorkout('nope'), isEmpty);
+      expect(provider.usagesOfWorkout('nope'), isEmpty);
     });
   });
 
-  group('sessionTemplatesUsingExercise & sessionWorkoutPathsUsingExercise', () {
+  group('usagesOfExercise', () {
     test('finds nested exercise occurrences across templates', () async {
       final ex1 = _exercise(id: 'cat-e');
       final ex1Copy =
@@ -116,13 +116,16 @@ void main() {
       await provider.addPresetSession(
           _session(id: 's3', title: 'Other', workouts: [w3]));
 
-      final sessions = provider.sessionTemplatesUsingExercise('cat-e');
-      expect(sessions.map((s) => s.id).toSet(), {'s1', 's2'});
+      final usages = provider.usagesOfExercise('cat-e');
 
-      final paths = provider.sessionWorkoutPathsUsingExercise('cat-e');
+      // Distinct sessions reachable via the usages list.
+      expect(usages.map((u) => u.session.id).toSet(), {'s1', 's2'});
+
+      // (sessionTitle, workoutTitle) pairs for every occurrence — what the
+      // propagation dialog renders.
       expect(
-        paths
-            .map((p) => '${p.sessionTitle}|${p.workoutTitle}')
+        usages
+            .map((u) => '${u.session.title}|${u.workout.title}')
             .toSet(),
         {'Leg day|Squats', 'Push|Press'},
       );
