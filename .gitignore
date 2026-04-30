@@ -51,3 +51,6 @@ sentry.properties
 
 # Claude Code analysis files
 .claude/
+
+# Git worktrees
+.worktrees/
