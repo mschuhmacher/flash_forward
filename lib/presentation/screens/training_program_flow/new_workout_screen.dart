@@ -45,7 +45,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   }
 
   late Workout _workout =
-      widget.workout ??
+      widget.workout?.deepCopy(keepId: true) ??
       Workout(
         title: 'title',
         label: 'label',
