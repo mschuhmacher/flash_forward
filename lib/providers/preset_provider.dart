@@ -36,18 +36,32 @@ class PresetProvider extends ChangeNotifier {
 
   SupabaseSyncService? _syncService;
 
-  List<Session> get presetSessions => [
-    ..._defaultSessions.where((s) => !_hiddenDefaultIds.contains(s.id)),
-    ..._userSessions,
-  ];
-  List<Workout> get presetWorkouts => [
-    ..._defaultWorkouts.where((w) => !_hiddenDefaultIds.contains(w.id)),
-    ..._userWorkouts,
-  ];
-  List<Exercise> get presetExercises => [
-    ..._defaultExercises.where((e) => !_hiddenDefaultIds.contains(e.id)),
-    ..._userExercises,
-  ];
+  // Catalog list rule: a user item with the same id as a default SHADOWS that
+  // default. Copy-on-edit promotes the default into the user list at the same
+  // id, so the default disappears from the catalog automatically.
+  List<Session> get presetSessions {
+    final userIds = _userSessions.map((s) => s.id).toSet();
+    return [
+      ..._defaultSessions.where((s) => !userIds.contains(s.id)),
+      ..._userSessions,
+    ];
+  }
+
+  List<Workout> get presetWorkouts {
+    final userIds = _userWorkouts.map((w) => w.id).toSet();
+    return [
+      ..._defaultWorkouts.where((w) => !userIds.contains(w.id)),
+      ..._userWorkouts,
+    ];
+  }
+
+  List<Exercise> get presetExercises {
+    final userIds = _userExercises.map((e) => e.id).toSet();
+    return [
+      ..._defaultExercises.where((e) => !userIds.contains(e.id)),
+      ..._userExercises,
+    ];
+  }
   List<Session> get presetDefaultSessions => _defaultSessions;
   List<Session> get presetUserSessions => _userSessions;
 
@@ -90,6 +104,20 @@ class PresetProvider extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  /// Seed in-memory default lists directly. Tests use this to set up shadow /
+  /// promotion scenarios without going through init() (which would also touch
+  /// SharedPreferences and the real default data).
+  @visibleForTesting
+  void debugSeedDefaults({
+    List<Session> sessions = const [],
+    List<Workout> workouts = const [],
+    List<Exercise> exercises = const [],
+  }) {
+    _defaultSessions = List.from(sessions);
+    _defaultWorkouts = List.from(workouts);
+    _defaultExercises = List.from(exercises);
   }
 
   /// Load user presets from Supabase cloud
