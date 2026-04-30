@@ -46,9 +46,9 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
     return presetProvider.isDefaultItem(widget.session!.id);
   }
 
-  // Title, label, workouts are required fields, so session must be initialized with them
   late Session _session =
-      widget.session ?? Session(title: 'title', label: 'label', workouts: []);
+      widget.session?.deepCopy(keepId: true) ??
+      Session(title: 'title', label: 'label', workouts: []);
 
   late final _titleController = TextEditingController(
     text: widget.session?.title,
