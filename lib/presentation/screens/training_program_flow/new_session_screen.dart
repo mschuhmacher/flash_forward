@@ -1,4 +1,5 @@
 import 'package:flash_forward/constants/field_limits.dart';
+import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
@@ -49,6 +50,10 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   late Session _session =
       widget.session?.deepCopy(keepId: true) ??
       Session(title: 'title', label: 'label', workouts: []);
+
+  /// Accumulates workout and exercise edits from nested drilldowns.
+  /// Flushed to the provider on Save via PresetProvider.commitChanges.
+  final PendingChangeBag _pending = PendingChangeBag();
 
   late final _titleController = TextEditingController(
     text: widget.session?.title,
@@ -286,11 +291,15 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                                         NewWorkoutScreen(workout: workout),
                               ),
                             );
-                            setState(() {
-                              if (newWorkout != null) {
+                            if (newWorkout != null) {
+                              setState(() {
                                 _session.workouts[index] = newWorkout;
-                              }
-                            });
+                              });
+                              // Track the workout change for combined propagation on Save.
+                              // The workout screen's own _pending (exercise changes) will
+                              // be merged here once Task 17 returns it as part of the result.
+                              _pending.addWorkout(newWorkout);
+                            }
                           },
                         );
                       },
