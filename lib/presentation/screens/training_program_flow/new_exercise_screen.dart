@@ -179,10 +179,15 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
           if (paths.isNotEmpty && mounted) {
             final yes = await showPropagateChangesDialog(
               context: context,
-              itemKind: 'exercise',
-              affectedItemLabels: paths
-                  .map((p) => '${p.sessionTitle} → ${p.workoutTitle}')
-                  .toList(),
+              sections: [
+                PropagationSection(
+                  itemKind: 'exercise',
+                  itemTitle: exercise.title,
+                  consumerLabels: paths
+                      .map((p) => '${p.sessionTitle} → ${p.workoutTitle}')
+                      .toList(),
+                ),
+              ],
             );
             if (yes == true) {
               await presetProvider

@@ -120,9 +120,13 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           if (affected.isNotEmpty && mounted) {
             final yes = await showPropagateChangesDialog(
               context: context,
-              itemKind: 'workout',
-              affectedItemLabels:
-                  affected.map((s) => s.title).toList(),
+              sections: [
+                PropagationSection(
+                  itemKind: 'workout',
+                  itemTitle: workout.title,
+                  consumerLabels: affected.map((s) => s.title).toList(),
+                ),
+              ],
             );
             if (yes == true) {
               await presetProvider.propagateWorkoutToSessionTemplates(workout);
