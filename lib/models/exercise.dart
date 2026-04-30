@@ -147,10 +147,14 @@ class Exercise {
     notes: notes == null ? this.notes : notes.value,
   );
 
-  /// Creates an independent copy with a new UUID — use when adding to a workout
-  /// or starting a session so the source is never mutated.
-  Exercise deepCopy() => Exercise(
-    templateId: templateId ?? id,
+  /// Creates an independent copy. With [keepId] = false (default), generates a
+  /// fresh UUID and sets [templateId] as a breadcrumb to the source — use when
+  /// adding to a session or starting a session so the copy is independent.
+  /// With [keepId] = true, preserves the original id so that saves target the
+  /// correct catalog row — use when opening an edit screen.
+  Exercise deepCopy({bool keepId = false}) => Exercise(
+    id: keepId ? id : null,
+    templateId: keepId ? templateId : (templateId ?? id),
     title: title,
     description: description,
     label: label,

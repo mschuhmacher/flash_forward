@@ -90,14 +90,19 @@ class Workout {
     notes: notes == null ? this.notes : notes.value,
   );
 
-  /// Creates an independent copy with a new UUID and deep-copied exercises.
-  /// Use when adding to a session or starting a session.
-  Workout deepCopy() => Workout(
-    templateId: templateId ?? id,
+  /// Creates an independent copy with deep-copied exercises.
+  /// With [keepId] = false (default), generates a fresh UUID and sets
+  /// [templateId] as a breadcrumb — use when adding to a session or starting
+  /// a session so the copy is independent.
+  /// With [keepId] = true, preserves the original id so that saves target the
+  /// correct catalog row — use when opening an edit screen.
+  Workout deepCopy({bool keepId = false}) => Workout(
+    id: keepId ? id : null,
+    templateId: keepId ? templateId : (templateId ?? id),
     title: title,
     label: label,
     description: description,
-    exercises: exercises.map((e) => e.deepCopy()).toList(),
+    exercises: exercises.map((e) => e.deepCopy(keepId: keepId)).toList(),
     difficulty: difficulty,
     equipment: equipment,
     timeBetweenExercises: timeBetweenExercises,
