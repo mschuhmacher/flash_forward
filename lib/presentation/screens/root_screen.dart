@@ -322,11 +322,6 @@ class SettingsDrawer extends StatelessWidget {
               title: Text('Clear logs', style: context.bodyLarge),
               onTap: () => _showClearLogsPopUp(context),
             ),
-            ListTile(
-              leading: const Icon(Icons.restore_rounded),
-              title: Text('Restore defaults', style: context.bodyLarge),
-              onTap: () => _showRestoreDefaultsDialog(context),
-            ),
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -360,51 +355,6 @@ class SettingsDrawer extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// Shows a confirmation dialog for restoring default content and, if confirmed,
-  /// calls PresetProvider.restoreAllDefaults().
-  ///
-  /// Dialog wording is deliberately explicit: it tells the user that their
-  /// customized copies of defaults WILL be deleted, while also reassuring them
-  /// that items they created from scratch are safe. This is the only "destructive
-  /// for customizations, safe for creations" operation in the app, so surprise
-  /// here would be costly.
-  Future<void> _showRestoreDefaultsDialog(BuildContext context) async {
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Restore defaults?'),
-        content: const Text(
-          "All default exercises, workouts, and sessions will be restored to "
-          "their original state.\n\n"
-          "Any edits you made to default items will be lost — your customized "
-          "copies of defaults will be deleted.\n\n"
-          "Items you created from scratch will NOT be affected.",
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Restore'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await presetProvider.restoreAllDefaults();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Default items restored')),
-        );
-      }
-    }
   }
 
   Future<void> _signOut(BuildContext context) async {

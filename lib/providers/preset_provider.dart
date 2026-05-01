@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flash_forward/data/default_exercises.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
 import 'package:flash_forward/models/exercise.dart';
@@ -24,9 +23,6 @@ import '../models/pending_change.dart';
 /// reactive while separating mutable user data from the immutable defaults.
 
 class PresetProvider extends ChangeNotifier {
-  static const _keyHiddenDefaultIds = 'pref_hidden_default_ids';
-  Set<String> _hiddenDefaultIds = {};
-
   List<Session> _defaultSessions = [];
   List<Workout> _defaultWorkouts = [];
   List<Exercise> _defaultExercises = [];
@@ -63,8 +59,6 @@ class PresetProvider extends ChangeNotifier {
       ..._userExercises,
     ];
   }
-  List<Session> get presetDefaultSessions => _defaultSessions;
-  List<Session> get presetUserSessions => _userSessions;
 
   // Return the IDs of the user-defined workouts and exercises
   Set<String> get presetUserWorkoutsIDs =>
@@ -90,8 +84,6 @@ class PresetProvider extends ChangeNotifier {
     _defaultSessions = List.from(kDefaultSessions);
     _defaultWorkouts = List.from(kDefaultWorkouts);
     _defaultExercises = List.from(kDefaultExercises);
-
-    await _loadHiddenDefaultIds();
 
     // If user is logged in, load their cloud data
     if (userId != null) {
@@ -161,18 +153,6 @@ class PresetProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadHiddenDefaultIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_keyHiddenDefaultIds) ?? [];
-    _hiddenDefaultIds = raw.toSet();
-  }
-
-  Future<void> _saveHiddenDefaultIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    // TODO(sync): sync hiddenDefaultIds to Supabase in a future multi-device release
-    await prefs.setStringList(_keyHiddenDefaultIds, _hiddenDefaultIds.toList());
-  }
-
   /// Loads user-added presets if they exist
   Future<void> _loadUserPresetDataFromLocal() async {
     _userSessions = (await PresetLogger.readUserPresetSessions()).toList();
@@ -213,106 +193,6 @@ class PresetProvider extends ChangeNotifier {
     final filteredCloud = cloudItems.where((item) => !deletedIds.contains(getId(item))).toList();
     return [...filteredCloud, ...unsynced];
   }
-
-  /// Returns true if [id] belongs to any of the immutable default lists.
-  bool isDefaultItem(String id) =>
-      _defaultSessions.any((s) => s.id == id) ||
-      _defaultWorkouts.any((w) => w.id == id) ||
-      _defaultExercises.any((e) => e.id == id);
-
-  /// Returns true if [templateId] points to a default item.
-  /// Use to identify user items that are edits of defaults.
-  bool isModifiedDefault(String? templateId) {
-    if (templateId == null) return false;
-    return isDefaultItem(templateId);
-  }
-
-  Future<void> hideDefaultItem(String id) async {
-    _hiddenDefaultIds.add(id);
-    await _saveHiddenDefaultIds();
-    notifyListeners();
-  }
-
-  /// Clears all hidden defaults AND removes any user items that were created by
-  /// editing a default (identified by templateId pointing to a default item).
-  ///
-  /// Why delete the user copies: if we only un-hid the originals, the user would
-  /// see both the restored original and their customized copy in the catalog —
-  /// two items with similar names, competing for attention. The UX intent of
-  /// "Restore defaults" is "bring me back to a clean slate for default content",
-  /// so the customized copies are removed.
-  ///
-  /// User-created-from-scratch items are NOT affected (templateId is null or points
-  /// to another user item, not a default).
-  Future<void> restoreAllDefaults() async {
-    // Step 1: un-hide originals. This alone makes the catalog show the defaults again.
-    _hiddenDefaultIds.clear();
-    await _saveHiddenDefaultIds();
-
-    // Step 2: find user items that are "modified defaults" (templateId points to a
-    // default item). These were created by the copy-on-edit flow.
-    final removedSessionIds = _userSessions
-        .where((s) => isModifiedDefault(s.templateId))
-        .map((s) => s.id)
-        .toList();
-    final removedWorkoutIds = _userWorkouts
-        .where((w) => isModifiedDefault(w.templateId))
-        .map((w) => w.id)
-        .toList();
-    final removedExerciseIds = _userExercises
-        .where((e) => isModifiedDefault(e.templateId))
-        .map((e) => e.id)
-        .toList();
-
-    // Drop them from in-memory state.
-    _userSessions.removeWhere((s) => removedSessionIds.contains(s.id));
-    _userWorkouts.removeWhere((w) => removedWorkoutIds.contains(w.id));
-    _userExercises.removeWhere((e) => removedExerciseIds.contains(e.id));
-
-    // Persist pruned lists to local JSON (overwrite-in-place).
-    await PresetLogger.savePresetToFile('user_preset_sessions.json', _userSessions);
-    await PresetLogger.savePresetToFile('user_preset_workouts.json', _userWorkouts);
-    await PresetLogger.savePresetToFile('user_preset_exercises.json', _userExercises);
-
-    // Best-effort cloud deletion. We don't block on failures — the sync queue
-    // pattern used elsewhere in this file will retry on next connectivity.
-    if (_syncService != null) {
-      for (final id in removedSessionIds) {
-        await _syncService!.deleteSession(id).catchError((_) {});
-      }
-      for (final id in removedWorkoutIds) {
-        await _syncService!.deleteWorkout(id).catchError((_) {});
-      }
-      for (final id in removedExerciseIds) {
-        await _syncService!.deleteExercise(id).catchError((_) {});
-      }
-    }
-
-    notifyListeners();
-  }
-
-  /// Titles of ALL known exercises (defaults + user items), including hidden defaults.
-  /// Use only when validating titles during copy-on-edit of a default, so the user
-  /// is forced to pick a new title that won't collide with the restored original later.
-  List<String> get allKnownExerciseTitles => [
-    ..._defaultExercises.map((e) => e.title),
-    ..._userExercises.map((e) => e.title),
-  ];
-  List<String> get allKnownWorkoutTitles => [
-    ..._defaultWorkouts.map((w) => w.title),
-    ..._userWorkouts.map((w) => w.title),
-  ];
-  List<String> get allKnownSessionTitles => [
-    ..._defaultSessions.map((s) => s.title),
-    ..._userSessions.map((s) => s.title),
-  ];
-
-  int get userCreatedExerciseCount =>
-      _userExercises.where((e) => !isModifiedDefault(e.templateId)).length;
-  int get userCreatedWorkoutCount =>
-      _userWorkouts.where((w) => !isModifiedDefault(w.templateId)).length;
-  int get userCreatedSessionCount =>
-      _userSessions.where((s) => !isModifiedDefault(s.templateId)).length;
 
   Future<void> deleteAllUserPresets() async {
     _userSessions = [];
@@ -775,8 +655,6 @@ class PresetProvider extends ChangeNotifier {
     _userSessions = [];
     _userWorkouts = [];
     _userExercises = [];
-    _hiddenDefaultIds = {};
-    _saveHiddenDefaultIds(); // fire-and-forget: clear persisted hidden IDs on logout
     notifyListeners();
   }
 

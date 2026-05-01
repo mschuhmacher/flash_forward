@@ -84,51 +84,18 @@ class _ProgramListviewState extends State<ProgramListview> {
     }
   }
 
-  Future<void> _hideOrDeleteItem(dynamic item) async {
+  Future<void> _deleteItem(dynamic item) async {
     final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    final isDefault = presetProvider.isDefaultItem(item.id);
-
-    if (isDefault) {
-      // Default items cannot be deleted outright — they are hidden so the user
-      // can restore them later via Settings > Restore defaults.
-      final confirm = await _showHideDefaultDialog(item.title);
-      if (confirm != true) return;
-      await presetProvider.hideDefaultItem(item.id);
-    } else {
-      final confirm = await _showDeleteConfirmationDialog(item.title);
-      if (confirm != true) return;
-      switch (widget.itemType) {
-        case ItemType.sessions:
-          await presetProvider.deleteUserPresetSession(item.id);
-        case ItemType.workouts:
-          await presetProvider.deleteUserPresetWorkout(item.id);
-        case ItemType.exercises:
-          await presetProvider.deleteUserPresetExercise(item.id);
-      }
+    final confirm = await _showDeleteConfirmationDialog(item.title);
+    if (confirm != true) return;
+    switch (widget.itemType) {
+      case ItemType.sessions:
+        await presetProvider.deleteUserPresetSession(item.id);
+      case ItemType.workouts:
+        await presetProvider.deleteUserPresetWorkout(item.id);
+      case ItemType.exercises:
+        await presetProvider.deleteUserPresetExercise(item.id);
     }
-  }
-
-  Future<bool?> _showHideDefaultDialog(String title) {
-    return showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('Remove from catalog?'),
-            content: Text(
-              '"$title" is a default item. You can restore it anytime via Settings > Restore defaults.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Remove'),
-              ),
-            ],
-          ),
-    );
   }
 
   Future<bool?> _showDeleteConfirmationDialog(String title) {
@@ -212,14 +179,12 @@ class _ProgramListviewState extends State<ProgramListview> {
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   itemBuilder: (BuildContext context, int index) {
                     final item = filteredListItems[index];
-                    final bool isDefault = presetData.isDefaultItem(item.id);
 
                     return CatalogListviewCard(
                       filteredListItem: item,
                       itemType: widget.itemType,
                       onCopy: () => _copyItem(item),
-                      onDelete: () => _hideOrDeleteItem(item),
-                      isDefault: isDefault,
+                      onDelete: () => _deleteItem(item),
                     );
                   },
                 ),
@@ -238,7 +203,6 @@ class CatalogListviewCard extends StatelessWidget {
     required this.filteredListItem,
     required this.itemType,
     required this.onCopy,
-    required this.isDefault,
     required this.onDelete,
   });
 
@@ -246,7 +210,6 @@ class CatalogListviewCard extends StatelessWidget {
   final ItemType itemType;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
-  final bool isDefault;
 
   @override
   Widget build(BuildContext context) {
@@ -334,39 +297,10 @@ class CatalogListviewCard extends StatelessWidget {
                   size: 24,
                 ),
               ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      filteredListItem.title,
-                      style: context.titleMedium,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (isDefault)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.secondary.withAlpha(38),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: context.colorScheme.secondary,
-                        ),
-                      ),
-                      child: Text(
-                        'DEFAULT',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: context.colorScheme.onSecondary,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 9,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
-                ],
+              title: Text(
+                filteredListItem.title,
+                style: context.titleMedium,
+                overflow: TextOverflow.ellipsis,
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
