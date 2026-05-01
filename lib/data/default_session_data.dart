@@ -7,10 +7,11 @@ Workout _findWorkout(String id) {
   return kDefaultWorkouts.firstWhere((w) => w.id == id);
 }
 
-// IMPORTANT: IDs are stable keys. The user list shadows the default list by id
-// when an item is promoted on edit, so changing an existing id: value after it
-// ships would orphan a user's promoted copy. When adding a new session, pick a
-// unique kebab-case ID.
+// IMPORTANT: IDs are stable keys referenced by trash entries (trash.json and
+// Supabase), session templates (via templateId), and Supabase row keys.
+// Do NOT change an existing id once shipped — doing so will orphan trash entries
+// and template references. When adding a new session, pick a unique kebab-case
+// ID derived from the title.
 final List<Session> kDefaultSessions = [
   Session(
     id: 'projecting-session',
