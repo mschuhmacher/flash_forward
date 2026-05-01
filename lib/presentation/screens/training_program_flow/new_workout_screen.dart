@@ -95,42 +95,43 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           context,
           listen: false,
         );
-        final isDefault = widget.workout != null &&
-            presetProvider.isDefaultItem(widget.workout!.id);
 
         if (_isNew) {
           await presetProvider.addPresetWorkout(workout);
-        } else if (isDefault) {
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          final userCopy = workout.copyWith(
-            id: const Uuid().v4(),
-            userId: authProvider.userId,
-            templateId: widget.workout!.id,
-          );
-          await presetProvider.addPresetWorkout(userCopy);
-          await presetProvider.hideDefaultItem(widget.workout!.id);
-          if (mounted) await showDefaultEditTipIfNeeded(context);
         } else {
-          await presetProvider.updatePresetWorkout(workout);
-          // Offer to propagate the catalog edit to embedded copies in session
-          // templates. Only on the in-place update path: new workouts have
-          // nothing to propagate, and the copy-on-edit-default path produced a
-          // brand new id that no session template references yet.
-          final affected = presetProvider.usagesOfWorkout(workout.id);
-          if (affected.isNotEmpty && mounted) {
-            final yes = await showPropagateChangesDialog(
-              context: context,
-              sections: [
+          final bag = PendingChangeBag()
+            ..addWorkout(workout);
+          for (final ec in _pending.exercisesById.values) {
+            bag.addExercise(ec.exercise);
+          }
+          // excludeWorkoutId filters the parent workout out of each exercise's
+          // affected-workouts list — those edits ride along with the workout
+          // commit and don't need a separate propagation entry.
+          final result = await presetProvider.commitChanges(
+            bag,
+            excludeWorkoutId: workout.id,
+          );
+
+          if (result.hasAny && mounted) {
+            final sections = <PropagationSection>[
+              for (final entry in result.affectedSessionsByWorkoutId.entries)
                 PropagationSection(
                   itemKind: 'workout',
                   itemTitle: workout.title,
-                  consumerLabels: affected.map((s) => s.title).toList(),
+                  consumerLabels: entry.value.map((s) => s.title).toList(),
                 ),
-              ],
+              for (final entry in result.affectedWorkoutsByExerciseId.entries)
+                PropagationSection(
+                  itemKind: 'exercise',
+                  itemTitle: bag.exercisesById[entry.key]!.exercise.title,
+                  consumerLabels: entry.value.map((w) => w.title).toList(),
+                ),
+            ];
+            final yes = await showPropagateChangesDialog(
+              context: context,
+              sections: sections,
             );
-            if (yes == true) {
-              await presetProvider.propagateWorkoutToSessionTemplates(workout);
-            }
+            if (yes == true) await presetProvider.propagateBag(bag);
           }
         }
       }
