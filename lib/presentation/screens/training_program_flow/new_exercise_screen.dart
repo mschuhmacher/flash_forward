@@ -1,5 +1,6 @@
 import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
@@ -140,59 +141,25 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
       );
       if (widget.persistToProvider) {
         final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-        // Recompute here (not using _isEditingDefault) to avoid build-vs-save
-        // context inconsistency.
-        final isDefault = widget.exercise != null &&
-            presetProvider.isDefaultItem(widget.exercise!.id);
-
         if (_isNew) {
-          // Brand new user exercise — straight add.
           await presetProvider.addPresetExercise(exercise);
-        } else if (isDefault) {
-          // Copy-on-edit: create a user-owned copy carrying a templateId that
-          // points back to the original default. This templateId is the marker
-          // used by isModifiedDefault() and restoreAllDefaults() to find and
-          // clean up these copies when the user chooses to restore defaults.
-          // After adding the copy, hide the original so both don't appear.
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          final userCopy = exercise.copyWith(
-            id: const Uuid().v4(),
-            userId: authProvider.userId,
-            templateId: widget.exercise!.id,
-          );
-          await presetProvider.addPresetExercise(userCopy);
-          await presetProvider.hideDefaultItem(widget.exercise!.id);
-          if (mounted) await showDefaultEditTipIfNeeded(context);
         } else {
-          // Regular edit of a user item — mutate in place.
-          await presetProvider.updatePresetExercise(exercise);
-          // Offer to propagate the catalog edit to embedded copies inside
-          // session-template workouts. Only on the in-place update path:
-          // brand new exercises have nothing to propagate, and the
-          // copy-on-edit-default path produced a brand new id that no
-          // session template references yet.
-          final paths = presetProvider
-              .usagesOfExercise(exercise.id)
-              .map((u) =>
-                  (sessionTitle: u.session.title, workoutTitle: u.workout.title))
-              .toList();
-          if (paths.isNotEmpty && mounted) {
-            final yes = await showPropagateChangesDialog(
-              context: context,
-              sections: [
+          final bag = PendingChangeBag()..addExercise(exercise);
+          final result = await presetProvider.commitChanges(bag);
+          if (result.hasAny && mounted) {
+            final sections = <PropagationSection>[
+              for (final entry in result.affectedWorkoutsByExerciseId.entries)
                 PropagationSection(
                   itemKind: 'exercise',
                   itemTitle: exercise.title,
-                  consumerLabels: paths
-                      .map((p) => '${p.sessionTitle} → ${p.workoutTitle}')
-                      .toList(),
+                  consumerLabels: entry.value.map((w) => w.title).toList(),
                 ),
-              ],
+            ];
+            final yes = await showPropagateChangesDialog(
+              context: context,
+              sections: sections,
             );
-            if (yes == true) {
-              await presetProvider
-                  .propagateExerciseToSessionTemplates(exercise);
-            }
+            if (yes == true) await presetProvider.propagateBag(bag);
           }
         }
       }
