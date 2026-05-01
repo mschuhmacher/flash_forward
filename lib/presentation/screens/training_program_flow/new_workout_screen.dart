@@ -135,7 +135,13 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           }
         }
       }
-      if (mounted) Navigator.pop(context, workout);
+      if (mounted) {
+        if (widget.persistToProvider) {
+          Navigator.pop(context, workout);
+        } else {
+          Navigator.pop(context, (workout: workout, pending: _pending));
+        }
+      }
     }
   }
 

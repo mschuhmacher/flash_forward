@@ -283,7 +283,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           onCopy: () => _copyWorkout(workout),
                           onDelete: () => _deleteWorkout(workout),
                           onTap: () async {
-                            final newWorkout = await Navigator.push<Workout>(
+                            final result = await Navigator.push<
+                                ({Workout workout, PendingChangeBag pending})>(
                               context,
                               MaterialPageRoute(
                                 builder:
@@ -291,14 +292,14 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                                         NewWorkoutScreen(workout: workout),
                               ),
                             );
-                            if (newWorkout != null) {
+                            if (result != null) {
                               setState(() {
-                                _session.workouts[index] = newWorkout;
+                                _session.workouts[index] = result.workout;
                               });
-                              // Track the workout change for combined propagation on Save.
-                              // The workout screen's own _pending (exercise changes) will
-                              // be merged here once Task 17 returns it as part of the result.
-                              _pending.addWorkout(newWorkout);
+                              _pending.addWorkout(result.workout);
+                              // Merge the inner bag so nested exercise edits
+                              // also flow up to the session save.
+                              _pending.merge(result.pending);
                             }
                           },
                         );
