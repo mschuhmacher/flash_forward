@@ -689,6 +689,12 @@ class PresetProvider extends ChangeNotifier {
   /// the returned [CommitResult] describes other consumers affected, so the
   /// caller can render the combined propagation prompt.
   ///
+  /// Suppression rule: if a bagged exercise also lives inside a bagged
+  /// workout's exercises list, its `affectedWorkoutsByExerciseId` entry is
+  /// suppressed — the exercise change reaches its only relevant consumer (the
+  /// parent workout) via the workout's own propagation, so prompting again at
+  /// the exercise level would be misleading.
+  ///
   /// Partial-failure semantics: if a promote mid-flight throws (e.g. disk or
   /// network failure), some items may already be persisted while others
   /// aren't. There is no automatic rollback; the caller must surface the error
@@ -720,7 +726,16 @@ class PresetProvider extends ChangeNotifier {
           .toList();
       if (sessions.isNotEmpty) sessionsByWorkout[wc.workout.id] = sessions;
     }
+    // Suppress exercise-level propagation for exercises that live inside a
+    // workout that's also being committed. The user's edit was scoped to that
+    // workout context; the exercise change reaches its only relevant consumer
+    // (the parent workout) via the workout's own propagation.
+    final exerciseIdsInsideBaggedWorkouts = <String>{
+      for (final wc in bag.workoutsById.values)
+        for (final e in wc.workout.exercises) e.id,
+    };
     for (final ec in bag.exercisesById.values) {
+      if (exerciseIdsInsideBaggedWorkouts.contains(ec.exercise.id)) continue;
       final workouts = usagesOfExercise(ec.exercise.id)
           .map((u) => u.workout)
           .where((w) => w.id != excludeWorkoutId)

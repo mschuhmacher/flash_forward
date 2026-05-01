@@ -70,12 +70,12 @@ void main() {
 
   group('commitChanges', () {
     test(
-      'lists sessions affected by changed workouts and workouts affected by '
-      'changed exercises; excludeWorkoutId suppresses the parent workout',
+      'lists sessions affected by changed workouts; suppresses exercise-level '
+      'entry when the exercise lives inside a bagged workout',
       () async {
         // Catalog: one exercise, one workout containing it, one session containing
         // that workout. Plus another (sibling) workout that also references the
-        // exercise — used to show that excludeWorkoutId only filters the parent.
+        // exercise.
         final ex = _exercise(id: 'cat-e', title: 'Squat');
         final parentWorkout = _workout(
           id: 'cat-w',
@@ -124,11 +124,59 @@ void main() {
           ['cat-s'],
         );
 
-        // Exercise cat-e lives in parentWorkout AND siblingWorkout. With
-        // excludeWorkoutId='cat-w', only siblingWorkout should remain.
-        final affectedWorkouts =
-            result.affectedWorkoutsByExerciseId['cat-e']!;
-        expect(affectedWorkouts.map((w) => w.id), ['sibling-w']);
+        // Suppression rule: cat-e is inside cat-w (which is bagged), so the
+        // exercise-level entry is suppressed even though sibling-w also
+        // consumes cat-e. The user's edit was scoped to the parent workout.
+        expect(
+          result.affectedWorkoutsByExerciseId.containsKey('cat-e'),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'suppresses exercise-level entry when exercise lives inside a bagged '
+      'workout, but unrelated bagged exercises still get their entries',
+      () async {
+        // Bag will contain workout w1 (with exercise e1) and a separate
+        // exercise e2 that is NOT in w1's exercises. e1 should be suppressed,
+        // e2 should still surface its other consumers.
+        final e1 = _exercise(id: 'e1', title: 'E1');
+        final e2 = _exercise(id: 'e2', title: 'E2');
+        final w1 = _workout(id: 'w1', title: 'W1', exercises: [e1]);
+        final otherWorkoutUsingE2 = _workout(
+          id: 'w-other',
+          title: 'W-other',
+          exercises: [e2],
+        );
+
+        await provider.addPresetExercise(e1);
+        await provider.addPresetExercise(e2);
+        await provider.addPresetWorkout(w1);
+        await provider.addPresetWorkout(otherWorkoutUsingE2);
+        // Sessions wrap the workouts so usagesOfExercise can locate them.
+        await provider.addPresetSession(_session(id: 's1', workouts: [w1]));
+        await provider.addPresetSession(
+          _session(id: 's2', workouts: [otherWorkoutUsingE2]),
+        );
+
+        final bag = PendingChangeBag()
+          ..addWorkout(_workout(
+            id: 'w1',
+            title: 'W1 v2',
+            exercises: [_exercise(id: 'e1', title: 'E1 v2')],
+          ))
+          ..addExercise(_exercise(id: 'e2', title: 'E2 v2'));
+
+        final result = await provider.commitChanges(bag);
+
+        // e1 is inside the bagged workout w1 → suppressed.
+        expect(result.affectedWorkoutsByExerciseId.containsKey('e1'), isFalse);
+        // e2 is NOT inside any bagged workout → its entry is computed.
+        expect(
+          result.affectedWorkoutsByExerciseId['e2']!.map((w) => w.id),
+          ['w-other'],
+        );
       },
     );
 

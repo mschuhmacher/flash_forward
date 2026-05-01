@@ -5,6 +5,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/workout_card.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
@@ -102,28 +103,42 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       }
 
       final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-      final isDefault = widget.session != null &&
-          presetProvider.isDefaultItem(widget.session!.id);
 
       if (_isNew) {
         await presetProvider.addPresetSession(session);
-      } else if (isDefault) {
-        // Copy-on-edit: create a user-owned copy carrying a templateId that
-        // points back to the original default. This templateId is the marker
-        // used by isModifiedDefault() and restoreAllDefaults() to find and
-        // clean up these copies when the user chooses to restore defaults.
-        // After adding the copy, hide the original so both don't appear.
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final userCopy = session.copyWith(
-          id: const Uuid().v4(),
-          userId: authProvider.userId,
-          templateId: widget.session!.id,
-        );
-        await presetProvider.addPresetSession(userCopy);
-        await presetProvider.hideDefaultItem(widget.session!.id);
-        if (mounted) await showDefaultEditTipIfNeeded(context);
       } else {
-        await presetProvider.updatePresetSession(session);
+        final bag = PendingChangeBag()..setSession(session);
+        for (final wc in _pending.workoutsById.values) {
+          bag.addWorkout(wc.workout);
+        }
+        for (final ec in _pending.exercisesById.values) {
+          bag.addExercise(ec.exercise);
+        }
+        final result = await presetProvider.commitChanges(
+          bag,
+          excludeSessionId: session.id,
+        );
+        if (result.hasAny && mounted) {
+          final sections = <PropagationSection>[
+            for (final entry in result.affectedSessionsByWorkoutId.entries)
+              PropagationSection(
+                itemKind: 'workout',
+                itemTitle: bag.workoutsById[entry.key]!.workout.title,
+                consumerLabels: entry.value.map((s) => s.title).toList(),
+              ),
+            for (final entry in result.affectedWorkoutsByExerciseId.entries)
+              PropagationSection(
+                itemKind: 'exercise',
+                itemTitle: bag.exercisesById[entry.key]!.exercise.title,
+                consumerLabels: entry.value.map((w) => w.title).toList(),
+              ),
+          ];
+          final yes = await showPropagateChangesDialog(
+            context: context,
+            sections: sections,
+          );
+          if (yes == true) await presetProvider.propagateBag(bag);
+        }
       }
       if (mounted) Navigator.pop(context);
     }
