@@ -12,8 +12,6 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/utils/default_edit_tip.dart';
-import 'package:uuid/uuid.dart';
 
 class NewExerciseScreen extends StatefulWidget {
   final Exercise? exercise;
@@ -78,16 +76,6 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
       widget.exercise?.rpe != null;
 
   bool get _isNew => widget.exercise == null;
-
-  // When editing a default, the save path creates a user-owned copy instead of
-  // mutating the default in place. The copy must have a UNIQUE title because
-  // after restoreAllDefaults() the original returns and two items with the same
-  // title would be ambiguous.
-  bool get _isEditingDefault {
-    if (widget.exercise == null) return false;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    return presetProvider.isDefaultItem(widget.exercise!.id);
-  }
 
   @override
   void dispose() {
@@ -219,11 +207,11 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       ),
                       validator: (value) {
                         final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-                        final existingTitles = _isEditingDefault
-                            ? presetProvider.allKnownExerciseTitles
-                            : presetProvider.presetExercises.map((e) => e.title).toList();
-                        final ownTitle = _isEditingDefault ? null : widget.exercise?.title;
-                        return FieldValidators.exerciseTitle(value, existingTitles: existingTitles, ownTitle: ownTitle);
+                        return FieldValidators.exerciseTitle(
+                          value,
+                          existingTitles: presetProvider.presetExercises.map((e) => e.title).toList(),
+                          ownTitle: widget.exercise?.title,
+                        );
                       },
                     ),
                   ),

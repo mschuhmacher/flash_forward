@@ -16,8 +16,6 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:flash_forward/utils/default_edit_tip.dart';
-import 'package:uuid/uuid.dart';
 
 class NewWorkoutScreen extends StatefulWidget {
   final Workout? workout;
@@ -38,12 +36,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool get _isNew => widget.workout == null;
-
-  bool get _isEditingDefault {
-    if (widget.workout == null) return false;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    return presetProvider.isDefaultItem(widget.workout!.id);
-  }
 
   late Workout _workout =
       widget.workout?.deepCopy(keepId: true) ??
@@ -216,11 +208,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                       ),
                       validator: (v) {
                         final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-                        final existingTitles = _isEditingDefault
-                            ? presetProvider.allKnownWorkoutTitles
-                            : presetProvider.presetWorkouts.map((w) => w.title).toList();
-                        final ownTitle = _isEditingDefault ? null : widget.workout?.title;
-                        return FieldValidators.workoutTitle(v, existingTitles: existingTitles, ownTitle: ownTitle);
+                        return FieldValidators.workoutTitle(
+                          v,
+                          existingTitles: presetProvider.presetWorkouts.map((w) => w.title).toList(),
+                          ownTitle: widget.workout?.title,
+                        );
                       },
                     ),
                   ),

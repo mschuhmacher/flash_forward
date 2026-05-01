@@ -12,12 +12,10 @@ import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
-import 'package:flash_forward/utils/default_edit_tip.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:uuid/uuid.dart';
 
 class NewSessionScreen extends StatefulWidget {
   final Session? session;
@@ -37,16 +35,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool get _isNew => widget.session == null;
-
-  // When editing a default, the save path creates a user-owned copy instead of
-  // mutating the default in place. The copy must have a UNIQUE title because
-  // after restoreAllDefaults() the original returns and two items with the same
-  // title would be ambiguous.
-  bool get _isEditingDefault {
-    if (widget.session == null) return false;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    return presetProvider.isDefaultItem(widget.session!.id);
-  }
 
   late Session _session =
       widget.session?.deepCopy(keepId: true) ??
@@ -163,15 +151,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final session = _session;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    // When editing a default we use the UNFILTERED list (including the hidden
-    // original) and omit ownTitle so the validator sees the original's title
-    // as taken — forcing the user to pick a new name. This prevents collisions
-    // after restoreAllDefaults() brings the original back.
-    final existingSessionTitles = _isEditingDefault
-        ? presetProvider.allKnownSessionTitles
-        : presetProvider.presetSessions.map((s) => s.title).toList();
-    final sessionOwnTitle = _isEditingDefault ? null : widget.session?.title;
     final Set<String> existingWorkoutIds = {};
 
     if (session.workouts.isNotEmpty) {
@@ -223,12 +202,14 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator:
-                          (v) => FieldValidators.sessionTitle(
-                            v,
-                            existingTitles: existingSessionTitles,
-                            ownTitle: sessionOwnTitle,
-                          ),
+                      validator: (v) {
+                        final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+                        return FieldValidators.sessionTitle(
+                          v,
+                          existingTitles: presetProvider.presetSessions.map((s) => s.title).toList(),
+                          ownTitle: widget.session?.title,
+                        );
+                      },
                     ),
                   ),
                   SizedBox(width: 8),
