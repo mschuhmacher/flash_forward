@@ -3,10 +3,12 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/data/default_exercises.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/services/preset_logger.dart';
 import 'package:flash_forward/services/supabase_sync_service.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
+import 'package:flash_forward/services/trash_service.dart';
 import '../models/session.dart';
 import '../data/default_session_data.dart';
 import '../models/pending_change.dart';
@@ -30,6 +32,11 @@ class PresetProvider extends ChangeNotifier {
   List<Session> _userSessions = [];
   List<Workout> _userWorkouts = [];
   List<Exercise> _userExercises = [];
+
+  final TrashService _trashService = TrashService();
+  List<TrashEntry> _trashedItems = [];
+
+  List<TrashEntry> get trashedItems => List.unmodifiable(_trashedItems);
 
   SupabaseSyncService? _syncService;
 
@@ -95,6 +102,8 @@ class PresetProvider extends ChangeNotifier {
       await _loadUserPresetDataFromLocal();
     }
 
+    await _loadAndPurgeTrash();
+
     _isLoading = false;
     notifyListeners();
   }
@@ -111,6 +120,13 @@ class PresetProvider extends ChangeNotifier {
     _defaultSessions = List.from(sessions);
     _defaultWorkouts = List.from(workouts);
     _defaultExercises = List.from(exercises);
+  }
+
+  /// Seed in-memory trash list directly. Tests use this to set up trash
+  /// scenarios without going through init() and disk I/O.
+  @visibleForTesting
+  void debugSeedTrash(List<TrashEntry> entries) {
+    _trashedItems = List.from(entries);
   }
 
   /// Load user presets from Supabase cloud
@@ -643,6 +659,206 @@ class PresetProvider extends ChangeNotifier {
     }
   }
 
+  // ── Trash ─────────────────────────────────────────────────────────────────
+
+  /// Purge expired entries (> 90 days) and load the remaining trash from local
+  /// storage, then merge with any cloud entries. Cloud entries not yet present
+  /// locally are unioned in; conflicts are resolved by latest [deletedAt].
+  Future<void> _loadAndPurgeTrash() async {
+    await _trashService.purgeOlderThan(const Duration(days: 90));
+    _trashedItems = await _trashService.readAll();
+    if (_syncService != null) {
+      try {
+        final cloud = await _syncService!.fetchUserTrashEntries();
+        _trashedItems = _mergeTrashCloudAndLocal(_trashedItems, cloud);
+      } catch (e, st) {
+        Sentry.captureException(e, stackTrace: st);
+      }
+    }
+  }
+
+  /// Merges [local] and [cloud] trash lists, deduplicating by id.
+  /// When both lists contain the same id, the entry with the later [deletedAt]
+  /// wins (last-write-wins conflict resolution).
+  @visibleForTesting
+  static List<TrashEntry> mergeTrashCloudAndLocalForTest(
+    List<TrashEntry> local,
+    List<TrashEntry> cloud,
+  ) => _mergeTrashCloudAndLocal(local, cloud);
+
+  static List<TrashEntry> _mergeTrashCloudAndLocal(
+    List<TrashEntry> local,
+    List<TrashEntry> cloud,
+  ) {
+    final byId = <String, TrashEntry>{};
+    for (final e in local) {
+      byId[e.id] = e;
+    }
+    for (final e in cloud) {
+      final existing = byId[e.id];
+      if (existing == null || e.deletedAt.isAfter(existing.deletedAt)) {
+        byId[e.id] = e;
+      }
+    }
+    return byId.values.toList();
+  }
+
+  /// Moves the item with [id] of the given [kind] to the trash.
+  /// The item is removed from the user list (if present) and from the default
+  /// shadow. A [TrashEntry] is persisted locally and uploaded to the cloud.
+  Future<void> deleteToTrash({
+    required String id,
+    required TrashKind kind,
+  }) async {
+    final now = DateTime.now();
+    final TrashEntry entry;
+    switch (kind) {
+      case TrashKind.workout:
+        final src = presetWorkouts.firstWhere((w) => w.id == id);
+        _userWorkouts.removeWhere((w) => w.id == id);
+        await PresetLogger.savePresetToFile(
+          'user_preset_workouts.json',
+          _userWorkouts,
+        );
+        entry = TrashEntry.workout(workout: src, deletedAt: now);
+      case TrashKind.exercise:
+        final src = presetExercises.firstWhere((e) => e.id == id);
+        _userExercises.removeWhere((e) => e.id == id);
+        await PresetLogger.savePresetToFile(
+          'user_preset_exercises.json',
+          _userExercises,
+        );
+        entry = TrashEntry.exercise(exercise: src, deletedAt: now);
+      case TrashKind.session:
+        final src = presetSessions.firstWhere((s) => s.id == id);
+        _userSessions.removeWhere((s) => s.id == id);
+        await PresetLogger.savePresetToFile(
+          'user_preset_sessions.json',
+          _userSessions,
+        );
+        entry = TrashEntry.session(session: src, deletedAt: now);
+    }
+    _trashedItems.add(entry);
+    await _trashService.add(entry);
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadTrashEntry(entry);
+      } catch (e, st) {
+        Sentry.captureException(e, stackTrace: st);
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Restores the trashed item with [id] to the appropriate user list.
+  /// If [overrideTitle] is provided, the restored item gets that title instead
+  /// of its original one — use after a rename-on-collision dialog.
+  /// The caller is responsible for detecting title collisions and prompting the
+  /// user before calling this method.
+  Future<void> restoreFromTrash(String id, {String? overrideTitle}) async {
+    final entry = await _trashService.restore(id);
+    if (entry == null) return;
+    switch (entry.kind) {
+      case TrashKind.workout:
+        var w = entry.payload as Workout;
+        if (overrideTitle != null) w = w.copyWith(title: overrideTitle);
+        _userWorkouts.add(w);
+        await PresetLogger.savePresetToFile(
+          'user_preset_workouts.json',
+          _userWorkouts,
+        );
+      case TrashKind.exercise:
+        var e = entry.payload as Exercise;
+        if (overrideTitle != null) e = e.copyWith(title: overrideTitle);
+        _userExercises.add(e);
+        await PresetLogger.savePresetToFile(
+          'user_preset_exercises.json',
+          _userExercises,
+        );
+      case TrashKind.session:
+        var s = entry.payload as Session;
+        if (overrideTitle != null) s = s.copyWith(title: overrideTitle);
+        _userSessions.add(s);
+        await PresetLogger.savePresetToFile(
+          'user_preset_sessions.json',
+          _userSessions,
+        );
+    }
+    _trashedItems.removeWhere((e) => e.id == id);
+    if (_syncService != null) {
+      try {
+        await _syncService!.deleteTrashEntry(id);
+      } catch (e, st) {
+        Sentry.captureException(e, stackTrace: st);
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Lifts a session-embedded (or otherwise catalog-absent) item into the user
+  /// catalog. Purely additive — does not affect any embedded copies in sessions.
+  /// If [overrideTitle] is provided, the item is saved under that title.
+  /// If [overrideId] is provided, the item is saved under that id (use when the
+  /// original id already exists in the catalog).
+  Future<void> liftToCatalog({
+    required Object item,
+    required TrashKind kind,
+    String? overrideTitle,
+    String? overrideId,
+  }) async {
+    switch (kind) {
+      case TrashKind.workout:
+        var w = item as Workout;
+        if (overrideTitle != null) w = w.copyWith(title: overrideTitle);
+        if (overrideId != null) w = w.copyWith(id: overrideId);
+        _userWorkouts.add(w);
+        await PresetLogger.savePresetToFile(
+          'user_preset_workouts.json',
+          _userWorkouts,
+        );
+        if (_syncService != null) {
+          try {
+            await _syncService!.uploadWorkout(w);
+          } catch (e, st) {
+            Sentry.captureException(e, stackTrace: st);
+          }
+        }
+      case TrashKind.exercise:
+        var e = item as Exercise;
+        if (overrideTitle != null) e = e.copyWith(title: overrideTitle);
+        if (overrideId != null) e = e.copyWith(id: overrideId);
+        _userExercises.add(e);
+        await PresetLogger.savePresetToFile(
+          'user_preset_exercises.json',
+          _userExercises,
+        );
+        if (_syncService != null) {
+          try {
+            await _syncService!.uploadExercise(e);
+          } catch (e, st) {
+            Sentry.captureException(e, stackTrace: st);
+          }
+        }
+      case TrashKind.session:
+        var s = item as Session;
+        if (overrideTitle != null) s = s.copyWith(title: overrideTitle);
+        if (overrideId != null) s = s.copyWith(id: overrideId);
+        _userSessions.add(s);
+        await PresetLogger.savePresetToFile(
+          'user_preset_sessions.json',
+          _userSessions,
+        );
+        if (_syncService != null) {
+          try {
+            await _syncService!.uploadSession(s);
+          } catch (e, st) {
+            Sentry.captureException(e, stackTrace: st);
+          }
+        }
+    }
+    notifyListeners();
+  }
+
   /// Reset provider state on logout
   /// This allows re-initialization with a different user
   void reset() {
@@ -655,6 +871,7 @@ class PresetProvider extends ChangeNotifier {
     _userSessions = [];
     _userWorkouts = [];
     _userExercises = [];
+    _trashedItems = [];
     notifyListeners();
   }
 
