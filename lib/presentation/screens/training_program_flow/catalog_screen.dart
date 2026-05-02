@@ -1,6 +1,7 @@
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
@@ -84,40 +85,69 @@ class _ProgramListviewState extends State<ProgramListview> {
     }
   }
 
-  Future<void> _deleteItem(dynamic item) async {
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    final confirm = await _showDeleteConfirmationDialog(item.title);
+  Future<void> _moveToTrash(dynamic item) async {
+    final pp = Provider.of<PresetProvider>(context, listen: false);
+    final kind = switch (widget.itemType) {
+      ItemType.sessions => TrashKind.session,
+      ItemType.workouts => TrashKind.workout,
+      ItemType.exercises => TrashKind.exercise,
+    };
+    final references = switch (kind) {
+      TrashKind.workout =>
+        pp.sessionsContainingWorkout(item.id).map((s) => s.title).toList(),
+      TrashKind.exercise =>
+        pp.workoutsContainingExercise(item.id).map((w) => w.title).toList(),
+      TrashKind.session => const <String>[],
+    };
+    final confirm = await _showTrashConfirmationDialog(item.title, references);
     if (confirm != true) return;
-    switch (widget.itemType) {
-      case ItemType.sessions:
-        await presetProvider.deleteUserPresetSession(item.id);
-      case ItemType.workouts:
-        await presetProvider.deleteUserPresetWorkout(item.id);
-      case ItemType.exercises:
-        await presetProvider.deleteUserPresetExercise(item.id);
-    }
+    await pp.deleteToTrash(id: item.id, kind: kind);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 5),
+        content: Text('Moved "${item.title}" to trash'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            await pp.restoreFromTrash(item.id);
+          },
+        ),
+      ),
+    );
   }
 
-  Future<bool?> _showDeleteConfirmationDialog(String title) {
+  Future<bool?> _showTrashConfirmationDialog(
+    String title,
+    List<String> references,
+  ) {
     return showDialog<bool>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('Remove from catalog?'),
-            content: Text(
-              '"$title" is a user-created item. Deleting this item is permanent.',
+      builder: (ctx) {
+        final String body;
+        if (references.isEmpty) {
+          body =
+              '"$title" will be moved to the trash. You can restore it within 90 days from Settings.';
+        } else {
+          final list = references.map((r) => '• $r').join('\n');
+          body =
+              '"$title" is currently used in:\n$list\n\nMoving it to the trash won\'t affect those — they keep their own copy.';
+        }
+        return AlertDialog(
+          title: const Text('Move to trash?'),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Remove'),
-              ),
-            ],
-          ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Move to trash'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -184,7 +214,7 @@ class _ProgramListviewState extends State<ProgramListview> {
                       filteredListItem: item,
                       itemType: widget.itemType,
                       onCopy: () => _copyItem(item),
-                      onDelete: () => _deleteItem(item),
+                      onDelete: () => _moveToTrash(item),
                     );
                   },
                 ),

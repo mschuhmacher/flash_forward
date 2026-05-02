@@ -528,6 +528,17 @@ class PresetProvider extends ChangeNotifier {
     return result;
   }
 
+  /// All sessions whose workouts list contains an item with [id]
+  /// (matched by id or templateId). Convenience wrapper over [usagesOfWorkout].
+  List<Session> sessionsContainingWorkout(String id) =>
+      usagesOfWorkout(id);
+
+  /// Deduplicated list of workouts (across all sessions) that contain an
+  /// exercise with [id] (matched by id or templateId). Convenience wrapper
+  /// over [usagesOfExercise].
+  List<Workout> workoutsContainingExercise(String id) =>
+      usagesOfExercise(id).map((u) => u.workout).toSet().toList();
+
   /// Replaces every embedded copy of [updated] (matched by id or templateId)
   /// inside session templates with a fresh deepCopy of [updated], then
   /// persists each affected template. deepCopy ensures each template owns
