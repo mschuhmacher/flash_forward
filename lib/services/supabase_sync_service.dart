@@ -278,13 +278,13 @@ class SupabaseSyncService {
     final response = await supabase
         .from('trash_entries')
         .select()
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .order('deleted_at', ascending: false);
 
     return (response as List).map((row) {
-      // Use TrashEntry.fromJson so field renames and backward-compat fallbacks are handled centrally
       return TrashEntry.fromJson({
         'kind': row['kind'],
-        'deletedAt': row['deleted_at'],
+        'deletedAt': row['deleted_at']?.toString(),
         'payload': row['payload'],
       });
     }).toList();
