@@ -3,11 +3,13 @@ import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/pending_change.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
+import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -135,6 +137,28 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         }
       }
     }
+  }
+
+  Future<void> _saveExerciseToCatalog(Exercise exercise) async {
+    final pp = Provider.of<PresetProvider>(context, listen: false);
+    final titles = pp.presetExercises.map((e) => e.title).toList();
+    String? finalTitle = exercise.title;
+    if (titles.contains(exercise.title)) {
+      finalTitle = await showRenameOnCollisionDialog(
+        context: context,
+        currentTitle: exercise.title,
+        existingTitles: titles,
+      );
+      if (finalTitle == null) return;
+    }
+    await pp.liftToCatalog(
+      item: finalTitle == exercise.title ? exercise : exercise.copyWith(title: finalTitle),
+      kind: TrashKind.exercise,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Saved to catalog')),
+    );
   }
 
   _copyExercise(Exercise exercise) {
@@ -276,6 +300,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                       itemCount: workout.exercises.length,
                       itemBuilder: (BuildContext context, int index) {
                         final exercise = workout.exercises[index];
+                        final pp = Provider.of<PresetProvider>(context, listen: false);
+                        final notInCatalog = pp.presetExercises.every((e) => e.id != exercise.id);
+                        final notInTrash = pp.trashedItems.every((e) => e.id != exercise.id);
                         return _ExerciseCard(
                           exercise: exercise,
                           key: ValueKey(
@@ -283,6 +310,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           ), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
                           onCopy: () => _copyExercise(exercise),
                           onDelete: () => _deleteExercise(exercise),
+                          onSaveToCatalog: (notInCatalog && notInTrash)
+                              ? () => _saveExerciseToCatalog(exercise)
+                              : null,
                           onTap: () async {
                             Exercise? newExercise =
                                 await Navigator.push<Exercise>(
@@ -358,12 +388,17 @@ class _ExerciseCard extends StatelessWidget {
   final VoidCallback onCopy;
   final VoidCallback onDelete;
 
+  /// When non-null, a "Save to catalog" slidable action is shown. Null means
+  /// the action is hidden (the exercise is already in the catalog or in trash).
+  final VoidCallback? onSaveToCatalog;
+
   const _ExerciseCard({
     super.key,
     required this.exercise,
     required this.onTap,
     required this.onCopy,
     required this.onDelete,
+    this.onSaveToCatalog,
   });
 
   @override
@@ -375,6 +410,17 @@ class _ExerciseCard extends StatelessWidget {
         endActionPane: ActionPane(
           motion: ScrollMotion(),
           children: [
+            if (onSaveToCatalog != null) ...[
+              SizedBox(width: 8),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (_) => onSaveToCatalog!(),
+                backgroundColor: context.colorScheme.tertiary,
+                foregroundColor: context.colorScheme.onTertiary,
+                icon: Icons.save_alt_rounded,
+                label: 'Save to catalog',
+              ),
+            ],
             SizedBox(width: 8),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),
