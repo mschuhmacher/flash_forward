@@ -165,7 +165,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   }
 
   _deleteWorkout(Workout workout) {
-    // TODO: add in confirmation dialog or snackbar with undo function
     setState(() {
       final index = _session.workouts.indexOf(workout);
       _session.workouts.removeAt(index);

@@ -246,9 +246,9 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Legacy: use promoteAndUpdate* in new code. These methods will be removed
-  // once the default-fork cleanup ships and edit screens migrate to
-  // commitChanges().
+  // These add/update methods are still used by the _isNew add path in edit
+  // screens, by _copyItem in catalog, and by propagation helpers internally.
+  // New callers editing existing items should use promoteAndUpdate* instead.
   /// Save new user-added presets
   Future<void> addPresetSession(Session session) async {
     _userSessions.add(session);
@@ -739,7 +739,10 @@ class PresetProvider extends ChangeNotifier {
     final TrashEntry entry;
     switch (kind) {
       case TrashKind.workout:
-        final src = presetWorkouts.firstWhere((w) => w.id == id);
+        final src = presetWorkouts.firstWhere(
+          (w) => w.id == id,
+          orElse: () => throw StateError('deleteToTrash: workout $id not found'),
+        );
         _userWorkouts.removeWhere((w) => w.id == id);
         await PresetLogger.savePresetToFile(
           'user_preset_workouts.json',
@@ -747,7 +750,10 @@ class PresetProvider extends ChangeNotifier {
         );
         entry = TrashEntry.workout(workout: src, deletedAt: now);
       case TrashKind.exercise:
-        final src = presetExercises.firstWhere((e) => e.id == id);
+        final src = presetExercises.firstWhere(
+          (e) => e.id == id,
+          orElse: () => throw StateError('deleteToTrash: exercise $id not found'),
+        );
         _userExercises.removeWhere((e) => e.id == id);
         await PresetLogger.savePresetToFile(
           'user_preset_exercises.json',
@@ -755,7 +761,10 @@ class PresetProvider extends ChangeNotifier {
         );
         entry = TrashEntry.exercise(exercise: src, deletedAt: now);
       case TrashKind.session:
-        final src = presetSessions.firstWhere((s) => s.id == id);
+        final src = presetSessions.firstWhere(
+          (s) => s.id == id,
+          orElse: () => throw StateError('deleteToTrash: session $id not found'),
+        );
         _userSessions.removeWhere((s) => s.id == id);
         await PresetLogger.savePresetToFile(
           'user_preset_sessions.json',

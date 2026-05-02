@@ -93,8 +93,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         if (_isNew) {
           await presetProvider.addPresetWorkout(workout);
         } else {
-          final bag = PendingChangeBag()
-            ..addWorkout(workout);
+          final bag = PendingChangeBag()..addWorkout(workout);
           for (final ec in _pending.exercisesById.values) {
             bag.addExercise(ec.exercise);
           }
@@ -130,11 +129,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         }
       }
       if (mounted) {
-        if (widget.persistToProvider) {
-          Navigator.pop(context, workout);
-        } else {
-          Navigator.pop(context, (workout: workout, pending: _pending));
-        }
+        Navigator.pop(context, (workout: workout, pending: _pending));
       }
     }
   }
@@ -278,11 +273,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                       validator: FieldValidators.workoutDescription,
                     ),
                   ),
-                  // if (widget.itemName == 'workout') ...[],
                 ],
               ),
               SizedBox(height: 8),
-              // Expanded(child: Center(child: Text('No workouts added yet!'))),
               workout.exercises.isEmpty
                   ? Expanded(
                     child: Center(
