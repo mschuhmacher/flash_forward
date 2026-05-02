@@ -134,10 +134,8 @@ void main() {
 
       await provider.deleteToTrash(id: 'def-w', kind: TrashKind.workout);
 
-      // The default is not in _userWorkouts so nothing was removed there, but
-      // once trash filtering is added (Task 30) this will hide it. For now we
-      // verify the entry was persisted in trash.
       expect(provider.trashedItems.single.id, 'def-w');
+      expect(provider.presetWorkouts.any((w) => w.id == 'def-w'), isFalse);
     });
 
     test('id never appears twice across userWorkouts and trash', () async {
@@ -148,6 +146,88 @@ void main() {
       final userIds = provider.presetUserWorkoutsIDs;
       final trashIds = provider.trashedItems.map((e) => e.id).toSet();
       expect(userIds.intersection(trashIds), isEmpty);
+    });
+  });
+
+  group('presetWorkouts / presetExercises / presetSessions trash filtering', () {
+    test('trashed user workout hidden from presetWorkouts', () async {
+      await provider.addPresetWorkout(_workout(id: 'w-1'));
+      await provider.deleteToTrash(id: 'w-1', kind: TrashKind.workout);
+
+      expect(provider.presetWorkouts.any((w) => w.id == 'w-1'), isFalse);
+    });
+
+    test('trashed default workout hidden from presetWorkouts', () {
+      provider.debugSeedDefaults(
+        workouts: [_workout(id: 'def-w')],
+      );
+      provider.debugSeedTrash([_trashedWorkout(id: 'def-w')]);
+
+      expect(provider.presetWorkouts.any((w) => w.id == 'def-w'), isFalse);
+    });
+
+    test('trashed user exercise hidden from presetExercises', () async {
+      await provider.addPresetExercise(_exercise(id: 'e-1'));
+      await provider.deleteToTrash(id: 'e-1', kind: TrashKind.exercise);
+
+      expect(provider.presetExercises.any((e) => e.id == 'e-1'), isFalse);
+    });
+
+    test('trashed default exercise hidden from presetExercises', () {
+      provider.debugSeedDefaults(
+        exercises: [_exercise(id: 'def-e')],
+      );
+      provider.debugSeedTrash([_trashedExercise(id: 'def-e')]);
+
+      expect(provider.presetExercises.any((e) => e.id == 'def-e'), isFalse);
+    });
+
+    test('trashed user session hidden from presetSessions', () async {
+      await provider.addPresetSession(_session(id: 's-1'));
+      await provider.deleteToTrash(id: 's-1', kind: TrashKind.session);
+
+      expect(provider.presetSessions.any((s) => s.id == 's-1'), isFalse);
+    });
+
+    test('trashed default session hidden from presetSessions', () {
+      provider.debugSeedDefaults(
+        sessions: [_session(id: 'def-s')],
+      );
+      provider.debugSeedTrash([_trashedSession(id: 'def-s')]);
+
+      expect(provider.presetSessions.any((s) => s.id == 'def-s'), isFalse);
+    });
+
+    test('restoring a trashed item brings it back to presetWorkouts', () async {
+      await provider.addPresetWorkout(_workout(id: 'w-1', title: 'W'));
+      await provider.deleteToTrash(id: 'w-1', kind: TrashKind.workout);
+      expect(provider.presetWorkouts.any((w) => w.id == 'w-1'), isFalse);
+
+      await provider.restoreFromTrash('w-1');
+
+      expect(provider.presetWorkouts.any((w) => w.id == 'w-1'), isTrue);
+    });
+
+    test('non-trashed items remain visible alongside trashed ones', () {
+      provider.debugSeedDefaults(
+        workouts: [_workout(id: 'w-visible'), _workout(id: 'w-trashed')],
+      );
+      provider.debugSeedTrash([_trashedWorkout(id: 'w-trashed')]);
+
+      final ids = provider.presetWorkouts.map((w) => w.id).toSet();
+      expect(ids, contains('w-visible'));
+      expect(ids, isNot(contains('w-trashed')));
+    });
+
+    test('trash kind filtering: trashed workout does not hide exercises', () {
+      provider.debugSeedDefaults(
+        exercises: [_exercise(id: 'e-1')],
+      );
+      // Seed a trash entry for a workout with the same id as the exercise —
+      // the kind guard must prevent cross-kind suppression.
+      provider.debugSeedTrash([_trashedWorkout(id: 'e-1')]);
+
+      expect(provider.presetExercises.any((e) => e.id == 'e-1'), isTrue);
     });
   });
 

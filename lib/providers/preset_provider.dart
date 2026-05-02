@@ -41,29 +41,43 @@ class PresetProvider extends ChangeNotifier {
   SupabaseSyncService? _syncService;
 
   // Catalog list rule: a user item with the same id as a default SHADOWS that
-  // default. Copy-on-edit promotes the default into the user list at the same
-  // id, so the default disappears from the catalog automatically.
+  // default. Trashed items are hidden from both lists regardless of source.
   List<Session> get presetSessions {
     final userIds = _userSessions.map((s) => s.id).toSet();
+    final trashedIds = _trashedItems
+        .where((e) => e.kind == TrashKind.session)
+        .map((e) => e.id)
+        .toSet();
     return [
-      ..._defaultSessions.where((s) => !userIds.contains(s.id)),
-      ..._userSessions,
+      ..._defaultSessions.where(
+          (s) => !userIds.contains(s.id) && !trashedIds.contains(s.id)),
+      ..._userSessions.where((s) => !trashedIds.contains(s.id)),
     ];
   }
 
   List<Workout> get presetWorkouts {
     final userIds = _userWorkouts.map((w) => w.id).toSet();
+    final trashedIds = _trashedItems
+        .where((e) => e.kind == TrashKind.workout)
+        .map((e) => e.id)
+        .toSet();
     return [
-      ..._defaultWorkouts.where((w) => !userIds.contains(w.id)),
-      ..._userWorkouts,
+      ..._defaultWorkouts.where(
+          (w) => !userIds.contains(w.id) && !trashedIds.contains(w.id)),
+      ..._userWorkouts.where((w) => !trashedIds.contains(w.id)),
     ];
   }
 
   List<Exercise> get presetExercises {
     final userIds = _userExercises.map((e) => e.id).toSet();
+    final trashedIds = _trashedItems
+        .where((e) => e.kind == TrashKind.exercise)
+        .map((e) => e.id)
+        .toSet();
     return [
-      ..._defaultExercises.where((e) => !userIds.contains(e.id)),
-      ..._userExercises,
+      ..._defaultExercises.where(
+          (e) => !userIds.contains(e.id) && !trashedIds.contains(e.id)),
+      ..._userExercises.where((e) => !trashedIds.contains(e.id)),
     ];
   }
 
