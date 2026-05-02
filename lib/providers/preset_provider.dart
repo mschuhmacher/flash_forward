@@ -553,7 +553,9 @@ class PresetProvider extends ChangeNotifier {
         }
         return w;
       }).toList();
-      await updatePresetSession(session.copyWith(workouts: newWorkouts));
+      // promoteAndUpdate so default sessions get promoted into _userSessions
+      // on first propagation; updatePresetSession would silently no-op for them.
+      await promoteAndUpdateSession(session.copyWith(workouts: newWorkouts));
     }
   }
 
@@ -578,7 +580,7 @@ class PresetProvider extends ChangeNotifier {
         }).toList();
         return w.copyWith(exercises: newExercises);
       }).toList();
-      await updatePresetSession(session.copyWith(workouts: newWorkouts));
+      await promoteAndUpdateSession(session.copyWith(workouts: newWorkouts));
     }
   }
 
