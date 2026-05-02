@@ -2,6 +2,7 @@ import 'package:flash_forward/constants/urls.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/session_flow/home_screen.dart';
 import 'package:flash_forward/presentation/screens/profile_flow/profile_screen.dart';
+import 'package:flash_forward/presentation/screens/settings/restore_items_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
@@ -321,6 +322,16 @@ class SettingsDrawer extends StatelessWidget {
               leading: const Icon(Icons.delete_sweep_rounded),
               title: Text('Clear logs', style: context.bodyLarge),
               onTap: () => _showClearLogsPopUp(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.restore_rounded),
+              title: Text('Restore items', style: context.bodyLarge),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const RestoreItemsScreen(),
+                ),
+              ),
             ),
             const Divider(height: 1),
             Padding(
