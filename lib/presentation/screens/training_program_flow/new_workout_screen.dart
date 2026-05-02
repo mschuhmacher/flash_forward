@@ -2,11 +2,14 @@ import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/pending_change.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
+import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -15,8 +18,6 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:flash_forward/utils/default_edit_tip.dart';
-import 'package:uuid/uuid.dart';
 
 class NewWorkoutScreen extends StatefulWidget {
   final Workout? workout;
@@ -38,20 +39,18 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
   bool get _isNew => widget.workout == null;
 
-  bool get _isEditingDefault {
-    if (widget.workout == null) return false;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    return presetProvider.isDefaultItem(widget.workout!.id);
-  }
-
   late Workout _workout =
-      widget.workout ??
+      widget.workout?.deepCopy(keepId: true) ??
       Workout(
         title: 'title',
         label: 'label',
         exercises: [],
         timeBetweenExercises: 120,
       );
+
+  /// Accumulates exercise edits made via nested NewExerciseScreen drilldowns.
+  /// Flushed to the provider on Save (standalone) or returned to the parent (nested).
+  final PendingChangeBag _pending = PendingChangeBag();
 
   late final _titleController = TextEditingController(
     text: widget.workout?.title,
@@ -90,44 +89,71 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           context,
           listen: false,
         );
-        final isDefault = widget.workout != null &&
-            presetProvider.isDefaultItem(widget.workout!.id);
 
         if (_isNew) {
           await presetProvider.addPresetWorkout(workout);
-        } else if (isDefault) {
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          final userCopy = workout.copyWith(
-            id: const Uuid().v4(),
-            userId: authProvider.userId,
-            templateId: widget.workout!.id,
-          );
-          await presetProvider.addPresetWorkout(userCopy);
-          await presetProvider.hideDefaultItem(widget.workout!.id);
-          if (mounted) await showDefaultEditTipIfNeeded(context);
         } else {
-          await presetProvider.updatePresetWorkout(workout);
-          // Offer to propagate the catalog edit to embedded copies in session
-          // templates. Only on the in-place update path: new workouts have
-          // nothing to propagate, and the copy-on-edit-default path produced a
-          // brand new id that no session template references yet.
-          final affected =
-              presetProvider.sessionTemplatesUsingWorkout(workout.id);
-          if (affected.isNotEmpty && mounted) {
+          final bag = PendingChangeBag()..addWorkout(workout);
+          for (final ec in _pending.exercisesById.values) {
+            bag.addExercise(ec.exercise);
+          }
+          // excludeWorkoutId filters the parent workout out of each exercise's
+          // affected-workouts list — those edits ride along with the workout
+          // commit and don't need a separate propagation entry.
+          final result = await presetProvider.commitChanges(
+            bag,
+            excludeWorkoutId: workout.id,
+          );
+
+          if (result.hasAny && mounted) {
+            final sections = <PropagationSection>[
+              for (final entry in result.affectedSessionsByWorkoutId.entries)
+                PropagationSection(
+                  itemKind: 'workout',
+                  itemTitle: workout.title,
+                  consumerLabels: entry.value.map((s) => s.title).toList(),
+                ),
+              for (final entry in result.affectedWorkoutsByExerciseId.entries)
+                PropagationSection(
+                  itemKind: 'exercise',
+                  itemTitle: bag.exercisesById[entry.key]!.exercise.title,
+                  consumerLabels: entry.value.map((w) => w.title).toList(),
+                ),
+            ];
             final yes = await showPropagateChangesDialog(
               context: context,
-              itemKind: 'workout',
-              affectedItemLabels:
-                  affected.map((s) => s.title).toList(),
+              sections: sections,
             );
-            if (yes == true) {
-              await presetProvider.propagateWorkoutToSessionTemplates(workout);
-            }
+            if (yes == true) await presetProvider.propagateBag(bag);
           }
         }
       }
-      if (mounted) Navigator.pop(context, workout);
+      if (mounted) {
+        Navigator.pop(context, (workout: workout, pending: _pending));
+      }
     }
+  }
+
+  Future<void> _saveExerciseToCatalog(Exercise exercise) async {
+    final pp = Provider.of<PresetProvider>(context, listen: false);
+    final titles = pp.presetExercises.map((e) => e.title).toList();
+    String? finalTitle = exercise.title;
+    if (titles.contains(exercise.title)) {
+      finalTitle = await showRenameOnCollisionDialog(
+        context: context,
+        currentTitle: exercise.title,
+        existingTitles: titles,
+      );
+      if (finalTitle == null) return;
+    }
+    await pp.liftToCatalog(
+      item: finalTitle == exercise.title ? exercise : exercise.copyWith(title: finalTitle),
+      kind: TrashKind.exercise,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Saved to catalog')),
+    );
   }
 
   _copyExercise(Exercise exercise) {
@@ -201,11 +227,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                       ),
                       validator: (v) {
                         final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-                        final existingTitles = _isEditingDefault
-                            ? presetProvider.allKnownWorkoutTitles
-                            : presetProvider.presetWorkouts.map((w) => w.title).toList();
-                        final ownTitle = _isEditingDefault ? null : widget.workout?.title;
-                        return FieldValidators.workoutTitle(v, existingTitles: existingTitles, ownTitle: ownTitle);
+                        return FieldValidators.workoutTitle(
+                          v,
+                          existingTitles: presetProvider.presetWorkouts.map((w) => w.title).toList(),
+                          ownTitle: widget.workout?.title,
+                        );
                       },
                     ),
                   ),
@@ -247,11 +273,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                       validator: FieldValidators.workoutDescription,
                     ),
                   ),
-                  // if (widget.itemName == 'workout') ...[],
                 ],
               ),
               SizedBox(height: 8),
-              // Expanded(child: Center(child: Text('No workouts added yet!'))),
               workout.exercises.isEmpty
                   ? Expanded(
                     child: Center(
@@ -269,6 +293,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                       itemCount: workout.exercises.length,
                       itemBuilder: (BuildContext context, int index) {
                         final exercise = workout.exercises[index];
+                        final pp = Provider.of<PresetProvider>(context, listen: false);
+                        final notInCatalog = pp.presetExercises.every((e) => e.id != exercise.id);
+                        final notInTrash = pp.trashedItems.every((e) => e.id != exercise.id);
                         return _ExerciseCard(
                           exercise: exercise,
                           key: ValueKey(
@@ -276,6 +303,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           ), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
                           onCopy: () => _copyExercise(exercise),
                           onDelete: () => _deleteExercise(exercise),
+                          onSaveToCatalog: (notInCatalog && notInTrash)
+                              ? () => _saveExerciseToCatalog(exercise)
+                              : null,
                           onTap: () async {
                             Exercise? newExercise =
                                 await Navigator.push<Exercise>(
@@ -290,14 +320,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                             if (newExercise != null) {
                               setState(() {
                                 _workout.exercises[index] = newExercise;
-                                // _workout.exercises.where((s) => s.id == exercise.id) = newExercise;
-                                // _workout = _workout.copyWith(
-                                //   exercises: [
-                                //     ..._workout.exercises,
-                                //     ...newExercise,
-                                //   ],
-                                // );
                               });
+                              // Track the exercise change so Save can propagate it.
+                              // Copies (from _copyExercise) are brand-new ids with
+                              // no existing consumers, so they are never added here.
+                              _pending.addExercise(newExercise);
                             }
                           },
                         );
@@ -354,12 +381,17 @@ class _ExerciseCard extends StatelessWidget {
   final VoidCallback onCopy;
   final VoidCallback onDelete;
 
+  /// When non-null, a "Save to catalog" slidable action is shown. Null means
+  /// the action is hidden (the exercise is already in the catalog or in trash).
+  final VoidCallback? onSaveToCatalog;
+
   const _ExerciseCard({
     super.key,
     required this.exercise,
     required this.onTap,
     required this.onCopy,
     required this.onDelete,
+    this.onSaveToCatalog,
   });
 
   @override
@@ -371,6 +403,17 @@ class _ExerciseCard extends StatelessWidget {
         endActionPane: ActionPane(
           motion: ScrollMotion(),
           children: [
+            if (onSaveToCatalog != null) ...[
+              SizedBox(width: 8),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (_) => onSaveToCatalog!(),
+                backgroundColor: context.colorScheme.tertiary,
+                foregroundColor: context.colorScheme.onTertiary,
+                icon: Icons.save_alt_rounded,
+                label: 'Save to catalog',
+              ),
+            ],
             SizedBox(width: 8),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),

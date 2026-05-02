@@ -154,7 +154,14 @@ class _AddItemScreenState extends State<AddItemScreen> {
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
                             onPressed: () {
-                              Navigator.pop(context, selectedPresetItems);
+                              // Deep-copy each item so session-embedded copies
+                              // are independent from the catalog from the start.
+                              final independent = selectedPresetItems.map((item) {
+                                if (item is Workout) return item.deepCopy();
+                                if (item is Exercise) return item.deepCopy();
+                                return item;
+                              }).toList();
+                              Navigator.pop(context, independent);
                             },
                             child: Text(buttonLabel),
                           ),

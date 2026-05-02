@@ -1,15 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flash_forward/data/default_exercises.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/services/preset_logger.dart';
 import 'package:flash_forward/services/supabase_sync_service.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
+import 'package:flash_forward/services/trash_service.dart';
 import '../models/session.dart';
 import '../data/default_session_data.dart';
+import '../models/pending_change.dart';
 
 /// Responsibilities:
 /// - Holds in-memory state of all presets (sessions, workouts, exercises).
@@ -23,9 +25,6 @@ import '../data/default_session_data.dart';
 /// reactive while separating mutable user data from the immutable defaults.
 
 class PresetProvider extends ChangeNotifier {
-  static const _keyHiddenDefaultIds = 'pref_hidden_default_ids';
-  Set<String> _hiddenDefaultIds = {};
-
   List<Session> _defaultSessions = [];
   List<Workout> _defaultWorkouts = [];
   List<Exercise> _defaultExercises = [];
@@ -34,22 +33,53 @@ class PresetProvider extends ChangeNotifier {
   List<Workout> _userWorkouts = [];
   List<Exercise> _userExercises = [];
 
+  final TrashService _trashService = TrashService();
+  List<TrashEntry> _trashedItems = [];
+
+  List<TrashEntry> get trashedItems => List.unmodifiable(_trashedItems);
+
   SupabaseSyncService? _syncService;
 
-  List<Session> get presetSessions => [
-    ..._defaultSessions.where((s) => !_hiddenDefaultIds.contains(s.id)),
-    ..._userSessions,
-  ];
-  List<Workout> get presetWorkouts => [
-    ..._defaultWorkouts.where((w) => !_hiddenDefaultIds.contains(w.id)),
-    ..._userWorkouts,
-  ];
-  List<Exercise> get presetExercises => [
-    ..._defaultExercises.where((e) => !_hiddenDefaultIds.contains(e.id)),
-    ..._userExercises,
-  ];
-  List<Session> get presetDefaultSessions => _defaultSessions;
-  List<Session> get presetUserSessions => _userSessions;
+  // Catalog list rule: a user item with the same id as a default SHADOWS that
+  // default. Trashed items are hidden from both lists regardless of source.
+  List<Session> get presetSessions {
+    final userIds = _userSessions.map((s) => s.id).toSet();
+    final trashedIds = _trashedItems
+        .where((e) => e.kind == TrashKind.session)
+        .map((e) => e.id)
+        .toSet();
+    return [
+      ..._defaultSessions.where(
+          (s) => !userIds.contains(s.id) && !trashedIds.contains(s.id)),
+      ..._userSessions.where((s) => !trashedIds.contains(s.id)),
+    ];
+  }
+
+  List<Workout> get presetWorkouts {
+    final userIds = _userWorkouts.map((w) => w.id).toSet();
+    final trashedIds = _trashedItems
+        .where((e) => e.kind == TrashKind.workout)
+        .map((e) => e.id)
+        .toSet();
+    return [
+      ..._defaultWorkouts.where(
+          (w) => !userIds.contains(w.id) && !trashedIds.contains(w.id)),
+      ..._userWorkouts.where((w) => !trashedIds.contains(w.id)),
+    ];
+  }
+
+  List<Exercise> get presetExercises {
+    final userIds = _userExercises.map((e) => e.id).toSet();
+    final trashedIds = _trashedItems
+        .where((e) => e.kind == TrashKind.exercise)
+        .map((e) => e.id)
+        .toSet();
+    return [
+      ..._defaultExercises.where(
+          (e) => !userIds.contains(e.id) && !trashedIds.contains(e.id)),
+      ..._userExercises.where((e) => !trashedIds.contains(e.id)),
+    ];
+  }
 
   // Return the IDs of the user-defined workouts and exercises
   Set<String> get presetUserWorkoutsIDs =>
@@ -76,8 +106,6 @@ class PresetProvider extends ChangeNotifier {
     _defaultWorkouts = List.from(kDefaultWorkouts);
     _defaultExercises = List.from(kDefaultExercises);
 
-    await _loadHiddenDefaultIds();
-
     // If user is logged in, load their cloud data
     if (userId != null) {
       _syncService = SupabaseSyncService(userId: userId);
@@ -88,8 +116,31 @@ class PresetProvider extends ChangeNotifier {
       await _loadUserPresetDataFromLocal();
     }
 
+    await _loadAndPurgeTrash();
+
     _isLoading = false;
     notifyListeners();
+  }
+
+  /// Seed in-memory default lists directly. Tests use this to set up shadow /
+  /// promotion scenarios without going through init() (which would also touch
+  /// SharedPreferences and the real default data).
+  @visibleForTesting
+  void debugSeedDefaults({
+    List<Session> sessions = const [],
+    List<Workout> workouts = const [],
+    List<Exercise> exercises = const [],
+  }) {
+    _defaultSessions = List.from(sessions);
+    _defaultWorkouts = List.from(workouts);
+    _defaultExercises = List.from(exercises);
+  }
+
+  /// Seed in-memory trash list directly. Tests use this to set up trash
+  /// scenarios without going through init() and disk I/O.
+  @visibleForTesting
+  void debugSeedTrash(List<TrashEntry> entries) {
+    _trashedItems = List.from(entries);
   }
 
   /// Load user presets from Supabase cloud
@@ -130,18 +181,6 @@ class PresetProvider extends ChangeNotifier {
       Sentry.captureException(e, stackTrace: stackTrace);
       await _loadUserPresetDataFromLocal();
     }
-  }
-
-  Future<void> _loadHiddenDefaultIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_keyHiddenDefaultIds) ?? [];
-    _hiddenDefaultIds = raw.toSet();
-  }
-
-  Future<void> _saveHiddenDefaultIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    // TODO(sync): sync hiddenDefaultIds to Supabase in a future multi-device release
-    await prefs.setStringList(_keyHiddenDefaultIds, _hiddenDefaultIds.toList());
   }
 
   /// Loads user-added presets if they exist
@@ -185,106 +224,6 @@ class PresetProvider extends ChangeNotifier {
     return [...filteredCloud, ...unsynced];
   }
 
-  /// Returns true if [id] belongs to any of the immutable default lists.
-  bool isDefaultItem(String id) =>
-      _defaultSessions.any((s) => s.id == id) ||
-      _defaultWorkouts.any((w) => w.id == id) ||
-      _defaultExercises.any((e) => e.id == id);
-
-  /// Returns true if [templateId] points to a default item.
-  /// Use to identify user items that are edits of defaults.
-  bool isModifiedDefault(String? templateId) {
-    if (templateId == null) return false;
-    return isDefaultItem(templateId);
-  }
-
-  Future<void> hideDefaultItem(String id) async {
-    _hiddenDefaultIds.add(id);
-    await _saveHiddenDefaultIds();
-    notifyListeners();
-  }
-
-  /// Clears all hidden defaults AND removes any user items that were created by
-  /// editing a default (identified by templateId pointing to a default item).
-  ///
-  /// Why delete the user copies: if we only un-hid the originals, the user would
-  /// see both the restored original and their customized copy in the catalog —
-  /// two items with similar names, competing for attention. The UX intent of
-  /// "Restore defaults" is "bring me back to a clean slate for default content",
-  /// so the customized copies are removed.
-  ///
-  /// User-created-from-scratch items are NOT affected (templateId is null or points
-  /// to another user item, not a default).
-  Future<void> restoreAllDefaults() async {
-    // Step 1: un-hide originals. This alone makes the catalog show the defaults again.
-    _hiddenDefaultIds.clear();
-    await _saveHiddenDefaultIds();
-
-    // Step 2: find user items that are "modified defaults" (templateId points to a
-    // default item). These were created by the copy-on-edit flow.
-    final removedSessionIds = _userSessions
-        .where((s) => isModifiedDefault(s.templateId))
-        .map((s) => s.id)
-        .toList();
-    final removedWorkoutIds = _userWorkouts
-        .where((w) => isModifiedDefault(w.templateId))
-        .map((w) => w.id)
-        .toList();
-    final removedExerciseIds = _userExercises
-        .where((e) => isModifiedDefault(e.templateId))
-        .map((e) => e.id)
-        .toList();
-
-    // Drop them from in-memory state.
-    _userSessions.removeWhere((s) => removedSessionIds.contains(s.id));
-    _userWorkouts.removeWhere((w) => removedWorkoutIds.contains(w.id));
-    _userExercises.removeWhere((e) => removedExerciseIds.contains(e.id));
-
-    // Persist pruned lists to local JSON (overwrite-in-place).
-    await PresetLogger.savePresetToFile('user_preset_sessions.json', _userSessions);
-    await PresetLogger.savePresetToFile('user_preset_workouts.json', _userWorkouts);
-    await PresetLogger.savePresetToFile('user_preset_exercises.json', _userExercises);
-
-    // Best-effort cloud deletion. We don't block on failures — the sync queue
-    // pattern used elsewhere in this file will retry on next connectivity.
-    if (_syncService != null) {
-      for (final id in removedSessionIds) {
-        await _syncService!.deleteSession(id).catchError((_) {});
-      }
-      for (final id in removedWorkoutIds) {
-        await _syncService!.deleteWorkout(id).catchError((_) {});
-      }
-      for (final id in removedExerciseIds) {
-        await _syncService!.deleteExercise(id).catchError((_) {});
-      }
-    }
-
-    notifyListeners();
-  }
-
-  /// Titles of ALL known exercises (defaults + user items), including hidden defaults.
-  /// Use only when validating titles during copy-on-edit of a default, so the user
-  /// is forced to pick a new title that won't collide with the restored original later.
-  List<String> get allKnownExerciseTitles => [
-    ..._defaultExercises.map((e) => e.title),
-    ..._userExercises.map((e) => e.title),
-  ];
-  List<String> get allKnownWorkoutTitles => [
-    ..._defaultWorkouts.map((w) => w.title),
-    ..._userWorkouts.map((w) => w.title),
-  ];
-  List<String> get allKnownSessionTitles => [
-    ..._defaultSessions.map((s) => s.title),
-    ..._userSessions.map((s) => s.title),
-  ];
-
-  int get userCreatedExerciseCount =>
-      _userExercises.where((e) => !isModifiedDefault(e.templateId)).length;
-  int get userCreatedWorkoutCount =>
-      _userWorkouts.where((w) => !isModifiedDefault(w.templateId)).length;
-  int get userCreatedSessionCount =>
-      _userSessions.where((s) => !isModifiedDefault(s.templateId)).length;
-
   Future<void> deleteAllUserPresets() async {
     _userSessions = [];
     _userWorkouts = [];
@@ -307,6 +246,9 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // These add/update methods are still used by the _isNew add path in edit
+  // screens, by _copyItem in catalog, and by propagation helpers internally.
+  // New callers editing existing items should use promoteAndUpdate* instead.
   /// Save new user-added presets
   Future<void> addPresetSession(Session session) async {
     _userSessions.add(session);
@@ -480,6 +422,73 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Single entry point used by the edit flow: append on first save (promotes a
+  // default into the user list at the same id, where it shadows the default),
+  // replace in place on subsequent saves. Idempotent on retry.
+
+  Future<void> promoteAndUpdateWorkout(Workout updated) async {
+    final i = _userWorkouts.indexWhere((w) => w.id == updated.id);
+    if (i == -1) {
+      _userWorkouts.add(updated);
+    } else {
+      _userWorkouts[i] = updated;
+    }
+    await PresetLogger.savePresetToFile(
+      'user_preset_workouts.json',
+      _userWorkouts,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadWorkout(updated);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> promoteAndUpdateExercise(Exercise updated) async {
+    final i = _userExercises.indexWhere((e) => e.id == updated.id);
+    if (i == -1) {
+      _userExercises.add(updated);
+    } else {
+      _userExercises[i] = updated;
+    }
+    await PresetLogger.savePresetToFile(
+      'user_preset_exercises.json',
+      _userExercises,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadExercise(updated);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> promoteAndUpdateSession(Session updated) async {
+    final i = _userSessions.indexWhere((s) => s.id == updated.id);
+    if (i == -1) {
+      _userSessions.add(updated);
+    } else {
+      _userSessions[i] = updated;
+    }
+    await PresetLogger.savePresetToFile(
+      'user_preset_sessions.json',
+      _userSessions,
+    );
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadSession(updated);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    notifyListeners();
+  }
+
   // ── Propagation: catalog edits → session templates ────────────────────────
   //
   // When a user edits a catalog workout/exercise, embedded copies in session
@@ -491,7 +500,7 @@ class PresetProvider extends ChangeNotifier {
 
   /// Session templates whose workouts list contains [workoutId]
   /// (matched by id or templateId).
-  List<Session> sessionTemplatesUsingWorkout(String workoutId) {
+  List<Session> usagesOfWorkout(String workoutId) {
     return presetSessions
         .where((s) => s.workouts.any(
               (w) => w.id == workoutId || w.templateId == workoutId,
@@ -499,37 +508,36 @@ class PresetProvider extends ChangeNotifier {
         .toList();
   }
 
-  /// Session templates that contain a workout whose exercises list includes
-  /// [exerciseId] (matched by id or templateId).
-  List<Session> sessionTemplatesUsingExercise(String exerciseId) {
-    return presetSessions
-        .where((s) => s.workouts.any((w) => w.exercises.any(
-              (e) => e.id == exerciseId || e.templateId == exerciseId,
-            )))
-        .toList();
-  }
-
-  /// (sessionTitle, workoutTitle) pairs for every occurrence of an exercise
-  /// (matched by id or templateId) inside session-template workouts. Used by
-  /// the propagation dialog to show the user exactly where the change applies.
-  List<({String sessionTitle, String workoutTitle})>
-      sessionWorkoutPathsUsingExercise(String exerciseId) {
-    final result = <({String sessionTitle, String workoutTitle})>[];
+  /// Each usage of an exercise is described by which session and which workout
+  /// inside that session contain the matching exercise. (Same exercise can
+  /// appear in multiple workouts; same workout can appear in multiple sessions.)
+  /// Matched by id or templateId.
+  List<({Session session, Workout workout})> usagesOfExercise(
+      String exerciseId) {
+    final result = <({Session session, Workout workout})>[];
     for (final session in presetSessions) {
       for (final workout in session.workouts) {
         final hit = workout.exercises.any(
           (e) => e.id == exerciseId || e.templateId == exerciseId,
         );
         if (hit) {
-          result.add((
-            sessionTitle: session.title,
-            workoutTitle: workout.title,
-          ));
+          result.add((session: session, workout: workout));
         }
       }
     }
     return result;
   }
+
+  /// All sessions whose workouts list contains an item with [id]
+  /// (matched by id or templateId). Convenience wrapper over [usagesOfWorkout].
+  List<Session> sessionsContainingWorkout(String id) =>
+      usagesOfWorkout(id);
+
+  /// Deduplicated list of workouts (across all sessions) that contain an
+  /// exercise with [id] (matched by id or templateId). Convenience wrapper
+  /// over [usagesOfExercise].
+  List<Workout> workoutsContainingExercise(String id) =>
+      usagesOfExercise(id).map((u) => u.workout).toSet().toList();
 
   /// Replaces every embedded copy of [updated] (matched by id or templateId)
   /// inside session templates with a fresh deepCopy of [updated], then
@@ -537,7 +545,7 @@ class PresetProvider extends ChangeNotifier {
   /// independent objects (so future edits to one template don't bleed into
   /// another) while preserving the templateId chain back to the catalog.
   Future<void> propagateWorkoutToSessionTemplates(Workout updated) async {
-    final affected = sessionTemplatesUsingWorkout(updated.id);
+    final affected = usagesOfWorkout(updated.id);
     for (final session in affected) {
       final newWorkouts = session.workouts.map((w) {
         if (w.id == updated.id || w.templateId == updated.id) {
@@ -554,7 +562,8 @@ class PresetProvider extends ChangeNotifier {
   /// persists each affected template. Each occurrence (even multiple inside the
   /// same workout) gets its own independent deep copy.
   Future<void> propagateExerciseToSessionTemplates(Exercise updated) async {
-    final affected = sessionTemplatesUsingExercise(updated.id);
+    final affected =
+        usagesOfExercise(updated.id).map((u) => u.session).toSet();
     for (final session in affected) {
       final newWorkouts = session.workouts.map((w) {
         final hasMatch = w.exercises.any(
@@ -573,6 +582,317 @@ class PresetProvider extends ChangeNotifier {
     }
   }
 
+  /// Replaces every embedded copy of [updated] (matched by id or templateId)
+  /// inside user-list workouts with a fresh deepCopy of [updated], then
+  /// persists each affected workout. Why: catalog workouts are not the only
+  /// consumer of an exercise — user workouts (whether created from scratch or
+  /// promoted from a default) hold their own embedded exercise copies and need
+  /// to update too. deepCopy gives each workout an independent instance so
+  /// future edits don't cross-contaminate.
+  Future<void> propagateExerciseToWorkouts(Exercise updated) async {
+    for (final workout in List<Workout>.from(_userWorkouts)) {
+      final hasMatch = workout.exercises.any(
+        (e) => e.id == updated.id || e.templateId == updated.id,
+      );
+      if (!hasMatch) continue;
+      final newExercises = workout.exercises.map((e) {
+        if (e.id == updated.id || e.templateId == updated.id) {
+          return updated.deepCopy();
+        }
+        return e;
+      }).toList();
+      await promoteAndUpdateWorkout(workout.copyWith(exercises: newExercises));
+    }
+  }
+
+  /// Single entry point edit screens call to commit a [PendingChangeBag].
+  /// Promotes happen in dependency order (exercises → workouts → session) and
+  /// the returned [CommitResult] describes other consumers affected, so the
+  /// caller can render the combined propagation prompt.
+  ///
+  /// Suppression rule: if a bagged exercise also lives inside a bagged
+  /// workout's exercises list, its `affectedWorkoutsByExerciseId` entry is
+  /// suppressed — the exercise change reaches its only relevant consumer (the
+  /// parent workout) via the workout's own propagation, so prompting again at
+  /// the exercise level would be misleading.
+  ///
+  /// Partial-failure semantics: if a promote mid-flight throws (e.g. disk or
+  /// network failure), some items may already be persisted while others
+  /// aren't. There is no automatic rollback; the caller must surface the error
+  /// to the user. (Each promoteAndUpdateX is itself best-effort with
+  /// Sentry-on-upload-failure; this note covers uncaught exceptions bubbling
+  /// up from the local-write step.)
+  Future<CommitResult> commitChanges(
+    PendingChangeBag bag, {
+    String? excludeSessionId,
+    String? excludeWorkoutId,
+  }) async {
+    // Promote in dependency order: exercises first, workouts next, session last.
+    for (final ec in bag.exercisesById.values) {
+      await promoteAndUpdateExercise(ec.exercise);
+    }
+    for (final wc in bag.workoutsById.values) {
+      await promoteAndUpdateWorkout(wc.workout);
+    }
+    if (bag.session != null) {
+      await promoteAndUpdateSession(bag.session!.session);
+    }
+
+    // Compute affected consumers AFTER promotion (so usagesOf reflects current state).
+    final sessionsByWorkout = <String, List<Session>>{};
+    final workoutsByExercise = <String, List<Workout>>{};
+    for (final wc in bag.workoutsById.values) {
+      final sessions = usagesOfWorkout(wc.workout.id)
+          .where((s) => s.id != excludeSessionId)
+          .toList();
+      if (sessions.isNotEmpty) sessionsByWorkout[wc.workout.id] = sessions;
+    }
+    // Suppress exercise-level propagation for exercises that live inside a
+    // workout that's also being committed. The user's edit was scoped to that
+    // workout context; the exercise change reaches its only relevant consumer
+    // (the parent workout) via the workout's own propagation.
+    final exerciseIdsInsideBaggedWorkouts = <String>{
+      for (final wc in bag.workoutsById.values)
+        for (final e in wc.workout.exercises) e.id,
+    };
+    for (final ec in bag.exercisesById.values) {
+      if (exerciseIdsInsideBaggedWorkouts.contains(ec.exercise.id)) continue;
+      final workouts = usagesOfExercise(ec.exercise.id)
+          .map((u) => u.workout)
+          .where((w) => w.id != excludeWorkoutId)
+          .toSet() // dedupe: same workout may appear via multiple sessions
+          .toList();
+      if (workouts.isNotEmpty) workoutsByExercise[ec.exercise.id] = workouts;
+    }
+    return CommitResult(
+      affectedSessionsByWorkoutId: sessionsByWorkout,
+      affectedWorkoutsByExerciseId: workoutsByExercise,
+    );
+  }
+
+  /// Runs every propagation path implied by the bag. Called when the user
+  /// confirms the combined propagation prompt. Exercises propagate into both
+  /// session templates and user workouts; workouts propagate into session
+  /// templates. Session changes don't propagate (sessions are leaf consumers).
+  Future<void> propagateBag(PendingChangeBag bag) async {
+    for (final ec in bag.exercisesById.values) {
+      await propagateExerciseToSessionTemplates(ec.exercise);
+      await propagateExerciseToWorkouts(ec.exercise);
+    }
+    for (final wc in bag.workoutsById.values) {
+      await propagateWorkoutToSessionTemplates(wc.workout);
+    }
+  }
+
+  // ── Trash ─────────────────────────────────────────────────────────────────
+
+  /// Purge expired entries (> 90 days) and load the remaining trash from local
+  /// storage, then merge with any cloud entries. Cloud entries not yet present
+  /// locally are unioned in; conflicts are resolved by latest [deletedAt].
+  Future<void> _loadAndPurgeTrash() async {
+    await _trashService.purgeOlderThan(const Duration(days: 90));
+    _trashedItems = await _trashService.readAll();
+    if (_syncService != null) {
+      try {
+        final cloud = await _syncService!.fetchUserTrashEntries();
+        _trashedItems = _mergeTrashCloudAndLocal(_trashedItems, cloud);
+      } catch (e, st) {
+        Sentry.captureException(e, stackTrace: st);
+      }
+    }
+  }
+
+  /// Merges [local] and [cloud] trash lists, deduplicating by id.
+  /// When both lists contain the same id, the entry with the later [deletedAt]
+  /// wins (last-write-wins conflict resolution).
+  @visibleForTesting
+  static List<TrashEntry> mergeTrashCloudAndLocalForTest(
+    List<TrashEntry> local,
+    List<TrashEntry> cloud,
+  ) => _mergeTrashCloudAndLocal(local, cloud);
+
+  static List<TrashEntry> _mergeTrashCloudAndLocal(
+    List<TrashEntry> local,
+    List<TrashEntry> cloud,
+  ) {
+    final byId = <String, TrashEntry>{};
+    for (final e in local) {
+      byId[e.id] = e;
+    }
+    for (final e in cloud) {
+      final existing = byId[e.id];
+      if (existing == null || e.deletedAt.isAfter(existing.deletedAt)) {
+        byId[e.id] = e;
+      }
+    }
+    return byId.values.toList();
+  }
+
+  /// Moves the item with [id] of the given [kind] to the trash.
+  /// The item is removed from the user list (if present) and from the default
+  /// shadow. A [TrashEntry] is persisted locally and uploaded to the cloud.
+  Future<void> deleteToTrash({
+    required String id,
+    required TrashKind kind,
+  }) async {
+    final now = DateTime.now();
+    final TrashEntry entry;
+    switch (kind) {
+      case TrashKind.workout:
+        final src = presetWorkouts.firstWhere(
+          (w) => w.id == id,
+          orElse: () => throw StateError('deleteToTrash: workout $id not found'),
+        );
+        _userWorkouts.removeWhere((w) => w.id == id);
+        await PresetLogger.savePresetToFile(
+          'user_preset_workouts.json',
+          _userWorkouts,
+        );
+        entry = TrashEntry.workout(workout: src, deletedAt: now);
+      case TrashKind.exercise:
+        final src = presetExercises.firstWhere(
+          (e) => e.id == id,
+          orElse: () => throw StateError('deleteToTrash: exercise $id not found'),
+        );
+        _userExercises.removeWhere((e) => e.id == id);
+        await PresetLogger.savePresetToFile(
+          'user_preset_exercises.json',
+          _userExercises,
+        );
+        entry = TrashEntry.exercise(exercise: src, deletedAt: now);
+      case TrashKind.session:
+        final src = presetSessions.firstWhere(
+          (s) => s.id == id,
+          orElse: () => throw StateError('deleteToTrash: session $id not found'),
+        );
+        _userSessions.removeWhere((s) => s.id == id);
+        await PresetLogger.savePresetToFile(
+          'user_preset_sessions.json',
+          _userSessions,
+        );
+        entry = TrashEntry.session(session: src, deletedAt: now);
+    }
+    _trashedItems.add(entry);
+    await _trashService.add(entry);
+    if (_syncService != null) {
+      try {
+        await _syncService!.uploadTrashEntry(entry);
+      } catch (e, st) {
+        Sentry.captureException(e, stackTrace: st);
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Restores the trashed item with [id] to the appropriate user list.
+  /// If [overrideTitle] is provided, the restored item gets that title instead
+  /// of its original one — use after a rename-on-collision dialog.
+  /// The caller is responsible for detecting title collisions and prompting the
+  /// user before calling this method.
+  Future<void> restoreFromTrash(String id, {String? overrideTitle}) async {
+    final entry = await _trashService.restore(id);
+    if (entry == null) return;
+    switch (entry.kind) {
+      case TrashKind.workout:
+        var w = entry.payload as Workout;
+        if (overrideTitle != null) w = w.copyWith(title: overrideTitle);
+        _userWorkouts.add(w);
+        await PresetLogger.savePresetToFile(
+          'user_preset_workouts.json',
+          _userWorkouts,
+        );
+      case TrashKind.exercise:
+        var e = entry.payload as Exercise;
+        if (overrideTitle != null) e = e.copyWith(title: overrideTitle);
+        _userExercises.add(e);
+        await PresetLogger.savePresetToFile(
+          'user_preset_exercises.json',
+          _userExercises,
+        );
+      case TrashKind.session:
+        var s = entry.payload as Session;
+        if (overrideTitle != null) s = s.copyWith(title: overrideTitle);
+        _userSessions.add(s);
+        await PresetLogger.savePresetToFile(
+          'user_preset_sessions.json',
+          _userSessions,
+        );
+    }
+    _trashedItems.removeWhere((e) => e.id == id);
+    if (_syncService != null) {
+      try {
+        await _syncService!.deleteTrashEntry(id);
+      } catch (e, st) {
+        Sentry.captureException(e, stackTrace: st);
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Lifts a session-embedded (or otherwise catalog-absent) item into the user
+  /// catalog. Purely additive — does not affect any embedded copies in sessions.
+  /// If [overrideTitle] is provided, the item is saved under that title.
+  /// If [overrideId] is provided, the item is saved under that id (use when the
+  /// original id already exists in the catalog).
+  Future<void> liftToCatalog({
+    required Object item,
+    required TrashKind kind,
+    String? overrideTitle,
+    String? overrideId,
+  }) async {
+    switch (kind) {
+      case TrashKind.workout:
+        var w = item as Workout;
+        if (overrideTitle != null) w = w.copyWith(title: overrideTitle);
+        if (overrideId != null) w = w.copyWith(id: overrideId);
+        _userWorkouts.add(w);
+        await PresetLogger.savePresetToFile(
+          'user_preset_workouts.json',
+          _userWorkouts,
+        );
+        if (_syncService != null) {
+          try {
+            await _syncService!.uploadWorkout(w);
+          } catch (e, st) {
+            Sentry.captureException(e, stackTrace: st);
+          }
+        }
+      case TrashKind.exercise:
+        var e = item as Exercise;
+        if (overrideTitle != null) e = e.copyWith(title: overrideTitle);
+        if (overrideId != null) e = e.copyWith(id: overrideId);
+        _userExercises.add(e);
+        await PresetLogger.savePresetToFile(
+          'user_preset_exercises.json',
+          _userExercises,
+        );
+        if (_syncService != null) {
+          try {
+            await _syncService!.uploadExercise(e);
+          } catch (e, st) {
+            Sentry.captureException(e, stackTrace: st);
+          }
+        }
+      case TrashKind.session:
+        var s = item as Session;
+        if (overrideTitle != null) s = s.copyWith(title: overrideTitle);
+        if (overrideId != null) s = s.copyWith(id: overrideId);
+        _userSessions.add(s);
+        await PresetLogger.savePresetToFile(
+          'user_preset_sessions.json',
+          _userSessions,
+        );
+        if (_syncService != null) {
+          try {
+            await _syncService!.uploadSession(s);
+          } catch (e, st) {
+            Sentry.captureException(e, stackTrace: st);
+          }
+        }
+    }
+    notifyListeners();
+  }
+
   /// Reset provider state on logout
   /// This allows re-initialization with a different user
   void reset() {
@@ -585,8 +905,7 @@ class PresetProvider extends ChangeNotifier {
     _userSessions = [];
     _userWorkouts = [];
     _userExercises = [];
-    _hiddenDefaultIds = {};
-    _saveHiddenDefaultIds(); // fire-and-forget: clear persisted hidden IDs on logout
+    _trashedItems = [];
     notifyListeners();
   }
 
@@ -602,4 +921,25 @@ class PresetProvider extends ChangeNotifier {
     if (_syncService == null) return 0;
     return await _syncService!.processPendingSync();
   }
+}
+
+/// Returned by [PresetProvider.commitChanges] so the edit screen can render a
+/// single combined "this also affects …" prompt covering every promoted item.
+/// Lists are already filtered by the optional excludes (the workout/session
+/// being edited is suppressed from its own consumer list).
+class CommitResult {
+  CommitResult({
+    required this.affectedSessionsByWorkoutId,
+    required this.affectedWorkoutsByExerciseId,
+  });
+
+  /// Workout id → sessions (other than the one being edited, if any) that use it.
+  final Map<String, List<Session>> affectedSessionsByWorkoutId;
+
+  /// Exercise id → workouts (other than the one being edited, if any) that use it.
+  final Map<String, List<Workout>> affectedWorkoutsByExerciseId;
+
+  bool get hasAny =>
+      affectedSessionsByWorkoutId.values.any((l) => l.isNotEmpty) ||
+      affectedWorkoutsByExerciseId.values.any((l) => l.isNotEmpty);
 }

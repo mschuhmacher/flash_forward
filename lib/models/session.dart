@@ -147,17 +147,20 @@ class Session {
     summary: summary ?? this.summary,
   );
 
-  /// Creates an independent copy with a new UUID and deep-copied workouts.
-  /// Call this when starting a session so the preset is never mutated.
-  Session deepCopy() => Session(
-    templateId: templateId ?? id,
+  /// Creates an independent copy with deep-copied workouts (and their exercises).
+  /// With [keepId] = false (default), generates a fresh UUID and sets
+  /// [templateId] as a breadcrumb — use when starting a session from a template.
+  /// With [keepId] = true, preserves the original id so saves target the correct
+  /// catalog row — use when opening a session template in an edit screen.
+  /// Completion fields (grades, events, summary) are always omitted; they are
+  /// set post-run and are never part of the template.
+  Session deepCopy({bool keepId = false}) => Session(
+    id: keepId ? id : null,
+    templateId: keepId ? templateId : (templateId ?? id),
     title: title,
     label: label,
     description: description,
-    workouts: workouts.map((w) => w.deepCopy()).toList(),
+    workouts: workouts.map((w) => w.deepCopy(keepId: keepId)).toList(),
     userId: userId,
-    // maxGradeClimbed, maxGradeFlashed, bodyWeightKg intentionally omitted —
-    // these are set post-completion and are not part of the preset.
-    // Same for setEvents, restEvents, summary.
   );
 }

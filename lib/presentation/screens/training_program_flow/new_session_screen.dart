@@ -1,21 +1,23 @@
 import 'package:flash_forward/constants/field_limits.dart';
+import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
+import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
 import 'package:flash_forward/presentation/widgets/workout_card.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
-import 'package:flash_forward/utils/default_edit_tip.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:uuid/uuid.dart';
 
 class NewSessionScreen extends StatefulWidget {
   final Session? session;
@@ -36,19 +38,13 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
 
   bool get _isNew => widget.session == null;
 
-  // When editing a default, the save path creates a user-owned copy instead of
-  // mutating the default in place. The copy must have a UNIQUE title because
-  // after restoreAllDefaults() the original returns and two items with the same
-  // title would be ambiguous.
-  bool get _isEditingDefault {
-    if (widget.session == null) return false;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    return presetProvider.isDefaultItem(widget.session!.id);
-  }
-
-  // Title, label, workouts are required fields, so session must be initialized with them
   late Session _session =
-      widget.session ?? Session(title: 'title', label: 'label', workouts: []);
+      widget.session?.deepCopy(keepId: true) ??
+      Session(title: 'title', label: 'label', workouts: []);
+
+  /// Accumulates workout and exercise edits from nested drilldowns.
+  /// Flushed to the provider on Save via PresetProvider.commitChanges.
+  final PendingChangeBag _pending = PendingChangeBag();
 
   late final _titleController = TextEditingController(
     text: widget.session?.title,
@@ -97,31 +93,67 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       }
 
       final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-      final isDefault = widget.session != null &&
-          presetProvider.isDefaultItem(widget.session!.id);
 
       if (_isNew) {
         await presetProvider.addPresetSession(session);
-      } else if (isDefault) {
-        // Copy-on-edit: create a user-owned copy carrying a templateId that
-        // points back to the original default. This templateId is the marker
-        // used by isModifiedDefault() and restoreAllDefaults() to find and
-        // clean up these copies when the user chooses to restore defaults.
-        // After adding the copy, hide the original so both don't appear.
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final userCopy = session.copyWith(
-          id: const Uuid().v4(),
-          userId: authProvider.userId,
-          templateId: widget.session!.id,
-        );
-        await presetProvider.addPresetSession(userCopy);
-        await presetProvider.hideDefaultItem(widget.session!.id);
-        if (mounted) await showDefaultEditTipIfNeeded(context);
       } else {
-        await presetProvider.updatePresetSession(session);
+        final bag = PendingChangeBag()..setSession(session);
+        for (final wc in _pending.workoutsById.values) {
+          bag.addWorkout(wc.workout);
+        }
+        for (final ec in _pending.exercisesById.values) {
+          bag.addExercise(ec.exercise);
+        }
+        final result = await presetProvider.commitChanges(
+          bag,
+          excludeSessionId: session.id,
+        );
+        if (result.hasAny && mounted) {
+          final sections = <PropagationSection>[
+            for (final entry in result.affectedSessionsByWorkoutId.entries)
+              PropagationSection(
+                itemKind: 'workout',
+                itemTitle: bag.workoutsById[entry.key]!.workout.title,
+                consumerLabels: entry.value.map((s) => s.title).toList(),
+              ),
+            for (final entry in result.affectedWorkoutsByExerciseId.entries)
+              PropagationSection(
+                itemKind: 'exercise',
+                itemTitle: bag.exercisesById[entry.key]!.exercise.title,
+                consumerLabels: entry.value.map((w) => w.title).toList(),
+              ),
+          ];
+          final yes = await showPropagateChangesDialog(
+            context: context,
+            sections: sections,
+          );
+          if (yes == true) await presetProvider.propagateBag(bag);
+        }
       }
       if (mounted) Navigator.pop(context);
     }
+  }
+
+  Future<void> _saveWorkoutToCatalog(Workout workout) async {
+    final pp = Provider.of<PresetProvider>(context, listen: false);
+    final titles = pp.presetWorkouts.map((w) => w.title).toList();
+    String? finalTitle = workout.title;
+    if (titles.contains(workout.title)) {
+      finalTitle = await showRenameOnCollisionDialog(
+        context: context,
+        currentTitle: workout.title,
+        existingTitles: titles,
+      );
+      if (finalTitle == null) return;
+    }
+    await pp.liftToCatalog(
+      item: finalTitle == workout.title ? workout : workout.copyWith(title: finalTitle),
+      kind: TrashKind.workout,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Saved to catalog')),
+    );
   }
 
   _copyWorkout(Workout workout) {
@@ -133,7 +165,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   }
 
   _deleteWorkout(Workout workout) {
-    // TODO: add in confirmation dialog or snackbar with undo function
     setState(() {
       final index = _session.workouts.indexOf(workout);
       _session.workouts.removeAt(index);
@@ -143,15 +174,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final session = _session;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    // When editing a default we use the UNFILTERED list (including the hidden
-    // original) and omit ownTitle so the validator sees the original's title
-    // as taken — forcing the user to pick a new name. This prevents collisions
-    // after restoreAllDefaults() brings the original back.
-    final existingSessionTitles = _isEditingDefault
-        ? presetProvider.allKnownSessionTitles
-        : presetProvider.presetSessions.map((s) => s.title).toList();
-    final sessionOwnTitle = _isEditingDefault ? null : widget.session?.title;
     final Set<String> existingWorkoutIds = {};
 
     if (session.workouts.isNotEmpty) {
@@ -203,12 +225,14 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator:
-                          (v) => FieldValidators.sessionTitle(
-                            v,
-                            existingTitles: existingSessionTitles,
-                            ownTitle: sessionOwnTitle,
-                          ),
+                      validator: (v) {
+                        final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+                        return FieldValidators.sessionTitle(
+                          v,
+                          existingTitles: presetProvider.presetSessions.map((s) => s.title).toList(),
+                          ownTitle: widget.session?.title,
+                        );
+                      },
                     ),
                   ),
                   SizedBox(width: 8),
@@ -270,6 +294,9 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                       itemCount: session.workouts.length,
                       itemBuilder: (BuildContext context, int index) {
                         final workout = session.workouts[index];
+                        final pp = Provider.of<PresetProvider>(context, listen: false);
+                        final notInCatalog = pp.presetWorkouts.every((w) => w.id != workout.id);
+                        final notInTrash = pp.trashedItems.every((e) => e.id != workout.id);
                         return _WorkoutCard(
                           workout: workout,
                           key: ValueKey(
@@ -277,8 +304,12 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           ), // prefix index to workout.id to allow multiple instances of same workout in the reorderable list
                           onCopy: () => _copyWorkout(workout),
                           onDelete: () => _deleteWorkout(workout),
+                          onSaveToCatalog: (notInCatalog && notInTrash)
+                              ? () => _saveWorkoutToCatalog(workout)
+                              : null,
                           onTap: () async {
-                            final newWorkout = await Navigator.push<Workout>(
+                            final result = await Navigator.push<
+                                ({Workout workout, PendingChangeBag pending})>(
                               context,
                               MaterialPageRoute(
                                 builder:
@@ -286,11 +317,15 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                                         NewWorkoutScreen(workout: workout),
                               ),
                             );
-                            setState(() {
-                              if (newWorkout != null) {
-                                _session.workouts[index] = newWorkout;
-                              }
-                            });
+                            if (result != null) {
+                              setState(() {
+                                _session.workouts[index] = result.workout;
+                              });
+                              _pending.addWorkout(result.workout);
+                              // Merge the inner bag so nested exercise edits
+                              // also flow up to the session save.
+                              _pending.merge(result.pending);
+                            }
                           },
                         );
                       },
@@ -345,12 +380,17 @@ class _WorkoutCard extends StatelessWidget {
   final VoidCallback onCopy;
   final VoidCallback onDelete;
 
+  /// When non-null, a "Save to catalog" slidable action is shown. Null means
+  /// the action is hidden (the workout is already in the catalog or in trash).
+  final VoidCallback? onSaveToCatalog;
+
   const _WorkoutCard({
     super.key,
     required this.workout,
     required this.onTap,
     required this.onCopy,
     required this.onDelete,
+    this.onSaveToCatalog,
   });
 
   @override
@@ -362,6 +402,17 @@ class _WorkoutCard extends StatelessWidget {
         endActionPane: ActionPane(
           motion: ScrollMotion(),
           children: [
+            if (onSaveToCatalog != null) ...[
+              SizedBox(width: 8),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (_) => onSaveToCatalog!(),
+                backgroundColor: context.colorScheme.tertiary,
+                foregroundColor: context.colorScheme.onTertiary,
+                icon: Icons.save_alt_rounded,
+                label: 'Save to catalog',
+              ),
+            ],
             SizedBox(width: 8),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),

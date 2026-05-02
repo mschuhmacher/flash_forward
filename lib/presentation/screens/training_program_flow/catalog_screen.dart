@@ -1,6 +1,7 @@
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
@@ -84,73 +85,69 @@ class _ProgramListviewState extends State<ProgramListview> {
     }
   }
 
-  Future<void> _hideOrDeleteItem(dynamic item) async {
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    final isDefault = presetProvider.isDefaultItem(item.id);
-
-    if (isDefault) {
-      // Default items cannot be deleted outright — they are hidden so the user
-      // can restore them later via Settings > Restore defaults.
-      final confirm = await _showHideDefaultDialog(item.title);
-      if (confirm != true) return;
-      await presetProvider.hideDefaultItem(item.id);
-    } else {
-      final confirm = await _showDeleteConfirmationDialog(item.title);
-      if (confirm != true) return;
-      switch (widget.itemType) {
-        case ItemType.sessions:
-          await presetProvider.deleteUserPresetSession(item.id);
-        case ItemType.workouts:
-          await presetProvider.deleteUserPresetWorkout(item.id);
-        case ItemType.exercises:
-          await presetProvider.deleteUserPresetExercise(item.id);
-      }
-    }
-  }
-
-  Future<bool?> _showHideDefaultDialog(String title) {
-    return showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('Remove from catalog?'),
-            content: Text(
-              '"$title" is a default item. You can restore it anytime via Settings > Restore defaults.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Remove'),
-              ),
-            ],
-          ),
+  Future<void> _moveToTrash(dynamic item) async {
+    final pp = Provider.of<PresetProvider>(context, listen: false);
+    final kind = switch (widget.itemType) {
+      ItemType.sessions => TrashKind.session,
+      ItemType.workouts => TrashKind.workout,
+      ItemType.exercises => TrashKind.exercise,
+    };
+    final references = switch (kind) {
+      TrashKind.workout =>
+        pp.sessionsContainingWorkout(item.id).map((s) => s.title).toList(),
+      TrashKind.exercise =>
+        pp.workoutsContainingExercise(item.id).map((w) => w.title).toList(),
+      TrashKind.session => const <String>[],
+    };
+    final confirm = await _showTrashConfirmationDialog(item.title, references);
+    if (confirm != true) return;
+    await pp.deleteToTrash(id: item.id, kind: kind);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 5),
+        content: Text('Moved "${item.title}" to trash'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            await pp.restoreFromTrash(item.id);
+          },
+        ),
+      ),
     );
   }
 
-  Future<bool?> _showDeleteConfirmationDialog(String title) {
+  Future<bool?> _showTrashConfirmationDialog(
+    String title,
+    List<String> references,
+  ) {
     return showDialog<bool>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('Remove from catalog?'),
-            content: Text(
-              '"$title" is a user-created item. Deleting this item is permanent.',
+      builder: (ctx) {
+        final String body;
+        if (references.isEmpty) {
+          body =
+              '"$title" will be moved to the trash. You can restore it within 90 days from Settings.';
+        } else {
+          final list = references.map((r) => '• $r').join('\n');
+          body =
+              '"$title" is currently used in:\n$list\n\nMoving it to the trash won\'t affect those — they keep their own copy.';
+        }
+        return AlertDialog(
+          title: const Text('Move to trash?'),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Remove'),
-              ),
-            ],
-          ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Move to trash'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -212,14 +209,12 @@ class _ProgramListviewState extends State<ProgramListview> {
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   itemBuilder: (BuildContext context, int index) {
                     final item = filteredListItems[index];
-                    final bool isDefault = presetData.isDefaultItem(item.id);
 
                     return CatalogListviewCard(
                       filteredListItem: item,
                       itemType: widget.itemType,
                       onCopy: () => _copyItem(item),
-                      onDelete: () => _hideOrDeleteItem(item),
-                      isDefault: isDefault,
+                      onDelete: () => _moveToTrash(item),
                     );
                   },
                 ),
@@ -238,7 +233,6 @@ class CatalogListviewCard extends StatelessWidget {
     required this.filteredListItem,
     required this.itemType,
     required this.onCopy,
-    required this.isDefault,
     required this.onDelete,
   });
 
@@ -246,7 +240,6 @@ class CatalogListviewCard extends StatelessWidget {
   final ItemType itemType;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
-  final bool isDefault;
 
   @override
   Widget build(BuildContext context) {
@@ -334,39 +327,10 @@ class CatalogListviewCard extends StatelessWidget {
                   size: 24,
                 ),
               ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      filteredListItem.title,
-                      style: context.titleMedium,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (isDefault)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.secondary.withAlpha(38),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: context.colorScheme.secondary,
-                        ),
-                      ),
-                      child: Text(
-                        'DEFAULT',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: context.colorScheme.onSecondary,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 9,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
-                ],
+              title: Text(
+                filteredListItem.title,
+                style: context.titleMedium,
+                overflow: TextOverflow.ellipsis,
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
