@@ -508,21 +508,33 @@ class PresetProvider extends ChangeNotifier {
         .toList();
   }
 
-  /// Each usage of an exercise is described by which session and which workout
-  /// inside that session contain the matching exercise. (Same exercise can
-  /// appear in multiple workouts; same workout can appear in multiple sessions.)
-  /// Matched by id or templateId.
-  List<({Session session, Workout workout})> usagesOfExercise(
+  /// Each usage of an exercise is described by which session (if any) and
+  /// which workout contain the matching exercise. Catalog workouts that
+  /// contain the exercise but are not embedded in any session yield a tuple
+  /// with `session == null`. Matched by id or templateId.
+  List<({Session? session, Workout workout})> usagesOfExercise(
       String exerciseId) {
-    final result = <({Session session, Workout workout})>[];
-    for (final session in presetSessions) {
-      for (final workout in session.workouts) {
-        final hit = workout.exercises.any(
+    bool workoutContains(Workout w) => w.exercises.any(
           (e) => e.id == exerciseId || e.templateId == exerciseId,
         );
-        if (hit) {
+
+    final result = <({Session? session, Workout workout})>[];
+    final sessionWorkoutIds = <String>{};
+    for (final session in presetSessions) {
+      for (final workout in session.workouts) {
+        if (workoutContains(workout)) {
           result.add((session: session, workout: workout));
+          sessionWorkoutIds.add(workout.id);
         }
+      }
+    }
+    // Include catalog workouts that contain the exercise but aren't embedded
+    // in any session — otherwise editing an exercise misses standalone
+    // catalog consumers.
+    for (final workout in presetWorkouts) {
+      if (sessionWorkoutIds.contains(workout.id)) continue;
+      if (workoutContains(workout)) {
+        result.add((session: null, workout: workout));
       }
     }
     return result;
@@ -564,8 +576,10 @@ class PresetProvider extends ChangeNotifier {
   /// persists each affected template. Each occurrence (even multiple inside the
   /// same workout) gets its own independent deep copy.
   Future<void> propagateExerciseToSessionTemplates(Exercise updated) async {
-    final affected =
-        usagesOfExercise(updated.id).map((u) => u.session).toSet();
+    final affected = usagesOfExercise(updated.id)
+        .map((u) => u.session)
+        .whereType<Session>()
+        .toSet();
     for (final session in affected) {
       final newWorkouts = session.workouts.map((w) {
         final hasMatch = w.exercises.any(
@@ -592,7 +606,7 @@ class PresetProvider extends ChangeNotifier {
   /// to update too. deepCopy gives each workout an independent instance so
   /// future edits don't cross-contaminate.
   Future<void> propagateExerciseToWorkouts(Exercise updated) async {
-    for (final workout in List<Workout>.from(_userWorkouts)) {
+    for (final workout in List<Workout>.from(presetWorkouts)) {
       final hasMatch = workout.exercises.any(
         (e) => e.id == updated.id || e.templateId == updated.id,
       );

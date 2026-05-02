@@ -119,13 +119,17 @@ void main() {
       final usages = provider.usagesOfExercise('cat-e');
 
       // Distinct sessions reachable via the usages list.
-      expect(usages.map((u) => u.session.id).toSet(), {'s1', 's2'});
+      expect(
+        usages.map((u) => u.session?.id).whereType<String>().toSet(),
+        {'s1', 's2'},
+      );
 
       // (sessionTitle, workoutTitle) pairs for every occurrence — what the
       // propagation dialog renders.
       expect(
         usages
-            .map((u) => '${u.session.title}|${u.workout.title}')
+            .where((u) => u.session != null)
+            .map((u) => '${u.session!.title}|${u.workout.title}')
             .toSet(),
         {'Leg day|Squats', 'Push|Press'},
       );
