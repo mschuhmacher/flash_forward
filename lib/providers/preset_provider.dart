@@ -673,12 +673,17 @@ class PresetProvider extends ChangeNotifier {
     };
     for (final ec in bag.exercisesById.values) {
       if (exerciseIdsInsideBaggedWorkouts.contains(ec.exercise.id)) continue;
-      final workouts = usagesOfExercise(ec.exercise.id)
-          .map((u) => u.workout)
-          .where((w) => w.id != excludeWorkoutId)
-          .toSet() // dedupe: same workout may appear via multiple sessions
-          .toList();
-      if (workouts.isNotEmpty) workoutsByExercise[ec.exercise.id] = workouts;
+      // Dedupe by workout.id, not object identity — sessions loaded from JSON
+      // produce separate Workout instances for the same id, so .toSet() on the
+      // raw objects fails to collapse them.
+      final byId = <String, Workout>{};
+      for (final u in usagesOfExercise(ec.exercise.id)) {
+        if (u.workout.id == excludeWorkoutId) continue;
+        byId[u.workout.id] = u.workout;
+      }
+      if (byId.isNotEmpty) {
+        workoutsByExercise[ec.exercise.id] = byId.values.toList();
+      }
     }
     return CommitResult(
       affectedSessionsByWorkoutId: sessionsByWorkout,

@@ -283,6 +283,45 @@ void main() {
         );
       },
     );
+
+    test(
+      'dedupes affected workouts by id when two sessions reference the same '
+      'workout via separate Workout instances',
+      () async {
+        // Two sessions each contain a Workout with the same id but distinct
+        // Dart instances (e.g. each session was loaded from JSON separately).
+        // The propagation prompt must list the shared workout once, not twice.
+        final ex = _exercise(id: 'cat-e', title: 'Pull-ups');
+        final wA = _workout(
+          id: 'shared-w',
+          title: 'Full-Body',
+          exercises: [ex],
+        );
+        final wB = _workout(
+          id: 'shared-w',
+          title: 'Full-Body',
+          exercises: [_exercise(id: 'cat-e', title: 'Pull-ups')],
+        );
+        final sA = _session(id: 's-a', title: 'A', workouts: [wA]);
+        final sB = _session(id: 's-b', title: 'B', workouts: [wB]);
+
+        provider.debugSeedDefaults(
+          exercises: [ex],
+          workouts: [wA],
+          sessions: [sA, sB],
+        );
+
+        final bag = PendingChangeBag()
+          ..addExercise(_exercise(id: 'cat-e', title: 'Pull-ups', sets: 5));
+        final result = await provider.commitChanges(bag);
+
+        expect(result.affectedWorkoutsByExerciseId['cat-e'], hasLength(1));
+        expect(
+          result.affectedWorkoutsByExerciseId['cat-e']!.single.id,
+          'shared-w',
+        );
+      },
+    );
   });
 
   group('propagateBag', () {
