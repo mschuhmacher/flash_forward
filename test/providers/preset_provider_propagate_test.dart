@@ -134,6 +134,45 @@ void main() {
         {'Leg day|Squats', 'Push|Press'},
       );
     });
+
+    test(
+        'workoutsContainingExercise dedupes by workout.id when sessions hold '
+        'separate Workout instances with the same id',
+        () async {
+      // Multiple sessions each carry a Workout with the same id but distinct
+      // Dart instances (each loaded from JSON separately). The deduped result
+      // must list the shared workout exactly once.
+      final ex = _exercise(id: 'shared-e', title: 'Hangs');
+      final wA = _workout(
+        id: 'shared-w',
+        title: 'Combined Limit Strength',
+        exercises: [ex],
+      );
+      final wB = _workout(
+        id: 'shared-w',
+        title: 'Combined Limit Strength',
+        exercises: [_exercise(id: 'shared-e', title: 'Hangs')],
+      );
+      final wC = _workout(
+        id: 'shared-w',
+        title: 'Combined Limit Strength',
+        exercises: [_exercise(id: 'shared-e', title: 'Hangs')],
+      );
+      final sA = _session(id: 's-a', title: 'A', workouts: [wA]);
+      final sB = _session(id: 's-b', title: 'B', workouts: [wB]);
+      final sC = _session(id: 's-c', title: 'C', workouts: [wC]);
+
+      provider.debugSeedDefaults(
+        exercises: [ex],
+        workouts: [wA],
+        sessions: [sA, sB, sC],
+      );
+
+      final result = provider.workoutsContainingExercise('shared-e');
+
+      expect(result, hasLength(1));
+      expect(result.single.id, 'shared-w');
+    });
   });
 
   group('propagateWorkoutToSessionTemplates', () {
