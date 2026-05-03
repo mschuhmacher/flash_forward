@@ -86,7 +86,7 @@ class _ProgramListviewState extends State<ProgramListview> {
   }
 
   Future<void> _moveToTrash(dynamic item) async {
-    final pp = Provider.of<PresetProvider>(context, listen: false);
+    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
     final kind = switch (widget.itemType) {
       ItemType.sessions => TrashKind.session,
       ItemType.workouts => TrashKind.workout,
@@ -94,23 +94,24 @@ class _ProgramListviewState extends State<ProgramListview> {
     };
     final references = switch (kind) {
       TrashKind.workout =>
-        pp.sessionsContainingWorkout(item.id).map((s) => s.title).toList(),
+        presetProvider.sessionsContainingWorkout(item.id).map((s) => s.title).toList(),
       TrashKind.exercise =>
-        pp.workoutsContainingExercise(item.id).map((w) => w.title).toList(),
+        presetProvider.workoutsContainingExercise(item.id).map((w) => w.title).toList(),
       TrashKind.session => const <String>[],
     };
-    final confirm = await _showTrashConfirmationDialog(item.title, references);
+    final confirm = await _showTrashConfirmationDialog(item.title, references, kind);
     if (confirm != true) return;
-    await pp.deleteToTrash(id: item.id, kind: kind);
+    await presetProvider.deleteToTrash(id: item.id, kind: kind);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        duration: const Duration(seconds: 5),
+        persist: false,
+        duration: const Duration(seconds: 3),
         content: Text('Moved "${item.title}" to trash'),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () async {
-            await pp.restoreFromTrash(item.id);
+            await presetProvider.restoreFromTrash(item.id);
           },
         ),
       ),
@@ -120,6 +121,7 @@ class _ProgramListviewState extends State<ProgramListview> {
   Future<bool?> _showTrashConfirmationDialog(
     String title,
     List<String> references,
+    TrashKind kind,
   ) {
     return showDialog<bool>(
       context: context,
@@ -130,8 +132,18 @@ class _ProgramListviewState extends State<ProgramListview> {
               '"$title" will be moved to the trash. You can restore it within 90 days from Settings.';
         } else {
           final list = references.map((r) => '• $r').join('\n');
+          final isPlural = references.length > 1;
+          final referenceNoun = switch (kind) {
+            TrashKind.workout => isPlural ? 'sessions' : 'session',
+            TrashKind.exercise => isPlural ? 'workouts' : 'workout',
+            TrashKind.session => isPlural ? 'items' : 'item',
+          };
+          final intro = isPlural ? 'these $referenceNoun' : 'this $referenceNoun';
+          final trailing = isPlural
+              ? 'those $referenceNoun, they keep their own copy.'
+              : 'that $referenceNoun, it keeps its own copy.';
           body =
-              '"$title" is currently used in:\n$list\n\nMoving it to the trash won\'t affect those — they keep their own copy.';
+              '"$title" is currently used in $intro:\n$list\n\nMoving it to the trash won\'t affect $trailing';
         }
         return AlertDialog(
           title: const Text('Move to trash?'),
