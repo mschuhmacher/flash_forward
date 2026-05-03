@@ -568,7 +568,7 @@ class PresetProvider extends ChangeNotifier {
     for (final session in affected) {
       final newWorkouts = session.workouts.map((w) {
         if (w.id == updated.id || w.templateId == updated.id) {
-          return updated.deepCopy();
+          return updated.deepCopy(keepId: true);
         }
         return w;
       }).toList();

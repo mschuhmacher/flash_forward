@@ -235,6 +235,25 @@ void main() {
       expect(s1.workouts.single.templateId, 'cat-w');
       expect(s2.workouts.single.templateId, 'cat-w');
     });
+
+    test('embedded copies retain the catalog id after propagation', () async {
+      final ex = _exercise(id: 'cat-e', sets: 3);
+      final catalogW = _workout(id: 'cat-w', exercises: [ex]);
+      final embeddedA = _workout(id: 'cat-w', exercises: [ex.deepCopy(keepId: true)]);
+      final embeddedB = _workout(id: 'cat-w', exercises: [ex.deepCopy(keepId: true)]);
+      final sA = _session(id: 's-a', workouts: [embeddedA]);
+      final sB = _session(id: 's-b', workouts: [embeddedB]);
+      provider.debugSeedDefaults(workouts: [catalogW], sessions: [sA, sB]);
+
+      final updated = catalogW.copyWith(timeBetweenExercises: 999);
+      await provider.propagateWorkoutToSessionTemplates(updated);
+
+      for (final session in provider.presetSessions) {
+        for (final w in session.workouts) {
+          expect(w.id, 'cat-w', reason: 'id must remain catalog id after propagation');
+        }
+      }
+    });
   });
 
   group('propagateExerciseToSessionTemplates', () {
