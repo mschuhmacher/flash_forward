@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/data/default_exercises.dart';
+import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/trash_entry.dart';
@@ -580,11 +581,15 @@ class PresetProvider extends ChangeNotifier {
   /// its own independent Dart instance (so future edits to one template don't
   /// bleed into another) while keeping the catalog id intact so subsequent
   /// usagesOfWorkout lookups can find every sibling instance directly.
-  Future<void> propagateWorkoutToSessionTemplates(Workout updated) async {
+  Future<void> propagateWorkoutToSessionTemplates(
+    Workout updated, {
+    Set<String>? onlyToSessionIds,
+  }) async {
     final affected = usagesOfWorkout(
       updated.id,
       alsoMatchTemplateId: updated.templateId,
-    );
+    ).where((s) => onlyToSessionIds == null || onlyToSessionIds.contains(s.id))
+        .toList();
     final matchKeys = <String>{
       updated.id,
       if (updated.templateId != null) updated.templateId!,
@@ -606,11 +611,16 @@ class PresetProvider extends ChangeNotifier {
   /// inside session-template workouts with a fresh deepCopy of [updated], then
   /// persists each affected template. Each occurrence (even multiple inside the
   /// same workout) gets its own independent deep copy.
-  Future<void> propagateExerciseToSessionTemplates(Exercise updated) async {
+  Future<void> propagateExerciseToSessionTemplates(
+    Exercise updated, {
+    Set<String>? onlyToSessionIds,
+  }) async {
     final affected = usagesOfExercise(
       updated.id,
       alsoMatchTemplateId: updated.templateId,
-    ).map((u) => u.session).whereType<Session>().toSet();
+    ).map((u) => u.session).whereType<Session>()
+        .where((s) => onlyToSessionIds == null || onlyToSessionIds.contains(s.id))
+        .toSet();
     final matchKeys = <String>{
       updated.id,
       if (updated.templateId != null) updated.templateId!,
@@ -640,7 +650,10 @@ class PresetProvider extends ChangeNotifier {
   /// promoted from a default) hold their own embedded exercise copies and need
   /// to update too. deepCopy gives each workout an independent instance so
   /// future edits don't cross-contaminate.
-  Future<void> propagateExerciseToWorkouts(Exercise updated) async {
+  Future<void> propagateExerciseToWorkouts(
+    Exercise updated, {
+    Set<String>? onlyToWorkoutIds,
+  }) async {
     // Iterates presetWorkouts (the catalog) directly rather than going through
     // usagesOfExercise — this propagation only touches catalog-level workouts
     // that consume the exercise. Session-embedded workout copies are handled
@@ -650,6 +663,7 @@ class PresetProvider extends ChangeNotifier {
       if (updated.templateId != null) updated.templateId!,
     };
     for (final workout in List<Workout>.from(presetWorkouts)) {
+      if (onlyToWorkoutIds != null && !onlyToWorkoutIds.contains(workout.id)) continue;
       final hasMatch = workout.exercises.any(
         (e) => matchKeys.contains(e.id) || matchKeys.contains(e.templateId),
       );
@@ -750,13 +764,26 @@ class PresetProvider extends ChangeNotifier {
   /// confirms the combined propagation prompt. Exercises propagate into both
   /// session templates and user workouts; workouts propagate into session
   /// templates. Session changes don't propagate (sessions are leaf consumers).
-  Future<void> propagateBag(PendingChangeBag bag) async {
+  /// Pass [selection] to honour the per-consumer checkboxes; null means all.
+  Future<void> propagateBag(
+    PendingChangeBag bag, {
+    PropagationSelection? selection,
+  }) async {
     for (final ec in bag.exercisesById.values) {
-      await propagateExerciseToSessionTemplates(ec.exercise);
-      await propagateExerciseToWorkouts(ec.exercise);
+      await propagateExerciseToSessionTemplates(
+        ec.exercise,
+        onlyToSessionIds: selection?.sessionIdsFor('exercise', ec.exercise.id),
+      );
+      await propagateExerciseToWorkouts(
+        ec.exercise,
+        onlyToWorkoutIds: selection?.workoutIdsFor('exercise', ec.exercise.id),
+      );
     }
     for (final wc in bag.workoutsById.values) {
-      await propagateWorkoutToSessionTemplates(wc.workout);
+      await propagateWorkoutToSessionTemplates(
+        wc.workout,
+        onlyToSessionIds: selection?.sessionIdsFor('workout', wc.workout.id),
+      );
     }
   }
 

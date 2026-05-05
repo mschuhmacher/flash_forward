@@ -139,15 +139,22 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
               for (final entry in result.affectedWorkoutsByExerciseId.entries)
                 PropagationSection(
                   itemKind: 'exercise',
+                  itemId: entry.key,
                   itemTitle: exercise.title,
-                  consumerLabels: entry.value.map((w) => w.title).toList(),
+                  consumerKind: 'workouts',
+                  consumers: [
+                    for (final w in entry.value)
+                      PropagationConsumer(id: w.id, label: w.title),
+                  ],
                 ),
             ];
-            final yes = await showPropagateChangesDialog(
+            final selection = await showPropagateChangesDialog(
               context: context,
               sections: sections,
             );
-            if (yes == true) await presetProvider.propagateBag(bag);
+            if (selection != null && !selection.isEmpty) {
+              await presetProvider.propagateBag(bag, selection: selection);
+            }
           }
         }
       }
