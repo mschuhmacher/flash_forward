@@ -156,6 +156,9 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
     );
   }
 
+  // Slidable Copy means divergence. Fresh UUID so this card evolves
+  // independently of the original (e.g. a circuits use case where the same
+  // template appears twice with different reps/loads).
   _copyWorkout(Workout workout) {
     final newWorkout = workout.deepCopy();
     setState(() {

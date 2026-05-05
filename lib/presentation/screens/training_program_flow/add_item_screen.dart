@@ -154,11 +154,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
                             onPressed: () {
-                              // Deep-copy each item so session-embedded copies
-                              // are independent from the catalog from the start.
+                              // keepId: true so the embedded copy shares the
+                              // catalog id — propagation lookups can find it
+                              // on the very first edit. Each instance is still
+                              // an independent Dart object (deep-copy guarantee).
                               final independent = selectedPresetItems.map((item) {
-                                if (item is Workout) return item.deepCopy();
-                                if (item is Exercise) return item.deepCopy();
+                                if (item is Workout) return item.deepCopy(keepId: true);
+                                if (item is Exercise) return item.deepCopy(keepId: true);
                                 return item;
                               }).toList();
                               Navigator.pop(context, independent);

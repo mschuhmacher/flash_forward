@@ -147,11 +147,19 @@ class Session {
     summary: summary ?? this.summary,
   );
 
-  /// Creates an independent copy with deep-copied workouts (and their exercises).
-  /// With [keepId] = false (default), generates a fresh UUID and sets
-  /// [templateId] as a breadcrumb — use when starting a session from a template.
-  /// With [keepId] = true, preserves the original id so saves target the correct
-  /// catalog row — use when opening a session template in an edit screen.
+  /// Creates an independent Dart copy with deep-copied workouts (and their
+  /// exercises).
+  ///
+  /// With [keepId] = true (default for propagation and any "this is the same
+  /// logical template, just a separate instance" use case): the copy keeps the
+  /// source's id and templateId. Mutating one instance cannot leak into another
+  /// (deep-copy guarantee), but lookups match by id and so naturally find every
+  /// sibling instance.
+  ///
+  /// With [keepId] = false: generates a fresh UUID and sets templateId as a
+  /// breadcrumb pointing at the source's id. Use only for genuine forks:
+  /// starting a session run (the run record is its own entity, not a template).
+  ///
   /// Completion fields (grades, events, summary) are always omitted; they are
   /// set post-run and are never part of the template.
   Session deepCopy({bool keepId = false}) => Session(

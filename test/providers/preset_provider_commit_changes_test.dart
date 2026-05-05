@@ -248,7 +248,38 @@ void main() {
     });
 
     test(
-      'promotes in dependency order: exercises before workouts before session',
+      'catalog-scoped commit promotes exercises and workouts in dependency order',
+      () async {
+        provider.debugSeedDefaults(
+          exercises: [_exercise(id: 'cat-e', title: 'Default ex')],
+          workouts: [_workout(id: 'cat-w', title: 'Default w', exercises: [])],
+        );
+
+        final bag = PendingChangeBag()
+          ..addExercise(_exercise(id: 'cat-e', title: 'My ex'))
+          ..addWorkout(_workout(id: 'cat-w', title: 'My w', exercises: []));
+
+        await provider.commitChanges(bag);
+
+        // Both were promoted (defaults shadowed).
+        expect(provider.presetUserExerciseIDs, contains('cat-e'));
+        expect(provider.presetUserWorkoutsIDs, contains('cat-w'));
+
+        // And the user-list values reflect the bag's edits.
+        expect(
+          provider.presetExercises.firstWhere((e) => e.id == 'cat-e').title,
+          'My ex',
+        );
+        expect(
+          provider.presetWorkouts.firstWhere((w) => w.id == 'cat-w').title,
+          'My w',
+        );
+      },
+    );
+
+    test(
+      'session-scoped commit promotes only the session; '
+      'bagged workouts and exercises are not pushed to the catalog',
       () async {
         provider.debugSeedDefaults(
           exercises: [_exercise(id: 'cat-e', title: 'Default ex')],
@@ -263,26 +294,61 @@ void main() {
 
         await provider.commitChanges(bag);
 
-        // All three were promoted (defaults shadowed).
-        expect(provider.presetUserExerciseIDs, contains('cat-e'));
-        expect(provider.presetUserWorkoutsIDs, contains('cat-w'));
+        // Session was promoted; defaults for exercises and workouts are NOT
+        // shadowed — they remain in the default list only.
+        expect(provider.presetUserExerciseIDs, isNot(contains('cat-e')));
+        expect(provider.presetUserWorkoutsIDs, isNot(contains('cat-w')));
         expect(provider.presetUserSessionIDs, contains('cat-s'));
 
-        // And the user-list values reflect the bag's edits.
-        expect(
-          provider.presetExercises.firstWhere((e) => e.id == 'cat-e').title,
-          'My ex',
-        );
-        expect(
-          provider.presetWorkouts.firstWhere((w) => w.id == 'cat-w').title,
-          'My w',
-        );
+        // The session in the catalog reflects the bag's edit.
         expect(
           provider.presetSessions.firstWhere((s) => s.id == 'cat-s').title,
           'My s',
         );
       },
     );
+
+    test('session-scoped commit does not promote workouts to catalog', () async {
+      final ex = _exercise(id: 'cat-e');
+      final catalogW = _workout(id: 'cat-w', exercises: [ex]);
+      final sa = _session(id: 'cat-s', workouts: [catalogW]);
+      provider.debugSeedDefaults(workouts: [catalogW], sessions: [sa]);
+
+      final embeddedW = catalogW.copyWith(timeBetweenExercises: 999);
+      final bag = PendingChangeBag()
+        ..setSession(sa.copyWith(workouts: [embeddedW]))
+        ..addWorkout(embeddedW);
+
+      final beforeUserWorkouts = provider.presetUserWorkoutsIDs.length;
+      await provider.commitChanges(bag);
+
+      expect(provider.presetUserWorkoutsIDs.length, beforeUserWorkouts);
+    });
+
+    test('session-scoped commit does not promote exercises to catalog', () async {
+      final ex = _exercise(id: 'cat-e');
+      final catalogW = _workout(id: 'cat-w', exercises: [ex]);
+      final sa = _session(id: 'cat-s', workouts: [catalogW]);
+      provider.debugSeedDefaults(exercises: [ex], workouts: [catalogW], sessions: [sa]);
+
+      final embeddedEx = ex.copyWith(sets: 7);
+      final bag = PendingChangeBag()
+        ..setSession(sa)
+        ..addExercise(embeddedEx);
+
+      final beforeUserExercises = provider.presetUserExerciseIDs.length;
+      await provider.commitChanges(bag);
+
+      expect(provider.presetUserExerciseIDs.length, beforeUserExercises);
+    });
+
+    test('catalog-scoped commit still promotes workouts (regression guard)', () async {
+      final w = _workout(id: 'cat-w', exercises: []);
+      provider.debugSeedDefaults(workouts: [w]);
+      final bag = PendingChangeBag()..addWorkout(w.copyWith(timeBetweenExercises: 999));
+      await provider.commitChanges(bag);
+      expect(provider.presetUserWorkoutsIDs, contains('cat-w'));
+    });
 
     test(
       'dedupes affected workouts by id when two sessions reference the same '
@@ -319,6 +385,66 @@ void main() {
         expect(
           result.affectedWorkoutsByExerciseId['cat-e']!.single.id,
           'shared-w',
+        );
+      },
+    );
+
+    test(
+      'session-edit of an embedded workout (fresh UUID, templateId pointing '
+      'to catalog) finds sibling sessions via the templateId chain',
+      () async {
+        // Realistic legacy data: three sessions each carry a session-embedded
+        // copy of Climbing Warm-up with a unique fresh UUID and templateId
+        // pointing back to the catalog id. This shape predates id-stable
+        // propagation and survives on disk.
+        final ex = _exercise(id: 'cat-e', sets: 3);
+        final catalogW = _workout(id: 'cat-w', exercises: [ex]);
+
+        Workout legacyEmbed(String id) => _workout(
+              id: id,
+              templateId: 'cat-w',
+              exercises: [_exercise(id: 'cat-e', sets: 3)],
+            );
+        final sA = _session(
+          id: 's-a',
+          workouts: [legacyEmbed('uuid-a')],
+        );
+        final sB = _session(
+          id: 's-b',
+          workouts: [legacyEmbed('uuid-b')],
+        );
+        final sC = _session(
+          id: 's-c',
+          workouts: [legacyEmbed('uuid-c')],
+        );
+
+        provider.debugSeedDefaults(
+          workouts: [catalogW],
+          sessions: [sA, sB, sC],
+        );
+
+        // User opens session A and edits its embedded workout (id=uuid-a).
+        // The session save bags the modified workout with that fresh id and
+        // templateId=cat-w.
+        final editedWorkout = legacyEmbed('uuid-a').copyWith(
+          timeBetweenExercises: 999,
+        );
+        final bag = PendingChangeBag()
+          ..setSession(sA.copyWith(workouts: [editedWorkout]))
+          ..addWorkout(editedWorkout);
+
+        final result = await provider.commitChanges(
+          bag,
+          excludeSessionId: 's-a',
+        );
+
+        // Sibling sessions sB and sC must be reachable via the templateId
+        // chain even though no other session shares 'uuid-a' as id.
+        expect(
+          result.affectedSessionsByWorkoutId['uuid-a']!
+              .map((s) => s.id)
+              .toSet(),
+          {'s-b', 's-c'},
         );
       },
     );
@@ -461,10 +587,11 @@ void main() {
         final w2After = provider.presetWorkouts.firstWhere((w) => w.id == 'w2');
         final w3After = provider.presetWorkouts.firstWhere((w) => w.id == 'w3');
 
-        // Affected workouts updated.
+        // Affected workouts updated; matched-by-templateId exercise gets a
+        // fresh copy carrying the catalog id (keepId: true).
         expect(w1After.exercises.single.sets, 9);
         expect(w2After.exercises.single.sets, 9);
-        expect(w2After.exercises.single.templateId, 'cat-e');
+        expect(w2After.exercises.single.id, 'cat-e');
 
         // Unrelated workout untouched.
         expect(w3After.exercises.single.id, 'unrelated-e');
@@ -476,5 +603,22 @@ void main() {
         );
       },
     );
+
+    test('embedded exercise copies in workouts retain the catalog id after propagation', () async {
+      final catalogEx = _exercise(id: 'cat-e', sets: 3);
+      final w = _workout(
+          id: 'w-1',
+          exercises: [_exercise(id: 'cat-e', sets: 3)]);
+      provider.debugSeedDefaults(exercises: [catalogEx], workouts: [w]);
+
+      final updated = catalogEx.copyWith(sets: 5);
+      await provider.propagateExerciseToWorkouts(updated);
+
+      for (final workout in provider.presetWorkouts) {
+        for (final e in workout.exercises) {
+          expect(e.id, 'cat-e', reason: 'id must remain catalog id after propagation');
+        }
+      }
+    });
   });
 }

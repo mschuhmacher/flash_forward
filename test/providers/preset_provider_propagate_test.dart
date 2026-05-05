@@ -231,9 +231,10 @@ void main() {
         isFalse,
       );
 
-      // templateId chain preserved on propagated copies.
-      expect(s1.workouts.single.templateId, 'cat-w');
-      expect(s2.workouts.single.templateId, 'cat-w');
+      // Catalog id preserved on propagated copies (keepId: true) so future
+      // edits in any session can find siblings via usagesOfWorkout.
+      expect(s1.workouts.single.id, 'cat-w');
+      expect(s2.workouts.single.id, 'cat-w');
     });
 
     test('embedded copies retain the catalog id after propagation', () async {
@@ -253,6 +254,44 @@ void main() {
           expect(w.id, 'cat-w', reason: 'id must remain catalog id after propagation');
         }
       }
+    });
+
+    test('second-pass: usagesOfWorkout still finds siblings after propagation',
+        () async {
+      // The original regression: after a first propagation, fresh-UUID copies
+      // broke the sibling lookup so a second edit from any session no longer
+      // saw the others. With keepId: true the post-propagation embedded copies
+      // share the catalog id, so usagesOfWorkout finds every session.
+      final ex = _exercise(id: 'cat-e', sets: 3);
+      final catalogW = _workout(id: 'cat-w', exercises: [ex]);
+      final embeddedA = _workout(id: 'cat-w', exercises: [ex.deepCopy(keepId: true)]);
+      final embeddedB = _workout(id: 'cat-w', exercises: [ex.deepCopy(keepId: true)]);
+      final embeddedC = _workout(id: 'cat-w', exercises: [ex.deepCopy(keepId: true)]);
+      final sA = _session(id: 's-a', workouts: [embeddedA]);
+      final sB = _session(id: 's-b', workouts: [embeddedB]);
+      final sC = _session(id: 's-c', workouts: [embeddedC]);
+      provider.debugSeedDefaults(
+        workouts: [catalogW],
+        sessions: [sA, sB, sC],
+      );
+
+      // First-pass propagation from a catalog edit.
+      await provider.propagateWorkoutToSessionTemplates(
+        catalogW.copyWith(timeBetweenExercises: 999),
+      );
+
+      // Pick any post-propagated embedded copy and re-look up siblings as if
+      // the user opened a different session and edited the workout there.
+      final postPropagated = provider.presetSessions
+          .firstWhere((s) => s.id == 's-b')
+          .workouts
+          .single;
+      final siblings = provider.usagesOfWorkout(
+        postPropagated.id,
+        alsoMatchTemplateId: postPropagated.templateId,
+      );
+
+      expect(siblings.map((s) => s.id).toSet(), {'s-a', 's-b', 's-c'});
     });
   });
 
@@ -287,13 +326,13 @@ void main() {
       expect(s1ws.exercises.length, 2);
       expect(s1ws.exercises[0].sets, 7);
       expect(s1ws.exercises[0].title, 'Squat v2');
-      expect(s1ws.exercises[0].templateId, 'cat-e');
+      expect(s1ws.exercises[0].id, 'cat-e');
       expect(s1ws.exercises[1].id, 'other-e');
       expect(s1ws.exercises[1].sets, 4);
 
-      // s2: matched by templateId, replaced.
+      // s2: matched by templateId, replaced; new copy carries the catalog id.
       expect(s2.workouts.single.exercises.single.sets, 7);
-      expect(s2.workouts.single.exercises.single.templateId, 'cat-e');
+      expect(s2.workouts.single.exercises.single.id, 'cat-e');
 
       // s3: untouched.
       expect(s3.workouts.single.exercises.single.id, 'other-e');
@@ -307,6 +346,26 @@ void main() {
         ),
         isFalse,
       );
+    });
+
+    test('embedded exercise copies retain the catalog id after propagation', () async {
+      final catalogEx = _exercise(id: 'cat-e', sets: 3);
+      final embeddedW = _workout(
+          id: 'w-1',
+          exercises: [_exercise(id: 'cat-e', sets: 3)]);
+      final s = _session(id: 's-a', workouts: [embeddedW]);
+      provider.debugSeedDefaults(exercises: [catalogEx], sessions: [s]);
+
+      final updated = catalogEx.copyWith(sets: 5);
+      await provider.propagateExerciseToSessionTemplates(updated);
+
+      for (final session in provider.presetSessions) {
+        for (final w in session.workouts) {
+          for (final e in w.exercises) {
+            expect(e.id, 'cat-e', reason: 'id must remain catalog id after propagation');
+          }
+        }
+      }
     });
   });
 }

@@ -90,12 +90,20 @@ class Workout {
     notes: notes == null ? this.notes : notes.value,
   );
 
-  /// Creates an independent copy with deep-copied exercises.
-  /// With [keepId] = false (default), generates a fresh UUID and sets
-  /// [templateId] as a breadcrumb — use when adding to a session or starting
-  /// a session so the copy is independent.
-  /// With [keepId] = true, preserves the original id so that saves target the
-  /// correct catalog row — use when opening an edit screen.
+  /// Creates an independent Dart copy with deep-copied exercises.
+  ///
+  /// With [keepId] = true (default for propagation, AddItemScreen, and any
+  /// "this is the same logical template, just a separate instance" use case):
+  /// the copy keeps the source's id and templateId. Mutating one instance
+  /// cannot leak into another (deep-copy guarantee), but propagation lookups
+  /// (`usagesOfWorkout`) match by id and so naturally find every sibling
+  /// instance.
+  ///
+  /// With [keepId] = false: generates a fresh UUID and sets templateId as a
+  /// breadcrumb pointing at the source's id. Use only for genuine forks:
+  /// slidable Copy (intentional divergence — the user wants to evolve the
+  /// copy independently of the original) and starting a session run (the
+  /// run record is its own entity, not a template).
   Workout deepCopy({bool keepId = false}) => Workout(
     id: keepId ? id : null,
     templateId: keepId ? templateId : (templateId ?? id),

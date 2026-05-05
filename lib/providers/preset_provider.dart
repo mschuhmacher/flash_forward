@@ -498,12 +498,21 @@ class PresetProvider extends ChangeNotifier {
   // the catalog id directly; workouts produced by deepCopy carry the catalog
   // id in templateId.
 
-  /// Session templates whose workouts list contains [workoutId]
-  /// (matched by id or templateId).
-  List<Session> usagesOfWorkout(String workoutId) {
+  /// Sessions whose embedded workouts list contains a workout matching
+  /// [workoutId] (by id or templateId), optionally widened to also match by
+  /// [alsoMatchTemplateId]. Pass the source workout's `templateId` when the
+  /// caller is a session-embedded copy (fresh UUID with a templateId chain
+  /// back to the catalog) so sibling embeds linked via the same catalog id
+  /// are also returned.
+  List<Session> usagesOfWorkout(
+    String workoutId, {
+    String? alsoMatchTemplateId,
+  }) {
+    final keys = <String>{workoutId};
+    if (alsoMatchTemplateId != null) keys.add(alsoMatchTemplateId);
     return presetSessions
         .where((s) => s.workouts.any(
-              (w) => w.id == workoutId || w.templateId == workoutId,
+              (w) => keys.contains(w.id) || keys.contains(w.templateId),
             ))
         .toList();
   }
@@ -511,11 +520,18 @@ class PresetProvider extends ChangeNotifier {
   /// Each usage of an exercise is described by which session (if any) and
   /// which workout contain the matching exercise. Catalog workouts that
   /// contain the exercise but are not embedded in any session yield a tuple
-  /// with `session == null`. Matched by id or templateId.
+  /// with `session == null`. Matched by id or templateId. When the caller
+  /// is editing an embedded exercise (fresh UUID with a templateId pointing
+  /// to the catalog), pass [alsoMatchTemplateId] so sibling embeds linked
+  /// via the catalog id are also returned.
   List<({Session? session, Workout workout})> usagesOfExercise(
-      String exerciseId) {
+    String exerciseId, {
+    String? alsoMatchTemplateId,
+  }) {
+    final keys = <String>{exerciseId};
+    if (alsoMatchTemplateId != null) keys.add(alsoMatchTemplateId);
     bool workoutContains(Workout w) => w.exercises.any(
-          (e) => e.id == exerciseId || e.templateId == exerciseId,
+          (e) => keys.contains(e.id) || keys.contains(e.templateId),
         );
 
     final result = <({Session? session, Workout workout})>[];
@@ -559,15 +575,23 @@ class PresetProvider extends ChangeNotifier {
   }
 
   /// Replaces every embedded copy of [updated] (matched by id or templateId)
-  /// inside session templates with a fresh deepCopy of [updated], then
-  /// persists each affected template. deepCopy ensures each template owns
-  /// independent objects (so future edits to one template don't bleed into
-  /// another) while preserving the templateId chain back to the catalog.
+  /// inside session templates with a fresh deepCopy(keepId: true) of [updated],
+  /// then persists each affected template. The deep copy gives each template
+  /// its own independent Dart instance (so future edits to one template don't
+  /// bleed into another) while keeping the catalog id intact so subsequent
+  /// usagesOfWorkout lookups can find every sibling instance directly.
   Future<void> propagateWorkoutToSessionTemplates(Workout updated) async {
-    final affected = usagesOfWorkout(updated.id);
+    final affected = usagesOfWorkout(
+      updated.id,
+      alsoMatchTemplateId: updated.templateId,
+    );
+    final matchKeys = <String>{
+      updated.id,
+      if (updated.templateId != null) updated.templateId!,
+    };
     for (final session in affected) {
       final newWorkouts = session.workouts.map((w) {
-        if (w.id == updated.id || w.templateId == updated.id) {
+        if (matchKeys.contains(w.id) || matchKeys.contains(w.templateId)) {
           return updated.deepCopy(keepId: true);
         }
         return w;
@@ -583,19 +607,23 @@ class PresetProvider extends ChangeNotifier {
   /// persists each affected template. Each occurrence (even multiple inside the
   /// same workout) gets its own independent deep copy.
   Future<void> propagateExerciseToSessionTemplates(Exercise updated) async {
-    final affected = usagesOfExercise(updated.id)
-        .map((u) => u.session)
-        .whereType<Session>()
-        .toSet();
+    final affected = usagesOfExercise(
+      updated.id,
+      alsoMatchTemplateId: updated.templateId,
+    ).map((u) => u.session).whereType<Session>().toSet();
+    final matchKeys = <String>{
+      updated.id,
+      if (updated.templateId != null) updated.templateId!,
+    };
     for (final session in affected) {
       final newWorkouts = session.workouts.map((w) {
         final hasMatch = w.exercises.any(
-          (e) => e.id == updated.id || e.templateId == updated.id,
+          (e) => matchKeys.contains(e.id) || matchKeys.contains(e.templateId),
         );
         if (!hasMatch) return w;
         final newExercises = w.exercises.map((e) {
-          if (e.id == updated.id || e.templateId == updated.id) {
-            return updated.deepCopy();
+          if (matchKeys.contains(e.id) || matchKeys.contains(e.templateId)) {
+            return updated.deepCopy(keepId: true);
           }
           return e;
         }).toList();
@@ -613,14 +641,22 @@ class PresetProvider extends ChangeNotifier {
   /// to update too. deepCopy gives each workout an independent instance so
   /// future edits don't cross-contaminate.
   Future<void> propagateExerciseToWorkouts(Exercise updated) async {
+    // Iterates presetWorkouts (the catalog) directly rather than going through
+    // usagesOfExercise — this propagation only touches catalog-level workouts
+    // that consume the exercise. Session-embedded workout copies are handled
+    // separately by propagateExerciseToSessionTemplates.
+    final matchKeys = <String>{
+      updated.id,
+      if (updated.templateId != null) updated.templateId!,
+    };
     for (final workout in List<Workout>.from(presetWorkouts)) {
       final hasMatch = workout.exercises.any(
-        (e) => e.id == updated.id || e.templateId == updated.id,
+        (e) => matchKeys.contains(e.id) || matchKeys.contains(e.templateId),
       );
       if (!hasMatch) continue;
       final newExercises = workout.exercises.map((e) {
-        if (e.id == updated.id || e.templateId == updated.id) {
-          return updated.deepCopy();
+        if (matchKeys.contains(e.id) || matchKeys.contains(e.templateId)) {
+          return updated.deepCopy(keepId: true);
         }
         return e;
       }).toList();
@@ -650,12 +686,20 @@ class PresetProvider extends ChangeNotifier {
     String? excludeSessionId,
     String? excludeWorkoutId,
   }) async {
-    // Promote in dependency order: exercises first, workouts next, session last.
-    for (final ec in bag.exercisesById.values) {
-      await promoteAndUpdateExercise(ec.exercise);
-    }
-    for (final wc in bag.workoutsById.values) {
-      await promoteAndUpdateWorkout(wc.workout);
+    // When the bag has a session, the bagged workouts and exercises are
+    // session-embedded: they live inside the session JSON and are persisted
+    // via the session's own promote below. Pushing them into the catalog
+    // (_userWorkouts/_userExercises) would create silent duplicates.
+    final isSessionScopedCommit = bag.session != null;
+
+    if (!isSessionScopedCommit) {
+      // Promote in dependency order: exercises first, workouts next.
+      for (final ec in bag.exercisesById.values) {
+        await promoteAndUpdateExercise(ec.exercise);
+      }
+      for (final wc in bag.workoutsById.values) {
+        await promoteAndUpdateWorkout(wc.workout);
+      }
     }
     if (bag.session != null) {
       await promoteAndUpdateSession(bag.session!.session);
@@ -665,9 +709,10 @@ class PresetProvider extends ChangeNotifier {
     final sessionsByWorkout = <String, List<Session>>{};
     final workoutsByExercise = <String, List<Workout>>{};
     for (final wc in bag.workoutsById.values) {
-      final sessions = usagesOfWorkout(wc.workout.id)
-          .where((s) => s.id != excludeSessionId)
-          .toList();
+      final sessions = usagesOfWorkout(
+        wc.workout.id,
+        alsoMatchTemplateId: wc.workout.templateId,
+      ).where((s) => s.id != excludeSessionId).toList();
       if (sessions.isNotEmpty) sessionsByWorkout[wc.workout.id] = sessions;
     }
     // Suppress exercise-level propagation for exercises that live inside a
@@ -684,7 +729,10 @@ class PresetProvider extends ChangeNotifier {
       // produce separate Workout instances for the same id, so .toSet() on the
       // raw objects fails to collapse them.
       final byId = <String, Workout>{};
-      for (final u in usagesOfExercise(ec.exercise.id)) {
+      for (final u in usagesOfExercise(
+        ec.exercise.id,
+        alsoMatchTemplateId: ec.exercise.templateId,
+      )) {
         if (u.workout.id == excludeWorkoutId) continue;
         byId[u.workout.id] = u.workout;
       }
