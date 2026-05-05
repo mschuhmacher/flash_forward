@@ -82,6 +82,7 @@ Future<PropagationSelection?> showPropagateChangesDialog({
                   final key = sections[i].selectionKey;
                   final isChecked = selected[key]!.contains(c.id);
                   return CheckboxListTile(
+                    visualDensity: VisualDensity(vertical: -4),
                     value: isChecked,
                     title: Text(c.label),
                     onChanged: (v) => setState(() {
@@ -93,7 +94,9 @@ Future<PropagationSelection?> showPropagateChangesDialog({
                     }),
                   );
                 }),
-                Row(children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                   TextButton(
                     onPressed: () => setState(() {
                       selected[sections[i].selectionKey] = {
