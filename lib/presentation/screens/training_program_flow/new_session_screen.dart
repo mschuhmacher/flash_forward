@@ -137,7 +137,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
             context: context,
             sections: sections,
           );
-          if (selection != null && !selection.isEmpty) {
+          if (selection == null) return; // user cancelled — stay on screen
+          if (!selection.isEmpty) {
             await presetProvider.propagateBag(bag, selection: selection);
           }
         }

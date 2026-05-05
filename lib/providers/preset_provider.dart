@@ -769,11 +769,23 @@ class PresetProvider extends ChangeNotifier {
     PendingChangeBag bag, {
     PropagationSelection? selection,
   }) async {
+    // Mirror the suppression in commitChanges: exercises that live inside a
+    // bagged workout already reach session templates via the workout's own
+    // propagation. Calling propagateExerciseToSessionTemplates separately
+    // would ignore the selection filter (no 'exercise-in-sessions' key exists)
+    // and overwrite correctly-excluded sessions.
+    final exerciseIdsInsideBaggedWorkouts = <String>{
+      for (final wc in bag.workoutsById.values)
+        for (final e in wc.workout.exercises) e.id,
+    };
+
     for (final ec in bag.exercisesById.values) {
-      await propagateExerciseToSessionTemplates(
-        ec.exercise,
-        onlyToSessionIds: selection?.sessionIdsFor('exercise', ec.exercise.id),
-      );
+      if (!exerciseIdsInsideBaggedWorkouts.contains(ec.exercise.id)) {
+        await propagateExerciseToSessionTemplates(
+          ec.exercise,
+          onlyToSessionIds: selection?.sessionIdsFor('exercise', ec.exercise.id),
+        );
+      }
       await propagateExerciseToWorkouts(
         ec.exercise,
         onlyToWorkoutIds: selection?.workoutIdsFor('exercise', ec.exercise.id),
