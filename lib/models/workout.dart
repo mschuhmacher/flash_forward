@@ -1,4 +1,5 @@
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,6 +14,7 @@ class Workout {
     this.difficulty,
     this.equipment,
     required this.timeBetweenExercises,
+    this.supersets = const [],
     this.userId,
     this.notes,
   }) : id = id ?? const Uuid().v4();
@@ -26,6 +28,7 @@ class Workout {
   final String? difficulty;
   final String? equipment;
   final int timeBetweenExercises;
+  final List<SupersetConfig> supersets;
   final String? userId;
   final String? notes;
 
@@ -39,6 +42,7 @@ class Workout {
     'difficulty': difficulty,
     'equipment': equipment,
     'timeBetweenExercises': timeBetweenExercises,
+    'supersets': supersets.map((s) => s.toJson()).toList(),
     'userId': userId,
     'notes': notes,
   };
@@ -56,6 +60,9 @@ class Workout {
     difficulty: json['difficulty'],
     equipment: json['equipment'],
     timeBetweenExercises: json['timeBetweenExercises'] ?? 120,
+    supersets: ((json['supersets']) as List<dynamic>? ?? [])
+        .map((s) => SupersetConfig.fromJson(s as Map<String, dynamic>))
+        .toList(),
     userId: json['userId'],
     notes: json['notes'],
   );
@@ -74,6 +81,7 @@ class Workout {
     Nullable<String>? difficulty,
     Nullable<String>? equipment,
     int? timeBetweenExercises,
+    List<SupersetConfig>? supersets,
     String? userId,
     Nullable<String>? notes,
   }) => Workout(
@@ -86,6 +94,7 @@ class Workout {
     difficulty: difficulty == null ? this.difficulty : difficulty.value,
     equipment: equipment == null ? this.equipment : equipment.value,
     timeBetweenExercises: timeBetweenExercises ?? this.timeBetweenExercises,
+    supersets: supersets ?? this.supersets,
     userId: userId ?? this.userId,
     notes: notes == null ? this.notes : notes.value,
   );
@@ -114,6 +123,7 @@ class Workout {
     difficulty: difficulty,
     equipment: equipment,
     timeBetweenExercises: timeBetweenExercises,
+    supersets: supersets.map((s) => s.copyWith()).toList(),
     userId: userId,
     notes: notes,
   );
