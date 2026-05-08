@@ -113,18 +113,40 @@ class Workout {
   /// slidable Copy (intentional divergence — the user wants to evolve the
   /// copy independently of the original) and starting a session run (the
   /// run record is its own entity, not a template).
-  Workout deepCopy({bool keepId = false}) => Workout(
-    id: keepId ? id : null,
-    templateId: keepId ? templateId : (templateId ?? id),
-    title: title,
-    label: label,
-    description: description,
-    exercises: exercises.map((e) => e.deepCopy(keepId: keepId)).toList(),
-    difficulty: difficulty,
-    equipment: equipment,
-    timeBetweenExercises: timeBetweenExercises,
-    supersets: supersets.map((s) => s.copyWith()).toList(),
-    userId: userId,
-    notes: notes,
-  );
+  Workout deepCopy({bool keepId = false}) {
+    final copiedExercises =
+        exercises.map((e) => e.deepCopy(keepId: keepId)).toList();
+    // When keepId is false, exercises get fresh UUIDs, so supersets'
+    // exerciseIds (which reference the old IDs) must be remapped to the new
+    // ones. Same positional order, since deepCopy preserves it.
+    final List<SupersetConfig> copiedSupersets;
+    if (keepId) {
+      copiedSupersets = supersets.map((s) => s.copyWith()).toList();
+    } else {
+      final idMap = <String, String>{
+        for (var i = 0; i < exercises.length; i++)
+          exercises[i].id: copiedExercises[i].id,
+      };
+      copiedSupersets = supersets.map((s) {
+        final remapped = s.exerciseIds
+            .map((id) => idMap[id] ?? id)
+            .toList(growable: false);
+        return s.copyWith(exerciseIds: remapped);
+      }).toList();
+    }
+    return Workout(
+      id: keepId ? id : null,
+      templateId: keepId ? templateId : (templateId ?? id),
+      title: title,
+      label: label,
+      description: description,
+      exercises: copiedExercises,
+      difficulty: difficulty,
+      equipment: equipment,
+      timeBetweenExercises: timeBetweenExercises,
+      supersets: copiedSupersets,
+      userId: userId,
+      notes: notes,
+    );
+  }
 }

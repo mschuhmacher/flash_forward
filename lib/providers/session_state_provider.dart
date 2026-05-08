@@ -7,6 +7,7 @@ import 'package:flash_forward/models/set_event.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/services/audio_beep_player.dart';
 import 'package:flash_forward/services/beep_scheduler.dart';
+import 'package:flash_forward/utils/superset_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
@@ -19,6 +20,7 @@ enum TimerPhase {
   rep,
   repRest,
   setRest,
+  supersetRest,
   exerciseRest,
   overtime,
   workoutComplete,
@@ -300,7 +302,12 @@ class SessionStateProvider extends ChangeNotifier {
     _discardDrafts();
     if (index < 0) {
       return;
-    } else if (index == 0) {
+    }
+    if (_activeSession == null) return;
+    final workout = _activeSession!.workouts[_workoutIndex];
+    final exercise = workout.exercises[_exerciseIndex];
+    final effectiveSets = setsForExerciseInWorkout(workout, exercise);
+    if (index == 0) {
       _progress = SessionProgress(
         workoutIndex: _workoutIndex,
         exerciseIndex: _exerciseIndex,
@@ -312,12 +319,7 @@ class SessionStateProvider extends ChangeNotifier {
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       notifyListeners();
-    } else if (index > 0 &&
-        index <=
-            _activeSession!
-                .workouts[_workoutIndex]
-                .exercises[_exerciseIndex]
-                .sets) {
+    } else if (index > 0 && index <= effectiveSets) {
       _progress = SessionProgress(
         workoutIndex: _workoutIndex,
         exerciseIndex: _exerciseIndex,
@@ -329,11 +331,7 @@ class SessionStateProvider extends ChangeNotifier {
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       notifyListeners();
-    } else if (index >
-        _activeSession!
-            .workouts[_workoutIndex]
-            .exercises[_exerciseIndex]
-            .sets) {
+    } else if (index > effectiveSets) {
       return;
     }
   }
@@ -349,14 +347,15 @@ class SessionStateProvider extends ChangeNotifier {
     final workout = _activeSession!.workouts[workoutIndex];
     final updatedExercises = List<Exercise>.from(workout.exercises);
     updatedExercises[exerciseIndex] = updated;
+    final updatedWorkout = workout.copyWith(exercises: updatedExercises);
     final updatedWorkouts = List<Workout>.from(_activeSession!.workouts);
-    updatedWorkouts[workoutIndex] = workout.copyWith(
-      exercises: updatedExercises,
-    );
+    updatedWorkouts[workoutIndex] = updatedWorkout;
     _activeSession = _activeSession!.copyWith(workouts: updatedWorkouts);
 
     // Clamp progress if the user reduced sets/reps below current position.
-    final clampedSet = _progress.currentSet.clamp(1, updated.sets);
+    // For superset members, sets clamp uses the superset's effective sets.
+    final effectiveSets = setsForExerciseInWorkout(updatedWorkout, updated);
+    final clampedSet = _progress.currentSet.clamp(1, effectiveSets);
     final clampedRep =
         updated.reps != null
             ? _progress.currentRep.clamp(1, updated.reps!)
@@ -458,6 +457,7 @@ class SessionStateProvider extends ChangeNotifier {
     }
 
     var setRestTime = Duration.zero;
+    var supersetRestTime = Duration.zero;
     var exerciseRestTime = Duration.zero;
     var getReadyTime = Duration.zero;
     var overtime = Duration.zero;
@@ -466,6 +466,8 @@ class SessionStateProvider extends ChangeNotifier {
       switch (e.restType) {
         case RestType.setRest:
           setRestTime += e.actualDuration;
+        case RestType.supersetRest:
+          supersetRestTime += e.actualDuration;
         case RestType.exerciseRest:
           exerciseRestTime += e.actualDuration;
         case RestType.getReady:
@@ -480,6 +482,7 @@ class SessionStateProvider extends ChangeNotifier {
     final totalTime = activeTime +
         interRepRestTime +
         setRestTime +
+        supersetRestTime +
         exerciseRestTime +
         getReadyTime +
         overtime +
@@ -490,6 +493,7 @@ class SessionStateProvider extends ChangeNotifier {
       activeTime: activeTime,
       interRepRestTime: interRepRestTime,
       setRestTime: setRestTime,
+      supersetRestTime: supersetRestTime,
       exerciseRestTime: exerciseRestTime,
       getReadyTime: getReadyTime,
       overtime: overtime,
@@ -531,6 +535,7 @@ class SessionStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+
   /// Called when the app returns to foreground. Catches any time gap the
   /// ticker missed while the isolate was suspended, then reschedules beeps
   /// for the session's remaining phases.
@@ -571,25 +576,40 @@ class SessionStateProvider extends ChangeNotifier {
   }
 
   /// For manual-type exercises: advance to the next set (with rest) or to
-  /// exerciseRest when all sets are done. No-op for other exercise types.
+  /// exerciseRest when all sets are done. For superset members, the next
+  /// member's rep starts after a `supersetRest`. No-op for other exercise types.
   void advanceManually() {
     if (_activeSession == null) return;
-    final exercise =
-        _activeSession!.workouts[_progress.workoutIndex].exercises[_progress
-            .exerciseIndex];
+    final workout = _activeSession!.workouts[_progress.workoutIndex];
+    final exercise = workout.exercises[_progress.exerciseIndex];
     if (exercise.type != ExerciseType.manual) return;
     if (_progress.phase != TimerPhase.rep) return;
 
-    if (_progress.currentSet < exercise.sets) {
+    final effectiveSets = setsForExerciseInWorkout(workout, exercise);
+
+    if (hasNextInSuperset(workout, _progress.exerciseIndex)) {
+      final ss = supersetForExercise(workout, exercise.id);
+      final next = SessionProgress(
+        workoutIndex: _progress.workoutIndex,
+        exerciseIndex: _progress.exerciseIndex + 1,
+        currentSet: _progress.currentSet,
+        currentRep: 1,
+        phase: TimerPhase.supersetRest,
+      );
+      _onPhaseTransition(_progress.phase, next.phase, next);
+      _progress = next;
+      _remaining = Duration(seconds: ss?.restSeconds ?? 15);
+    } else if (_progress.currentSet < effectiveSets) {
       final next = _progress.copyWith(phase: TimerPhase.setRest);
       _onPhaseTransition(_progress.phase, next.phase, next);
       _progress = next;
+      _remaining = _getDurationForPhase(_progress);
     } else {
       final next = _progress.copyWith(phase: TimerPhase.exerciseRest);
       _onPhaseTransition(_progress.phase, next.phase, next);
       _progress = next;
+      _remaining = _getDurationForPhase(_progress);
     }
-    _remaining = _getDurationForPhase(_progress);
     _rescheduleSound();
     notifyListeners();
   }
@@ -792,6 +812,12 @@ class SessionStateProvider extends ChangeNotifier {
         if (phaseEndAt.isAfter(now)) {
           beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
         }
+      case TimerPhase.supersetRest:
+        // Short mandatory pause between superset members. No countdown — go
+        // beep at end so the user knows the next member's rep starts now.
+        if (phaseEndAt.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
+        }
       default:
         break; // exerciseRest, workoutComplete, paused, overtime: no beeps
     }
@@ -810,6 +836,7 @@ class SessionStateProvider extends ChangeNotifier {
     if (_activeSession == null) return null;
     final Workout workout = _activeSession!.workouts[p.workoutIndex];
     final Exercise exercise = workout.exercises[p.exerciseIndex];
+    final int effectiveSets = setsForExerciseInWorkout(workout, exercise);
 
     switch (p.phase) {
       case TimerPhase.rep:
@@ -824,8 +851,26 @@ class SessionStateProvider extends ChangeNotifier {
           case ExerciseType.fixedDuration:
             // A single timed effort per set — skip repRest entirely.
             // Also skip setRest on the last set.
-            if (p.currentSet >= exercise.sets) {
+            if (p.currentSet >= effectiveSets) {
+              if (hasNextInSuperset(workout, p.exerciseIndex)) {
+                return SessionProgress(
+                  workoutIndex: p.workoutIndex,
+                  exerciseIndex: p.exerciseIndex + 1,
+                  currentSet: p.currentSet,
+                  currentRep: 1,
+                  phase: TimerPhase.supersetRest,
+                );
+              }
               return _enterExerciseRest(p);
+            }
+            if (hasNextInSuperset(workout, p.exerciseIndex)) {
+              return SessionProgress(
+                workoutIndex: p.workoutIndex,
+                exerciseIndex: p.exerciseIndex + 1,
+                currentSet: p.currentSet,
+                currentRep: 1,
+                phase: TimerPhase.supersetRest,
+              );
             }
             return p.copyWith(phase: TimerPhase.setRest);
           case ExerciseType.manual:
@@ -843,20 +888,47 @@ class SessionStateProvider extends ChangeNotifier {
           );
         }
         // Last rep done — skip setRest if this was also the last set.
-        if (p.currentSet >= exercise.sets) {
+        if (p.currentSet >= effectiveSets) {
+          if (hasNextInSuperset(workout, p.exerciseIndex)) {
+            return SessionProgress(
+              workoutIndex: p.workoutIndex,
+              exerciseIndex: p.exerciseIndex + 1,
+              currentSet: p.currentSet,
+              currentRep: 1,
+              phase: TimerPhase.supersetRest,
+            );
+          }
           return _enterExerciseRest(p);
+        }
+        if (hasNextInSuperset(workout, p.exerciseIndex)) {
+          return SessionProgress(
+            workoutIndex: p.workoutIndex,
+            exerciseIndex: p.exerciseIndex + 1,
+            currentSet: p.currentSet,
+            currentRep: 1,
+            phase: TimerPhase.supersetRest,
+          );
         }
         return p.copyWith(phase: TimerPhase.setRest);
 
       case TimerPhase.setRest:
-        if (p.currentSet < exercise.sets) {
-          return p.copyWith(
+        if (p.currentSet < effectiveSets) {
+          // For superset members: walk back to the first member of the block
+          // so the next set restarts at the start of the superset cycle.
+          // For solo exercises this returns p.exerciseIndex unchanged.
+          final groupStart = supersetGroupStartIndex(workout, p.exerciseIndex);
+          return SessionProgress(
+            workoutIndex: p.workoutIndex,
+            exerciseIndex: groupStart,
             currentSet: p.currentSet + 1,
             currentRep: 1,
             phase: TimerPhase.rep,
           );
         }
         return _enterExerciseRest(p);
+
+      case TimerPhase.supersetRest:
+        return p.copyWith(phase: TimerPhase.rep);
 
       case TimerPhase.exerciseRest:
         // exerciseIndex already points to the next exercise (set on entry).
@@ -926,6 +998,7 @@ class SessionStateProvider extends ChangeNotifier {
   bool _isRestPhase(TimerPhase p) =>
       p == TimerPhase.getReady ||
       p == TimerPhase.setRest ||
+      p == TimerPhase.supersetRest ||
       p == TimerPhase.exerciseRest ||
       p == TimerPhase.overtime ||
       p == TimerPhase.paused;
@@ -936,6 +1009,8 @@ class SessionStateProvider extends ChangeNotifier {
         return RestType.getReady;
       case TimerPhase.setRest:
         return RestType.setRest;
+      case TimerPhase.supersetRest:
+        return RestType.supersetRest;
       case TimerPhase.exerciseRest:
         return RestType.exerciseRest;
       case TimerPhase.overtime:
@@ -1124,10 +1199,23 @@ class SessionStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Force the provider into a specific phase for testing
+  // Force the provider into a specific phase for testing.
+  // For `supersetRest`, advance the exercise index to the next member as the
+  // real state machine would do on entry.
   @visibleForTesting
   void debugSetPhase(TimerPhase phase) {
-    final next = _progress.copyWith(phase: phase);
+    final SessionProgress next;
+    if (phase == TimerPhase.supersetRest) {
+      next = SessionProgress(
+        workoutIndex: _progress.workoutIndex,
+        exerciseIndex: _progress.exerciseIndex + 1,
+        currentSet: _progress.currentSet,
+        currentRep: 1,
+        phase: TimerPhase.supersetRest,
+      );
+    } else {
+      next = _progress.copyWith(phase: phase);
+    }
     _onPhaseTransition(_progress.phase, next.phase, next);
     _progress = next;
     _remaining = _getDurationForPhase(_progress);
@@ -1164,6 +1252,9 @@ class SessionStateProvider extends ChangeNotifier {
         return Duration(seconds: exercise.timeBetweenReps);
       case TimerPhase.setRest:
         return Duration(seconds: exercise.timeBetweenSets);
+      case TimerPhase.supersetRest:
+        final ss = supersetForExercise(workout, exercise.id);
+        return Duration(seconds: ss?.restSeconds ?? 15);
       case TimerPhase.exerciseRest:
         return Duration(seconds: workout.timeBetweenExercises);
       case TimerPhase.overtime:

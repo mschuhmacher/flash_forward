@@ -3,6 +3,7 @@ class SessionSummary {
   final Duration activeTime;
   final Duration interRepRestTime;
   final Duration setRestTime;
+  final Duration supersetRestTime;
   final Duration exerciseRestTime;
   final Duration getReadyTime;
   final Duration overtime;
@@ -13,6 +14,7 @@ class SessionSummary {
     required this.activeTime,
     required this.interRepRestTime,
     required this.setRestTime,
+    this.supersetRestTime = Duration.zero,
     required this.exerciseRestTime,
     required this.getReadyTime,
     required this.overtime,
@@ -24,6 +26,7 @@ class SessionSummary {
         'activeTimeSeconds': activeTime.inSeconds,
         'interRepRestTimeSeconds': interRepRestTime.inSeconds,
         'setRestTimeSeconds': setRestTime.inSeconds,
+        'supersetRestTimeSeconds': supersetRestTime.inSeconds,
         'exerciseRestTimeSeconds': exerciseRestTime.inSeconds,
         'getReadyTimeSeconds': getReadyTime.inSeconds,
         'overtimeSeconds': overtime.inSeconds,
@@ -35,6 +38,8 @@ class SessionSummary {
         activeTime: Duration(seconds: json['activeTimeSeconds'] as int),
         interRepRestTime: Duration(seconds: json['interRepRestTimeSeconds'] as int),
         setRestTime: Duration(seconds: json['setRestTimeSeconds'] as int),
+        supersetRestTime:
+            Duration(seconds: json['supersetRestTimeSeconds'] as int? ?? 0),
         exerciseRestTime: Duration(seconds: json['exerciseRestTimeSeconds'] as int),
         getReadyTime: Duration(seconds: json['getReadyTimeSeconds'] as int),
         overtime: Duration(seconds: json['overtimeSeconds'] as int),
