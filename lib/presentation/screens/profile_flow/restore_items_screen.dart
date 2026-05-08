@@ -1,6 +1,7 @@
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -93,7 +94,7 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-          child: Text(heading, style: context.titleMedium),
+          child: Text(heading, style: context.h3),
         ),
         ...entries.map((entry) {
           final days = _daysRemaining(entry.deletedAt);

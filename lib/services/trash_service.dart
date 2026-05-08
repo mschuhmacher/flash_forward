@@ -36,13 +36,17 @@ class TrashService {
     return entry;
   }
 
-  Future<int> purgeOlderThan(Duration ttl, {DateTime? now}) async {
+  /// Purges entries older than [ttl] from the local trash file and returns the
+  /// ids that were removed. Callers that also sync to the cloud use the returned
+  /// ids to delete the corresponding cloud rows.
+  Future<List<String>> purgeOlderThan(Duration ttl, {DateTime? now}) async {
     final cutoff = (now ?? DateTime.now()).subtract(ttl);
     final entries = await readAll();
-    final before = entries.length;
+    final purged = entries.where((e) => e.deletedAt.isBefore(cutoff)).toList();
+    if (purged.isEmpty) return const [];
     entries.removeWhere((e) => e.deletedAt.isBefore(cutoff));
     await _write(entries);
-    return before - entries.length;
+    return purged.map((e) => e.id).toList();
   }
 
   Future<void> _write(List<TrashEntry> entries) async {

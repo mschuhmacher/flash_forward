@@ -106,7 +106,7 @@ void main() {
 
       final purged =
           await svc.purgeOlderThan(const Duration(days: 90), now: now);
-      expect(purged, 2);
+      expect(purged.toSet(), {'old1', 'old2'});
 
       final remaining = await svc.readAll();
       expect(remaining.length, 1);

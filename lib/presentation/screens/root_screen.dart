@@ -2,7 +2,7 @@ import 'package:flash_forward/constants/urls.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/session_flow/home_screen.dart';
 import 'package:flash_forward/presentation/screens/profile_flow/profile_screen.dart';
-import 'package:flash_forward/presentation/screens/settings/restore_items_screen.dart';
+import 'package:flash_forward/presentation/screens/profile_flow/restore_items_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
@@ -172,9 +172,10 @@ class SettingsDrawer extends StatelessWidget {
     return Drawer(
       backgroundColor: context.colorScheme.surfaceBright,
       child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               child: Text('Preferences', style: context.titleLargePrimary),
@@ -363,6 +364,7 @@ class SettingsDrawer extends StatelessWidget {
               onTap: () => _deleteAccount(context),
             ),
           ],
+          ),
         ),
       ),
     );
