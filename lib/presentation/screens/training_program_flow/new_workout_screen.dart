@@ -74,6 +74,16 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   }
 
   Future<void> _save() async {
+    // Defense-in-depth: every editing path validates contiguity, but a
+    // future code change could slip through. Refuse to persist a broken
+    // state.
+    if (!supersetsRemainContiguous(_workout.exercises, _workout.supersets)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('A superset is broken — please re-create it')),
+      );
+      return;
+    }
     if (_formKey.currentState!.validate()) {
       final workout = _workout.copyWith(
         title: _titleController.text.trim(),
@@ -341,6 +351,71 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     });
   }
 
+  /// Reorder handler for the workout list. Solo exercises move single-item.
+  /// Superset members drag the entire block as a unit. Drops that would
+  /// break a superset's contiguity (placing a solo exercise inside a block,
+  /// or placing one block inside another) snap back with a snackbar.
+  void _onReorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (oldIndex < newIndex) newIndex -= 1;
+
+      final exercises = List<Exercise>.from(_workout.exercises);
+      final dragged = exercises[oldIndex];
+      final draggedSuperset = supersetForExercise(_workout, dragged.id);
+
+      if (draggedSuperset == null) {
+        final candidate = List<Exercise>.from(exercises)
+          ..removeAt(oldIndex)
+          ..insert(newIndex, dragged);
+        if (!supersetsRemainContiguous(candidate, _workout.supersets)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cannot drop inside a superset')),
+          );
+          return;
+        }
+        _workout = _workout.copyWith(exercises: candidate);
+        return;
+      }
+
+      // Whole-block drag: extract every member of the dragged superset and
+      // re-insert them as a contiguous block at the target position.
+      final memberIds = draggedSuperset.exerciseIds.toSet();
+      final blockIndices = <int>[];
+      for (var i = 0; i < exercises.length; i++) {
+        if (memberIds.contains(exercises[i].id)) blockIndices.add(i);
+      }
+      final blockStart = blockIndices.first;
+      final blockEnd = blockIndices.last;
+      final blockExercises = exercises.sublist(blockStart, blockEnd + 1);
+      final remainder = [
+        ...exercises.sublist(0, blockStart),
+        ...exercises.sublist(blockEnd + 1),
+      ];
+      int targetInRemainder;
+      if (newIndex <= blockStart) {
+        targetInRemainder = newIndex;
+      } else if (newIndex > blockEnd) {
+        targetInRemainder = newIndex - blockExercises.length;
+      } else {
+        // Drop landed inside the block itself — no-op (a block can't move
+        // into itself).
+        return;
+      }
+      targetInRemainder = targetInRemainder.clamp(0, remainder.length);
+
+      final candidate = List<Exercise>.from(remainder)
+        ..insertAll(targetInRemainder, blockExercises);
+
+      if (!supersetsRemainContiguous(candidate, _workout.supersets)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot drop inside another superset')),
+        );
+        return;
+      }
+      _workout = _workout.copyWith(exercises: candidate);
+    });
+  }
+
   /// Pulls all members listed in [memberIds] to be contiguous in the exercise
   /// list, anchored at the position of the first member already in the list.
   /// Members are placed in the modal-defined order.
@@ -531,17 +606,45 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           },
                         );
                       },
-                      onReorder: (int oldIndex, int newIndex) {
-                        setState(() {
-                          if (oldIndex < newIndex) {
-                            newIndex -=
-                                1; // Since the widget if removed from its old index
-                          }
-                          final Exercise exercise = workout.exercises.removeAt(
-                            oldIndex,
-                          );
-                          workout.exercises.insert(newIndex, exercise);
-                        });
+                      onReorder: _onReorder,
+                      proxyDecorator: (child, index, animation) {
+                        final exercise = _workout.exercises[index];
+                        final ss = _supersetForExercise(exercise);
+                        if (ss == null) return child;
+                        final siblingCount = ss.exerciseIds.length - 1;
+                        return Material(
+                          color: Colors.transparent,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              for (var i = siblingCount; i > 0; i--)
+                                Positioned(
+                                  top: i * 4.0,
+                                  left: i * 2.0,
+                                  right: i * 2.0,
+                                  child: Container(
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: context.colorScheme.surface,
+                                      border: Border.all(
+                                        color: context.colorScheme.outline
+                                            .withValues(alpha: 0.3),
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.05),
+                                          blurRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              child,
+                            ],
+                          ),
+                        );
                       },
                     ),
                   ),
