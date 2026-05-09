@@ -3,6 +3,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/presentation/widgets/label_badge.dart';
 import 'package:flash_forward/utils/nullable.dart';
+import 'package:flash_forward/utils/superset_utils.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/utils/timer_utils.dart';
@@ -184,13 +185,17 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         TextStyle phaseTextStyle = context.h2.copyWith(
           color: context.colorScheme.onPrimary,
         );
+        final effectiveSets =
+            setsForExerciseInWorkout(activeWorkout, activeExercise);
         switch (sessionStateData.phase) {
           case TimerPhase.setRest:
             phaseText = 'rest between sets';
+          case TimerPhase.supersetRest:
+            phaseText = 'superset rest';
           case TimerPhase.rep:
             if (activeExercise.type == ExerciseType.manual) {
               phaseText =
-                  'set ${progress.currentSet} of ${activeExercise.sets}';
+                  'set ${progress.currentSet} of $effectiveSets';
             } else {
               phaseText = 'active';
             }
@@ -282,6 +287,30 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                           mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (() {
+                              final ss = supersetForExercise(
+                                  activeWorkout, activeExercise.id);
+                              return ss != null;
+                            }())
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Container(
+                                  width: 32,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: () {
+                                      final ss = supersetForExercise(
+                                          activeWorkout, activeExercise.id)!;
+                                      final idx = activeWorkout.supersets
+                                          .indexWhere((s) => s.id == ss.id);
+                                      return idx >= 0
+                                          ? supersetColorForIndex(idx)
+                                          : supersetColor(ss.id);
+                                    }(),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ),
                             Text(
                               activeExercise.title,
                               style: context.h1.copyWith(
@@ -309,7 +338,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                       // ── Timer or manual-advance button ──────────
                       if (isManualRep)
                         _ManualAdvanceButton(
-                          isLastSet: progress.currentSet >= activeExercise.sets,
+                          isLastSet: progress.currentSet >= effectiveSets,
                           onPressed: () => sessionStateData.advanceManually(),
                           color: context.colorScheme.onPrimary,
                         )
@@ -343,6 +372,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                                 TimerPhase.repRest ||
                                             sessionStateData.phase ==
                                                 TimerPhase.setRest ||
+                                            sessionStateData.phase ==
+                                                TimerPhase.supersetRest ||
                                             sessionStateData.phase ==
                                                 TimerPhase.exerciseRest) &&
                                         sessionStateData.remaining <
@@ -436,7 +467,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                               width: 150,
                               borderColor: context.colorScheme.onPrimary,
                               child: Text(
-                                '${progress.currentSet} / ${activeExercise.sets}   sets',
+                                '${progress.currentSet} / $effectiveSets   sets',
                                 style: context.titleLarge.copyWith(
                                   color: context.colorScheme.onPrimary,
                                   fontWeight: FontWeight.bold,
