@@ -1,12 +1,15 @@
 import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/utils/nullable.dart';
+import 'package:flash_forward/utils/superset_utils.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/pending_change.dart';
+import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
+import 'package:flash_forward/presentation/screens/training_program_flow/superset_modal.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
@@ -159,19 +162,210 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   // Slidable Copy means divergence. Fresh UUID so this card evolves
   // independently of the original (e.g. a circuits use case where the same
   // template appears twice with different reps/loads).
+  // Per design rule: a copy never joins the original's superset. If the
+  // source is in a superset, insert the copy *after* the entire block so the
+  // contiguity invariant is preserved.
   _copyExercise(Exercise exercise) {
     final newExercise = exercise.deepCopy();
     setState(() {
-      final index = _workout.exercises.indexOf(exercise);
-      _workout.exercises.insert(index + 1, newExercise);
+      final ss = supersetForExercise(_workout, exercise.id);
+      int insertAt;
+      if (ss != null) {
+        var lastMemberIndex = -1;
+        for (var i = 0; i < _workout.exercises.length; i++) {
+          if (ss.exerciseIds.contains(_workout.exercises[i].id)) {
+            lastMemberIndex = i;
+          }
+        }
+        insertAt = lastMemberIndex + 1;
+      } else {
+        insertAt = _workout.exercises.indexOf(exercise) + 1;
+      }
+      final newList = List<Exercise>.from(_workout.exercises)
+        ..insert(insertAt, newExercise);
+      _workout = _workout.copyWith(exercises: newList);
     });
   }
 
   _deleteExercise(Exercise exercise) {
     setState(() {
-      final index = _workout.exercises.indexOf(exercise);
-      _workout.exercises.removeAt(index);
+      _workout = _workout.copyWith(
+        exercises:
+            _workout.exercises.where((e) => e.id != exercise.id).toList(),
+        supersets: removeExerciseFromSupersets(exercise.id, _workout.supersets),
+      );
     });
+  }
+
+  // ── Superset management ─────────────────────────────────────────────────
+
+  SupersetConfig? _supersetForExercise(Exercise exercise) =>
+      supersetForExercise(_workout, exercise.id);
+
+  int? _supersetIndexForExercise(Exercise exercise) {
+    for (var i = 0; i < _workout.supersets.length; i++) {
+      if (_workout.supersets[i].exerciseIds.contains(exercise.id)) return i;
+    }
+    return null;
+  }
+
+  Future<void> _onSupersetSlidableTap(Exercise exercise) async {
+    final ss = _supersetForExercise(exercise);
+    if (ss != null) {
+      await _editSuperset(ss);
+    } else {
+      await _addToSuperset(exercise);
+    }
+  }
+
+  Future<void> _addToSuperset(Exercise exercise) async {
+    final supersets = _workout.supersets;
+    if (supersets.isEmpty) {
+      await _openCreateModal(initialExercise: exercise);
+      return;
+    }
+    final box = context.findRenderObject() as RenderBox?;
+    final picked = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        100,
+        200,
+        100,
+        box == null ? 200 : box.size.height - 200,
+      ),
+      items: [
+        for (var i = 0; i < supersets.length; i++)
+          PopupMenuItem<String>(
+            value: supersets[i].id,
+            child: Row(children: [
+              Container(
+                  width: 4, height: 24, color: supersetColorForIndex(i)),
+              const SizedBox(width: 8),
+              Text(_supersetMenuLabel(supersets[i], exercise)),
+            ]),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: '__new__',
+          child: Text('Create new superset'),
+        ),
+      ],
+    );
+    if (picked == null) return;
+    if (picked == '__new__') {
+      await _openCreateModal(initialExercise: exercise);
+    } else {
+      final existing = supersets.firstWhere((s) => s.id == picked);
+      await _editSuperset(existing, joining: exercise);
+    }
+  }
+
+  String _supersetMenuLabel(SupersetConfig ss, Exercise fallbackExercise) {
+    final firstId = ss.exerciseIds.first;
+    final firstTitle = _workout.exercises
+        .firstWhere(
+          (e) => e.id == firstId,
+          orElse: () => fallbackExercise,
+        )
+        .title;
+    return '${ss.exerciseIds.length} exercises: $firstTitle';
+  }
+
+  Future<void> _openCreateModal({required Exercise initialExercise}) async {
+    final result = await showSupersetModal(
+      context: context,
+      workoutExercises: _workout.exercises,
+      otherSupersets: _workout.supersets,
+      initialMembers: [initialExercise],
+      existing: null,
+    );
+    if (result == null || result.dissolveRequested) return;
+    if (result.memberIds.length < 2) return;
+
+    final newSs = SupersetConfig(
+      exerciseIds: result.memberIds,
+      restSeconds: result.restSeconds,
+      supersetSets: result.supersetSets,
+    );
+    setState(() {
+      _workout = _workout.copyWith(
+        exercises:
+            _reorderToContiguous(_workout.exercises, result.memberIds),
+        supersets: [..._workout.supersets, newSs],
+      );
+    });
+  }
+
+  Future<void> _editSuperset(SupersetConfig ss, {Exercise? joining}) async {
+    final initialMembers = _workout.exercises
+        .where((e) => ss.exerciseIds.contains(e.id))
+        .toList();
+    if (joining != null && !initialMembers.any((m) => m.id == joining.id)) {
+      initialMembers.add(joining);
+    }
+    final otherSupersets =
+        _workout.supersets.where((s) => s.id != ss.id).toList();
+    final result = await showSupersetModal(
+      context: context,
+      workoutExercises: _workout.exercises,
+      otherSupersets: otherSupersets,
+      initialMembers: initialMembers,
+      existing: ss,
+      joiningExercise: joining,
+    );
+    if (result == null) return;
+
+    if (result.dissolveRequested || result.memberIds.length < 2) {
+      setState(() {
+        _workout = _workout.copyWith(
+          supersets:
+              _workout.supersets.where((s) => s.id != ss.id).toList(),
+        );
+      });
+      return;
+    }
+
+    final updated = ss.copyWith(
+      exerciseIds: result.memberIds,
+      restSeconds: result.restSeconds,
+      supersetSets: result.supersetSets,
+    );
+    setState(() {
+      _workout = _workout.copyWith(
+        exercises:
+            _reorderToContiguous(_workout.exercises, result.memberIds),
+        supersets: _workout.supersets
+            .map((s) => s.id == ss.id ? updated : s)
+            .toList(),
+      );
+    });
+  }
+
+  /// Pulls all members listed in [memberIds] to be contiguous in the exercise
+  /// list, anchored at the position of the first member already in the list.
+  /// Members are placed in the modal-defined order.
+  List<Exercise> _reorderToContiguous(
+      List<Exercise> exercises, List<String> memberIds) {
+    if (memberIds.length < 2) return exercises;
+    final memberSet = memberIds.toSet();
+    final firstAnchor = exercises.indexWhere((e) => memberSet.contains(e.id));
+    if (firstAnchor == -1) return exercises;
+    final members = <Exercise>[];
+    final others = <Exercise>[];
+    for (final e in exercises) {
+      if (memberSet.contains(e.id)) {
+        members.add(e);
+      } else {
+        others.add(e);
+      }
+    }
+    members.sort(
+        (a, b) => memberIds.indexOf(a.id).compareTo(memberIds.indexOf(b.id)));
+    final insertAt = exercises
+        .sublist(0, firstAnchor)
+        .where((e) => !memberSet.contains(e.id))
+        .length;
+    return [...others]..insertAll(insertAt, members);
   }
 
   @override
@@ -299,6 +493,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                         final pp = Provider.of<PresetProvider>(context, listen: false);
                         final notInCatalog = pp.presetExercises.every((e) => e.id != exercise.id);
                         final notInTrash = pp.trashedItems.every((e) => e.id != exercise.id);
+                        final paletteIndex = _supersetIndexForExercise(exercise);
+                        final ss = _supersetForExercise(exercise);
                         return _ExerciseCard(
                           exercise: exercise,
                           key: ValueKey(
@@ -306,9 +502,12 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           ), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
                           onCopy: () => _copyExercise(exercise),
                           onDelete: () => _deleteExercise(exercise),
+                          onSuperset: () => _onSupersetSlidableTap(exercise),
                           onSaveToCatalog: (notInCatalog && notInTrash)
                               ? () => _saveExerciseToCatalog(exercise)
                               : null,
+                          supersetPaletteIndex: paletteIndex,
+                          supersetSets: ss?.supersetSets,
                           onTap: () async {
                             Exercise? newExercise =
                                 await Navigator.push<Exercise>(
@@ -383,10 +582,19 @@ class _ExerciseCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
+  final VoidCallback onSuperset;
 
   /// When non-null, a "Save to catalog" slidable action is shown. Null means
   /// the action is hidden (the exercise is already in the catalog or in trash).
   final VoidCallback? onSaveToCatalog;
+
+  /// Non-null when the exercise is a member of a superset. Drives the leading
+  /// color bar and the slidable label ("Edit superset" vs "Add to superset").
+  final int? supersetPaletteIndex;
+
+  /// When non-null, the displayed sets value is overridden by the superset's
+  /// supersetSets — so members of a superset show the shared count.
+  final int? supersetSets;
 
   const _ExerciseCard({
     super.key,
@@ -394,39 +602,60 @@ class _ExerciseCard extends StatelessWidget {
     required this.onTap,
     required this.onCopy,
     required this.onDelete,
+    required this.onSuperset,
     this.onSaveToCatalog,
+    this.supersetPaletteIndex,
+    this.supersetSets,
   });
 
   @override
   Widget build(BuildContext context) {
+    final saveVisible = onSaveToCatalog != null;
     return GestureDetector(
       onTap: onTap,
       child: Slidable(
         key: ValueKey(exercise.id),
-        endActionPane: ActionPane(
-          motion: ScrollMotion(),
+        // Left-to-right swipe — additive actions (Save, Copy).
+        startActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          extentRatio: 0.22 * (saveVisible ? 2 : 1),
           children: [
-            if (onSaveToCatalog != null) ...[
-              SizedBox(width: 8),
+            if (saveVisible)
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
                 onPressed: (_) => onSaveToCatalog!(),
                 backgroundColor: context.colorScheme.tertiary,
                 foregroundColor: context.colorScheme.onTertiary,
                 icon: Icons.save_alt_rounded,
-                label: 'Save to catalog',
+                label: 'Save to\ncatalog',
               ),
-            ],
-            SizedBox(width: 8),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),
               onPressed: (_) => onCopy(),
               backgroundColor: context.colorScheme.secondary,
-              foregroundColor: context.colorScheme.onError,
+              foregroundColor: context.colorScheme.onSecondary,
               icon: Icons.copy_rounded,
               label: 'Copy',
             ),
-            SizedBox(width: 8),
+          ],
+        ),
+        // Right-to-left swipe — modifying / destructive actions.
+        endActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          extentRatio: 0.22 * 2,
+          children: [
+            SlidableAction(
+              borderRadius: BorderRadius.circular(12),
+              onPressed: (_) => onSuperset(),
+              backgroundColor: context.colorScheme.tertiary,
+              foregroundColor: context.colorScheme.onTertiary,
+              icon: supersetPaletteIndex != null
+                  ? Icons.edit_rounded
+                  : Icons.link_rounded,
+              label: supersetPaletteIndex != null
+                  ? 'Edit\nsuperset'
+                  : 'Add to\nsuperset',
+            ),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),
               onPressed: (_) => onDelete(),
@@ -437,74 +666,97 @@ class _ExerciseCard extends StatelessWidget {
             ),
           ],
         ),
+        child: _cardBody(context),
+      ),
+    );
+  }
 
-        child: Container(
-          margin: EdgeInsets.only(bottom: 8),
-          padding: EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: context.colorScheme.surfaceBright,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: context.colorScheme.onSurface.withValues(alpha: 0.08),
-            ),
-            boxShadow: context.shadowSmall,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _cardBody(BuildContext context) {
+    final body = Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.colorScheme.surfaceBright,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: context.colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
+        boxShadow: context.shadowSmall,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(exercise.title, style: context.titleMedium),
-                  _LabelBadge(labelKey: exercise.label),
-                ],
+              Text(exercise.title, style: context.titleMedium),
+              _LabelBadge(labelKey: exercise.label),
+            ],
+          ),
+          if (exercise.description.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              exercise.description,
+              style: context.bodyMedium.copyWith(
+                color: context.colorScheme.onSurfaceVariant,
               ),
-              if (exercise.description.isNotEmpty) ...[
-                SizedBox(height: 2),
-                Text(
-                  exercise.description,
-                  style: context.bodyMedium.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                  ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 16,
+            runSpacing: 6,
+            children: [
+              _StatPill(label: 'Sets', value: '${supersetSets ?? exercise.sets}'),
+              if (exercise.reps != null)
+                _StatPill(label: 'Reps', value: '${exercise.reps}'),
+              if (exercise.load > 0)
+                _StatPill(
+                  label: 'Load',
+                  value: exercise.loadUnit != null
+                      ? '${exercise.load} ${exercise.loadUnit}'
+                      : '${exercise.load}',
                 ),
-              ],
-              SizedBox(height: 10),
-              Divider(height: 1),
-              SizedBox(height: 8),
-              Wrap(
-                spacing: 16,
-                runSpacing: 6,
-                children: [
-                  _StatPill(label: 'Sets', value: '${exercise.sets}'),
-                  if (exercise.reps != null)
-                    _StatPill(label: 'Reps', value: '${exercise.reps}'),
-                  if (exercise.load > 0)
-                    _StatPill(
-                      label: 'Load',
-                      value:
-                          exercise.loadUnit != null
-                              ? '${exercise.load} ${exercise.loadUnit}'
-                              : '${exercise.load}',
-                    ),
-                  _StatPill(
-                    label: 'Rest',
-                    value: '${exercise.timeBetweenSets}s',
-                  ),
-                  _StatPill(
-                    label: 'Active',
-                    value: switch (exercise.type) {
-                      ExerciseType.timedReps =>
-                        '${exercise.timePerRep * (exercise.reps ?? 1)}s',
-                      ExerciseType.fixedDuration => '${exercise.activeTime}s',
-                      ExerciseType.manual => '-',
-                    },
-                  ),
-                ],
+              _StatPill(
+                label: 'Rest',
+                value: '${exercise.timeBetweenSets}s',
+              ),
+              _StatPill(
+                label: 'Active',
+                value: switch (exercise.type) {
+                  ExerciseType.timedReps =>
+                    '${exercise.timePerRep * (exercise.reps ?? 1)}s',
+                  ExerciseType.fixedDuration => '${exercise.activeTime}s',
+                  ExerciseType.manual => '-',
+                },
               ),
             ],
           ),
-        ),
+        ],
       ),
+    );
+    if (supersetPaletteIndex == null) return body;
+    return Stack(
+      children: [
+        body,
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 8,
+          child: Container(
+            width: 4,
+            decoration: BoxDecoration(
+              color: supersetColorForIndex(supersetPaletteIndex!),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
