@@ -4,6 +4,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/rest_event.dart';
 import 'package:flash_forward/models/session_summary.dart';
 import 'package:flash_forward/models/set_event.dart';
+import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/services/audio_beep_player.dart';
 import 'package:flash_forward/services/beep_scheduler.dart';
@@ -368,6 +369,48 @@ class SessionStateProvider extends ChangeNotifier {
       );
     }
 
+    notifyListeners();
+  }
+
+  /// Updates `supersetSets` on the superset that contains [exerciseId] in
+  /// the active session's workout at [workoutIndex]. No-op if the exercise
+  /// is not a superset member. Clamps `currentSet` to the new value when
+  /// applicable.
+  ///
+  /// Mid-session sets edits on a superset member route here instead of
+  /// `updateActiveExercise` for the sets field — all members of the same
+  /// superset share `supersetSets`, so a single edit propagates to all of
+  /// them via the existing read path (`setsForExerciseInWorkout`).
+  void updateActiveSupersetSets({
+    required int workoutIndex,
+    required String exerciseId,
+    required int newSupersetSets,
+  }) {
+    if (_activeSession == null) return;
+    final workout = _activeSession!.workouts[workoutIndex];
+    final ssIndex = workout.supersets.indexWhere(
+      (ss) => ss.exerciseIds.contains(exerciseId),
+    );
+    if (ssIndex == -1) return;
+    final updated =
+        workout.supersets[ssIndex].copyWith(supersetSets: newSupersetSets);
+    final newSupersets = List<SupersetConfig>.from(workout.supersets);
+    newSupersets[ssIndex] = updated;
+    final updatedWorkout = workout.copyWith(supersets: newSupersets);
+    final updatedWorkouts = List<Workout>.from(_activeSession!.workouts);
+    updatedWorkouts[workoutIndex] = updatedWorkout;
+    _activeSession = _activeSession!.copyWith(workouts: updatedWorkouts);
+
+    if (_progress.workoutIndex == workoutIndex) {
+      final activeExercise =
+          updatedWorkout.exercises[_progress.exerciseIndex];
+      final effectiveSets =
+          setsForExerciseInWorkout(updatedWorkout, activeExercise);
+      final clamped = _progress.currentSet.clamp(1, effectiveSets);
+      if (clamped != _progress.currentSet) {
+        _progress = _progress.copyWith(currentSet: clamped);
+      }
+    }
     notifyListeners();
   }
 

@@ -584,25 +584,40 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                           supersetPaletteIndex: paletteIndex,
                           supersetSets: ss?.supersetSets,
                           onTap: () async {
-                            Exercise? newExercise =
-                                await Navigator.push<Exercise>(
+                            final result =
+                                await Navigator.push<NewExerciseResult>(
                                   context,
                                   MaterialPageRoute(
                                     builder:
                                         (context) => NewExerciseScreen(
                                           exercise: exercise,
+                                          parentWorkout: _workout,
                                         ),
                                   ),
                                 );
-                            if (newExercise != null) {
-                              setState(() {
-                                _workout.exercises[index] = newExercise;
-                              });
-                              // Track the exercise change so Save can propagate it.
-                              // Copies (from _copyExercise) are brand-new ids with
-                              // no existing consumers, so they are never added here.
-                              _pending.addExercise(newExercise);
-                            }
+                            if (result == null) return;
+                            setState(() {
+                              _workout.exercises[index] = result.exercise;
+                              if (result.supersetSetsChange != null) {
+                                _workout = _workout.copyWith(
+                                  supersets: _workout.supersets
+                                      .map(
+                                        (ss) => ss.exerciseIds
+                                                .contains(result.exercise.id)
+                                            ? ss.copyWith(
+                                                supersetSets:
+                                                    result.supersetSetsChange,
+                                              )
+                                            : ss,
+                                      )
+                                      .toList(),
+                                );
+                              }
+                            });
+                            // Track the exercise change so Save can propagate it.
+                            // Copies (from _copyExercise) are brand-new ids with
+                            // no existing consumers, so they are never added here.
+                            _pending.addExercise(result.exercise);
                           },
                         );
                       },

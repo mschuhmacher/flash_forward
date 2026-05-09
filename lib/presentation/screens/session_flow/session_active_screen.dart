@@ -593,8 +593,20 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
     final wasAlreadyPaused = sessionStateData.isPaused;
     sessionStateData.pause();
 
+    // For superset members, the sets value displayed/edited in the dialog
+    // is the parent superset's supersetSets, not exercise.sets. The save
+    // path below routes back via updateActiveSupersetSets.
+    final activeWorkout =
+        sessionStateData.activeSession?.workouts[workoutIndex];
+    final ssMembership = activeWorkout != null
+        ? supersetForExercise(activeWorkout, activeExercise.id)
+        : null;
+    final initialSets = activeWorkout != null
+        ? setsForExerciseInWorkout(activeWorkout, activeExercise)
+        : activeExercise.sets;
+
     // Local state — initialized once when sheet opens, applied to provider on save.
-    int localSets = activeExercise.sets;
+    int localSets = initialSets;
     int? localReps = activeExercise.reps;
     bool localRepsEnabled = activeExercise.reps != null;
     int localTimeBetweenSets = activeExercise.timeBetweenSets;
@@ -623,13 +635,27 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         return StatefulBuilder(
           builder: (context, setDialogState) {
             void applyAndClose() {
+              // For superset members, the sets edit goes to supersetSets so
+              // every member of the group reflects the change. Other fields
+              // (reps, load, etc.) stay on the exercise. exercise.sets is
+              // preserved unchanged so removing the exercise from the
+              // superset later restores its original set count.
+              final exerciseEditedSets =
+                  ssMembership != null ? activeExercise.sets : localSets;
+              if (ssMembership != null && localSets != initialSets) {
+                sessionStateData.updateActiveSupersetSets(
+                  workoutIndex: workoutIndex,
+                  exerciseId: activeExercise.id,
+                  newSupersetSets: localSets,
+                );
+              }
               // Apply all local edits to the live session copy via the provider.
               // Uses copyWith (not deepCopy) — keeps the same IDs, only replaces fields.
               sessionStateData.updateActiveExercise(
                 workoutIndex,
                 exerciseIndex,
                 activeExercise.copyWith(
-                  sets: localSets,
+                  sets: exerciseEditedSets,
                   reps: Nullable(localRepsEnabled ? localReps : null),
                   timeBetweenSets: localTimeBetweenSets,
                   timePerRep: localTimePerRep,
