@@ -1,6 +1,7 @@
 import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/pending_change.dart';
+import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
@@ -25,6 +26,26 @@ class NewExerciseResult {
   final Exercise exercise;
   final int? supersetSetsChange;
   const NewExerciseResult({required this.exercise, this.supersetSetsChange});
+
+  /// Decides what value (if any) to surface as `supersetSetsChange`.
+  /// - Returns `null` when the exercise is not in a superset (saves go to
+  ///   the exercise's own `sets`).
+  /// - Returns `null` when the displayed sets value equals the existing
+  ///   `supersetSets` (no-op edit).
+  /// - Returns the new value otherwise.
+  ///
+  /// Extracted as a pure function so the contract — "non-null only on actual
+  /// change" — is unit-testable without spinning up the full edit screen.
+  static int? computeSupersetSetsChange({
+    required SupersetConfig? membership,
+    required int displayedSets,
+    required int? existingSupersetSets,
+    required int exerciseSetsFallback,
+  }) {
+    if (membership == null) return null;
+    final existing = existingSupersetSets ?? exerciseSetsFallback;
+    return displayedSets != existing ? displayedSets : null;
+  }
 }
 
 class NewExerciseScreen extends StatefulWidget {
@@ -123,13 +144,19 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
     if (_formKey.currentState!.validate()) {
       // If this exercise is a superset member, the sets field is controlled
       // by the parent superset's supersetSets — keep exercise.sets at its
-      // original value and surface the new value separately.
+      // original value and surface the new value separately, but only when
+      // it actually differs from the existing supersetSets.
       final ssMembership = widget.parentWorkout != null && widget.exercise != null
           ? supersetForExercise(widget.parentWorkout!, widget.exercise!.id)
           : null;
       final preservedSets =
           ssMembership != null ? widget.exercise!.sets : _sets;
-      final supersetSetsChange = ssMembership != null ? _sets : null;
+      final supersetSetsChange = NewExerciseResult.computeSupersetSetsChange(
+        membership: ssMembership,
+        displayedSets: _sets,
+        existingSupersetSets: ssMembership?.supersetSets,
+        exerciseSetsFallback: widget.exercise?.sets ?? _sets,
+      );
 
       final exercise = Exercise(
         id: widget.exercise?.id,

@@ -1244,11 +1244,23 @@ class SessionStateProvider extends ChangeNotifier {
 
   // Force the provider into a specific phase for testing.
   // For `supersetRest`, advance the exercise index to the next member as the
-  // real state machine would do on entry.
+  // real state machine would do on entry. Asserts the current exercise has a
+  // next-in-superset so out-of-bounds indexing can't happen.
   @visibleForTesting
   void debugSetPhase(TimerPhase phase) {
     final SessionProgress next;
     if (phase == TimerPhase.supersetRest) {
+      assert(
+        _activeSession != null &&
+            hasNextInSuperset(
+              _activeSession!.workouts[_progress.workoutIndex],
+              _progress.exerciseIndex,
+            ),
+        'debugSetPhase(supersetRest): the current exercise must have a '
+        'next-in-superset member. Call jumpToExercise() to a member that '
+        'is not the last in its block, or build the fixture so the active '
+        'exercise has a sibling.',
+      );
       next = SessionProgress(
         workoutIndex: _progress.workoutIndex,
         exerciseIndex: _progress.exerciseIndex + 1,

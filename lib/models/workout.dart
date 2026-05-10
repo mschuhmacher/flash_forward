@@ -106,13 +106,22 @@ class Workout {
   /// the copy keeps the source's id and templateId. Mutating one instance
   /// cannot leak into another (deep-copy guarantee), but propagation lookups
   /// (`usagesOfWorkout`) match by id and so naturally find every sibling
-  /// instance.
+  /// instance. `supersets` are independent `SupersetConfig` instances with
+  /// the same `exerciseIds` — exercises kept their IDs, so no remap needed.
   ///
   /// With [keepId] = false: generates a fresh UUID and sets templateId as a
   /// breadcrumb pointing at the source's id. Use only for genuine forks:
   /// slidable Copy (intentional divergence — the user wants to evolve the
   /// copy independently of the original) and starting a session run (the
   /// run record is its own entity, not a template).
+  ///
+  /// **Superset id remap:** when [keepId] is false, exercises receive fresh
+  /// UUIDs. The supersets list's `exerciseIds` field references those IDs,
+  /// so it must be remapped onto the new ones — otherwise every superset
+  /// would silently drop because its members' IDs no longer exist in the
+  /// copied workout. This was a real bug found during the supersets feature
+  /// implementation; the test `Workout.deepCopy carries supersets through`
+  /// guards against regression.
   Workout deepCopy({bool keepId = false}) {
     final copiedExercises =
         exercises.map((e) => e.deepCopy(keepId: keepId)).toList();

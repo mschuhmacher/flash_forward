@@ -28,7 +28,6 @@ class SupersetModal extends StatefulWidget {
   final List<SupersetConfig> otherSupersets;
   final List<Exercise> initialMembers;
   final SupersetConfig? existing;
-  final Exercise? joiningExercise;
 
   const SupersetModal({
     super.key,
@@ -36,7 +35,6 @@ class SupersetModal extends StatefulWidget {
     required this.otherSupersets,
     required this.initialMembers,
     this.existing,
-    this.joiningExercise,
   });
 
   @override
@@ -290,7 +288,6 @@ Future<SupersetModalResult?> showSupersetModal({
   required List<SupersetConfig> otherSupersets,
   required List<Exercise> initialMembers,
   SupersetConfig? existing,
-  Exercise? joiningExercise,
 }) =>
     showDialog<SupersetModalResult>(
       context: context,
@@ -299,6 +296,5 @@ Future<SupersetModalResult?> showSupersetModal({
         otherSupersets: otherSupersets,
         initialMembers: initialMembers,
         existing: existing,
-        joiningExercise: joiningExercise,
       ),
     );

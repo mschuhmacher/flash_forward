@@ -234,32 +234,43 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       await _openCreateModal(initialExercise: exercise);
       return;
     }
-    final box = context.findRenderObject() as RenderBox?;
-    final picked = await showMenu<String>(
+    final picked = await showDialog<String>(
       context: context,
-      position: RelativeRect.fromLTRB(
-        100,
-        200,
-        100,
-        box == null ? 200 : box.size.height - 200,
-      ),
-      items: [
-        for (var i = 0; i < supersets.length; i++)
-          PopupMenuItem<String>(
-            value: supersets[i].id,
-            child: Row(children: [
-              Container(
-                  width: 4, height: 24, color: supersetColorForIndex(i)),
-              const SizedBox(width: 8),
-              Text(_supersetMenuLabel(supersets[i], exercise)),
-            ]),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add to superset'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < supersets.length; i++)
+                ListTile(
+                  dense: true,
+                  leading: Container(
+                    width: 4,
+                    height: 24,
+                    color: supersetColorForIndex(i),
+                  ),
+                  title: Text(_supersetMenuLabel(supersets[i], exercise)),
+                  onTap: () => Navigator.of(ctx).pop(supersets[i].id),
+                ),
+              const Divider(height: 1),
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.add_link_rounded),
+                title: const Text('Create new superset'),
+                onTap: () => Navigator.of(ctx).pop('__new__'),
+              ),
+            ],
           ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<String>(
-          value: '__new__',
-          child: Text('Create new superset'),
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     );
     if (picked == null) return;
     if (picked == '__new__') {
@@ -321,7 +332,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       otherSupersets: otherSupersets,
       initialMembers: initialMembers,
       existing: ss,
-      joiningExercise: joining,
     );
     if (result == null) return;
 
@@ -414,6 +424,27 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       }
       _workout = _workout.copyWith(exercises: candidate);
     });
+  }
+
+  /// Shallow value-equal comparison for two JSON-shaped maps. Used to detect
+  /// whether an Exercise edit actually changed anything before tracking it
+  /// for propagation. List-typed fields (e.g. exercises) compare by element.
+  bool _mapsEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key)) return false;
+      final av = entry.value;
+      final bv = b[entry.key];
+      if (av is List && bv is List) {
+        if (av.length != bv.length) return false;
+        for (var i = 0; i < av.length; i++) {
+          if (av[i] != bv[i]) return false;
+        }
+      } else if (av != bv) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Pulls all members listed in [memberIds] to be contiguous in the exercise
@@ -617,7 +648,15 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                             // Track the exercise change so Save can propagate it.
                             // Copies (from _copyExercise) are brand-new ids with
                             // no existing consumers, so they are never added here.
-                            _pending.addExercise(result.exercise);
+                            // Skip when nothing actually changed — avoids
+                            // spurious propagation prompts on no-op edits.
+                            final changed = !_mapsEqual(
+                              exercise.toJson(),
+                              result.exercise.toJson(),
+                            );
+                            if (changed || result.supersetSetsChange != null) {
+                              _pending.addExercise(result.exercise);
+                            }
                           },
                         );
                       },
@@ -626,7 +665,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                         final exercise = _workout.exercises[index];
                         final ss = _supersetForExercise(exercise);
                         if (ss == null) return child;
-                        final siblingCount = ss.exerciseIds.length - 1;
+                        // Cap visible stack edges so very large supersets
+                        // don't render an unwieldy tower of peeks.
+                        final siblingCount =
+                            (ss.exerciseIds.length - 1).clamp(0, 3);
                         return Material(
                           color: Colors.transparent,
                           child: Stack(
