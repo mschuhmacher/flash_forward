@@ -164,7 +164,10 @@ class _SupersetModalState extends State<SupersetModal> {
                 ReorderableListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  buildDefaultDragHandles: true,
+                  // Disable Flutter's default trailing drag handle — our
+                  // trailing slot is occupied by the delete icon. Use an
+                  // explicit leading handle below.
+                  buildDefaultDragHandles: false,
                   itemCount: _members.length,
                   onReorder: (oldIndex, newIndex) {
                     setState(() {
@@ -177,6 +180,10 @@ class _SupersetModalState extends State<SupersetModal> {
                     final e = _members[i];
                     return ListTile(
                       key: ValueKey(e.id),
+                      leading: ReorderableDragStartListener(
+                        index: i,
+                        child: const Icon(Icons.drag_handle_rounded),
+                      ),
                       title: Text(e.title),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline_rounded),

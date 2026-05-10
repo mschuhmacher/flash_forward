@@ -31,7 +31,11 @@ class NewWorkoutScreen extends StatefulWidget {
   /// (e.g. editing a workout within a session).
   final bool persistToProvider;
 
-  const NewWorkoutScreen({super.key, this.workout, this.persistToProvider = false});
+  const NewWorkoutScreen({
+    super.key,
+    this.workout,
+    this.persistToProvider = false,
+  });
 
   @override
   State<NewWorkoutScreen> createState() => _NewWorkoutScreenState();
@@ -54,6 +58,13 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   /// Accumulates exercise edits made via nested NewExerciseScreen drilldowns.
   /// Flushed to the provider on Save (standalone) or returned to the parent (nested).
   final PendingChangeBag _pending = PendingChangeBag();
+
+  /// While the user is dragging an exercise that belongs to a superset, this
+  /// holds that superset's id; the other members of the same superset fade
+  /// to invisible to communicate "the whole block moves together." Null when
+  /// no drag is active or when a solo exercise is being dragged.
+  String? _draggingSupersetId;
+  int? _draggingExerciseIndex;
 
   late final _titleController = TextEditingController(
     text: widget.workout?.title,
@@ -80,7 +91,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     if (!supersetsRemainContiguous(_workout.exercises, _workout.supersets)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('A superset is broken — please re-create it')),
+          content: Text('A superset is broken — please re-create it'),
+        ),
       );
       return;
     }
@@ -160,13 +172,16 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       if (finalTitle == null) return;
     }
     await pp.liftToCatalog(
-      item: finalTitle == exercise.title ? exercise : exercise.copyWith(title: finalTitle),
+      item:
+          finalTitle == exercise.title
+              ? exercise
+              : exercise.copyWith(title: finalTitle),
       kind: TrashKind.exercise,
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Saved to catalog')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Saved to catalog')));
   }
 
   // Slidable Copy means divergence. Fresh UUID so this card evolves
@@ -236,41 +251,42 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     }
     final picked = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add to superset'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < supersets.length; i++)
-                ListTile(
-                  dense: true,
-                  leading: Container(
-                    width: 4,
-                    height: 24,
-                    color: supersetColorForIndex(i),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Add to superset'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < supersets.length; i++)
+                    ListTile(
+                      dense: true,
+                      leading: Container(
+                        width: 4,
+                        height: 24,
+                        color: supersetColorForIndex(i),
+                      ),
+                      title: Text(_supersetMenuLabel(supersets[i], exercise)),
+                      onTap: () => Navigator.of(ctx).pop(supersets[i].id),
+                    ),
+                  const Divider(height: 1),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.add_link_rounded),
+                    title: const Text('Create new superset'),
+                    onTap: () => Navigator.of(ctx).pop('__new__'),
                   ),
-                  title: Text(_supersetMenuLabel(supersets[i], exercise)),
-                  onTap: () => Navigator.of(ctx).pop(supersets[i].id),
-                ),
-              const Divider(height: 1),
-              ListTile(
-                dense: true,
-                leading: const Icon(Icons.add_link_rounded),
-                title: const Text('Create new superset'),
-                onTap: () => Navigator.of(ctx).pop('__new__'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
     );
     if (picked == null) return;
     if (picked == '__new__') {
@@ -283,12 +299,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
   String _supersetMenuLabel(SupersetConfig ss, Exercise fallbackExercise) {
     final firstId = ss.exerciseIds.first;
-    final firstTitle = _workout.exercises
-        .firstWhere(
-          (e) => e.id == firstId,
-          orElse: () => fallbackExercise,
-        )
-        .title;
+    final firstTitle =
+        _workout.exercises
+            .firstWhere((e) => e.id == firstId, orElse: () => fallbackExercise)
+            .title;
     return '${ss.exerciseIds.length} exercises: $firstTitle';
   }
 
@@ -310,17 +324,15 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     );
     setState(() {
       _workout = _workout.copyWith(
-        exercises:
-            _reorderToContiguous(_workout.exercises, result.memberIds),
+        exercises: _reorderToContiguous(_workout.exercises, result.memberIds),
         supersets: [..._workout.supersets, newSs],
       );
     });
   }
 
   Future<void> _editSuperset(SupersetConfig ss, {Exercise? joining}) async {
-    final initialMembers = _workout.exercises
-        .where((e) => ss.exerciseIds.contains(e.id))
-        .toList();
+    final initialMembers =
+        _workout.exercises.where((e) => ss.exerciseIds.contains(e.id)).toList();
     if (joining != null && !initialMembers.any((m) => m.id == joining.id)) {
       initialMembers.add(joining);
     }
@@ -338,8 +350,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     if (result.dissolveRequested || result.memberIds.length < 2) {
       setState(() {
         _workout = _workout.copyWith(
-          supersets:
-              _workout.supersets.where((s) => s.id != ss.id).toList(),
+          supersets: _workout.supersets.where((s) => s.id != ss.id).toList(),
         );
       });
       return;
@@ -352,11 +363,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     );
     setState(() {
       _workout = _workout.copyWith(
-        exercises:
-            _reorderToContiguous(_workout.exercises, result.memberIds),
-        supersets: _workout.supersets
-            .map((s) => s.id == ss.id ? updated : s)
-            .toList(),
+        exercises: _reorderToContiguous(_workout.exercises, result.memberIds),
+        supersets:
+            _workout.supersets.map((s) => s.id == ss.id ? updated : s).toList(),
       );
     });
   }
@@ -374,9 +383,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       final draggedSuperset = supersetForExercise(_workout, dragged.id);
 
       if (draggedSuperset == null) {
-        final candidate = List<Exercise>.from(exercises)
-          ..removeAt(oldIndex)
-          ..insert(newIndex, dragged);
+        final candidate =
+            List<Exercise>.from(exercises)
+              ..removeAt(oldIndex)
+              ..insert(newIndex, dragged);
         if (!supersetsRemainContiguous(candidate, _workout.supersets)) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Cannot drop inside a superset')),
@@ -401,11 +411,20 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         ...exercises.sublist(0, blockStart),
         ...exercises.sublist(blockEnd + 1),
       ];
+      // Translating the post-`-= 1` newIndex (computed by Flutter as if a
+      // single item had been removed at oldIndex) into a target index in
+      // the remainder list (with the *whole block* removed). For positions
+      // before the block, indices match. For positions past the block end,
+      // Flutter's single-item-removed view shifts every item down by 1; the
+      // block-removed view shifts them down by `blockExercises.length`, so
+      // we subtract the difference plus one (the +1 because newIndex past
+      // blockEnd in the single-item view points at the slot AFTER the
+      // dragged item's original neighbor in the remainder).
       int targetInRemainder;
       if (newIndex <= blockStart) {
         targetInRemainder = newIndex;
       } else if (newIndex > blockEnd) {
-        targetInRemainder = newIndex - blockExercises.length;
+        targetInRemainder = newIndex - blockExercises.length + 1;
       } else {
         // Drop landed inside the block itself — no-op (a block can't move
         // into itself).
@@ -451,7 +470,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   /// list, anchored at the position of the first member already in the list.
   /// Members are placed in the modal-defined order.
   List<Exercise> _reorderToContiguous(
-      List<Exercise> exercises, List<String> memberIds) {
+    List<Exercise> exercises,
+    List<String> memberIds,
+  ) {
     if (memberIds.length < 2) return exercises;
     final memberSet = memberIds.toSet();
     final firstAnchor = exercises.indexWhere((e) => memberSet.contains(e.id));
@@ -466,11 +487,13 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       }
     }
     members.sort(
-        (a, b) => memberIds.indexOf(a.id).compareTo(memberIds.indexOf(b.id)));
-    final insertAt = exercises
-        .sublist(0, firstAnchor)
-        .where((e) => !memberSet.contains(e.id))
-        .length;
+      (a, b) => memberIds.indexOf(a.id).compareTo(memberIds.indexOf(b.id)),
+    );
+    final insertAt =
+        exercises
+            .sublist(0, firstAnchor)
+            .where((e) => !memberSet.contains(e.id))
+            .length;
     return [...others]..insertAll(insertAt, members);
   }
 
@@ -529,10 +552,16 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                         ),
                       ),
                       validator: (v) {
-                        final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+                        final presetProvider = Provider.of<PresetProvider>(
+                          context,
+                          listen: false,
+                        );
                         return FieldValidators.workoutTitle(
                           v,
-                          existingTitles: presetProvider.presetWorkouts.map((w) => w.title).toList(),
+                          existingTitles:
+                              presetProvider.presetWorkouts
+                                  .map((w) => w.title)
+                                  .toList(),
                           ownTitle: widget.workout?.title,
                         );
                       },
@@ -596,24 +625,38 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                       itemCount: workout.exercises.length,
                       itemBuilder: (BuildContext context, int index) {
                         final exercise = workout.exercises[index];
-                        final pp = Provider.of<PresetProvider>(context, listen: false);
-                        final notInCatalog = pp.presetExercises.every((e) => e.id != exercise.id);
-                        final notInTrash = pp.trashedItems.every((e) => e.id != exercise.id);
-                        final paletteIndex = _supersetIndexForExercise(exercise);
-                        final ss = _supersetForExercise(exercise);
-                        return _ExerciseCard(
+                        final presetProvider = Provider.of<PresetProvider>(
+                          context,
+                          listen: false,
+                        );
+                        final notInCatalog = presetProvider.presetExercises
+                            .every((e) => e.id != exercise.id);
+                        final notInTrash = presetProvider.trashedItems.every(
+                          (e) => e.id != exercise.id,
+                        );
+                        final paletteIndex = _supersetIndexForExercise(
+                          exercise,
+                        );
+                        final superset = _supersetForExercise(exercise);
+                        // While dragging a superset member, fade the OTHER
+                        // members of the same block so the user reads the
+                        // dragged card (with its peek-stack proxy) as
+                        // representing the whole group.
+                        final fadeSibling =
+                            _draggingSupersetId != null &&
+                            superset?.id == _draggingSupersetId &&
+                            index != _draggingExerciseIndex;
+                        final card = _ExerciseCard(
                           exercise: exercise,
-                          key: ValueKey(
-                            '$index-${exercise.id}',
-                          ), // prefix index to exercise.id to allow multiple instances of same exercise in the reorderable list
                           onCopy: () => _copyExercise(exercise),
                           onDelete: () => _deleteExercise(exercise),
                           onSuperset: () => _onSupersetSlidableTap(exercise),
-                          onSaveToCatalog: (notInCatalog && notInTrash)
-                              ? () => _saveExerciseToCatalog(exercise)
-                              : null,
+                          onSaveToCatalog:
+                              (notInCatalog && notInTrash)
+                                  ? () => _saveExerciseToCatalog(exercise)
+                                  : null,
                           supersetPaletteIndex: paletteIndex,
-                          supersetSets: ss?.supersetSets,
+                          supersetSets: superset?.supersetSets,
                           onTap: () async {
                             final result =
                                 await Navigator.push<NewExerciseResult>(
@@ -631,17 +674,21 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                               _workout.exercises[index] = result.exercise;
                               if (result.supersetSetsChange != null) {
                                 _workout = _workout.copyWith(
-                                  supersets: _workout.supersets
-                                      .map(
-                                        (ss) => ss.exerciseIds
-                                                .contains(result.exercise.id)
-                                            ? ss.copyWith(
-                                                supersetSets:
-                                                    result.supersetSetsChange,
-                                              )
-                                            : ss,
-                                      )
-                                      .toList(),
+                                  supersets:
+                                      _workout.supersets
+                                          .map(
+                                            (ss) =>
+                                                ss.exerciseIds.contains(
+                                                      result.exercise.id,
+                                                    )
+                                                    ? ss.copyWith(
+                                                      supersetSets:
+                                                          result
+                                                              .supersetSetsChange,
+                                                    )
+                                                    : ss,
+                                          )
+                                          .toList(),
                                 );
                               }
                             });
@@ -650,25 +697,58 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                             // no existing consumers, so they are never added here.
                             // Skip when nothing actually changed — avoids
                             // spurious propagation prompts on no-op edits.
-                            final changed = !_mapsEqual(
-                              exercise.toJson(),
-                              result.exercise.toJson(),
-                            );
+                            final changed =
+                                !_mapsEqual(
+                                  exercise.toJson(),
+                                  result.exercise.toJson(),
+                                );
                             if (changed || result.supersetSetsChange != null) {
                               _pending.addExercise(result.exercise);
                             }
                           },
                         );
+                        return KeyedSubtree(
+                          // Keep the same key contract on the outer widget
+                          // so ReorderableListView identifies items
+                          // consistently across rebuilds.
+                          key: ValueKey('$index-${exercise.id}'),
+                          child: AnimatedOpacity(
+                            opacity: fadeSibling ? 0.2 : 1.0,
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            child: card,
+                          ),
+                        );
                       },
                       onReorder: _onReorder,
+                      onReorderStart: (index) {
+                        final exercise = _workout.exercises[index];
+                        final ss = _supersetForExercise(exercise);
+                        setState(() {
+                          _draggingSupersetId = ss?.id;
+                          _draggingExerciseIndex = index;
+                        });
+                      },
+                      onReorderEnd: (_) {
+                        setState(() {
+                          _draggingSupersetId = null;
+                          _draggingExerciseIndex = null;
+                        });
+                      },
                       proxyDecorator: (child, index, animation) {
                         final exercise = _workout.exercises[index];
                         final ss = _supersetForExercise(exercise);
                         if (ss == null) return child;
                         // Cap visible stack edges so very large supersets
                         // don't render an unwieldy tower of peeks.
-                        final siblingCount =
-                            (ss.exerciseIds.length - 1).clamp(0, 3);
+                        final siblingCount = (ss.exerciseIds.length - 1).clamp(
+                          0,
+                          3,
+                        );
+                        // Peeks render BELOW the lifted card via negative
+                        // `bottom` + Clip.none, fanning out from underneath.
+                        // Stack with no `bottom` clipping means hit-test
+                        // bounds equal the card's intrinsic size.
                         return Material(
                           color: Colors.transparent,
                           child: Stack(
@@ -676,13 +756,13 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                             children: [
                               for (var i = siblingCount; i > 0; i--)
                                 Positioned(
-                                  top: i * 4.0,
-                                  left: i * 2.0,
-                                  right: i * 2.0,
+                                  bottom: -i * 4.0,
+                                  left: i * 3.0,
+                                  right: i * 3.0,
                                   child: Container(
                                     height: 12,
                                     decoration: BoxDecoration(
-                                      color: context.colorScheme.surface,
+                                      color: context.colorScheme.surfaceBright,
                                       border: Border.all(
                                         color: context.colorScheme.outline
                                             .withValues(alpha: 0.3),
@@ -690,9 +770,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                                       borderRadius: BorderRadius.circular(6),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.05),
-                                          blurRadius: 2,
+                                          color: Colors.black.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          blurRadius: 3,
                                         ),
                                       ],
                                     ),
@@ -757,7 +838,6 @@ class _ExerciseCard extends StatelessWidget {
   final int? supersetSets;
 
   const _ExerciseCard({
-    super.key,
     required this.exercise,
     required this.onTap,
     required this.onCopy,
@@ -773,67 +853,76 @@ class _ExerciseCard extends StatelessWidget {
     final saveVisible = onSaveToCatalog != null;
     return GestureDetector(
       onTap: onTap,
-      child: Slidable(
-        key: ValueKey(exercise.id),
-        // Left-to-right swipe — additive actions (Save, Copy).
-        startActionPane: ActionPane(
-          motion: const ScrollMotion(),
-          extentRatio: 0.22 * (saveVisible ? 2 : 1),
-          children: [
-            if (saveVisible)
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: Slidable(
+          key: ValueKey(exercise.id),
+          // Left-to-right swipe — additive actions (Save, Copy).
+          startActionPane: ActionPane(
+            motion: const ScrollMotion(),
+            extentRatio: 0.22 * (saveVisible ? 2 : 1),
+            children: [
+              if (saveVisible)
+                SlidableAction(
+                  borderRadius: BorderRadius.circular(12),
+                  onPressed: (_) => onSaveToCatalog!(),
+                  backgroundColor: context.colorScheme.tertiary,
+                  foregroundColor: context.colorScheme.onTertiary,
+                  icon: Icons.save_alt_rounded,
+                  label: 'Save to\ncatalog',
+                ),
+              SizedBox(width: 4),
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
-                onPressed: (_) => onSaveToCatalog!(),
+                onPressed: (_) => onCopy(),
+                backgroundColor: context.colorScheme.secondary,
+                foregroundColor: context.colorScheme.onSecondary,
+                icon: Icons.copy_rounded,
+                label: 'Copy',
+              ),
+              SizedBox(width: 4),
+            ],
+          ),
+          // Right-to-left swipe — modifying / destructive actions.
+          endActionPane: ActionPane(
+            motion: const ScrollMotion(),
+            extentRatio: 0.22 * 2,
+            children: [            SizedBox(width: 4),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (_) => onSuperset(),
                 backgroundColor: context.colorScheme.tertiary,
                 foregroundColor: context.colorScheme.onTertiary,
-                icon: Icons.save_alt_rounded,
-                label: 'Save to\ncatalog',
+                icon:
+                    supersetPaletteIndex != null
+                        ? Icons.edit_rounded
+                        : Icons.link_rounded,
+                label:
+                    supersetPaletteIndex != null
+                        ? 'Edit\nsuperset'
+                        : 'Add to\nsuperset',
               ),
-            SlidableAction(
-              borderRadius: BorderRadius.circular(12),
-              onPressed: (_) => onCopy(),
-              backgroundColor: context.colorScheme.secondary,
-              foregroundColor: context.colorScheme.onSecondary,
-              icon: Icons.copy_rounded,
-              label: 'Copy',
-            ),
-          ],
+              SizedBox(width: 4),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (_) => onDelete(),
+                backgroundColor: context.colorScheme.error,
+                foregroundColor: context.colorScheme.onError,
+                icon: Icons.delete_rounded,
+                label: 'Delete',
+              ),
+              SizedBox(width: 4),
+            ],
+          ),
+          child: _cardBody(context),
         ),
-        // Right-to-left swipe — modifying / destructive actions.
-        endActionPane: ActionPane(
-          motion: const ScrollMotion(),
-          extentRatio: 0.22 * 2,
-          children: [
-            SlidableAction(
-              borderRadius: BorderRadius.circular(12),
-              onPressed: (_) => onSuperset(),
-              backgroundColor: context.colorScheme.tertiary,
-              foregroundColor: context.colorScheme.onTertiary,
-              icon: supersetPaletteIndex != null
-                  ? Icons.edit_rounded
-                  : Icons.link_rounded,
-              label: supersetPaletteIndex != null
-                  ? 'Edit\nsuperset'
-                  : 'Add to\nsuperset',
-            ),
-            SlidableAction(
-              borderRadius: BorderRadius.circular(12),
-              onPressed: (_) => onDelete(),
-              backgroundColor: context.colorScheme.error,
-              foregroundColor: context.colorScheme.onError,
-              icon: Icons.delete_rounded,
-              label: 'Delete',
-            ),
-          ],
-        ),
-        child: _cardBody(context),
       ),
     );
   }
 
   Widget _cardBody(BuildContext context) {
     final body = Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      // margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.colorScheme.surfaceBright,
@@ -869,20 +958,21 @@ class _ExerciseCard extends StatelessWidget {
             spacing: 16,
             runSpacing: 6,
             children: [
-              _StatPill(label: 'Sets', value: '${supersetSets ?? exercise.sets}'),
+              _StatPill(
+                label: 'Sets',
+                value: '${supersetSets ?? exercise.sets}',
+              ),
               if (exercise.reps != null)
                 _StatPill(label: 'Reps', value: '${exercise.reps}'),
               if (exercise.load > 0)
                 _StatPill(
                   label: 'Load',
-                  value: exercise.loadUnit != null
-                      ? '${exercise.load} ${exercise.loadUnit}'
-                      : '${exercise.load}',
+                  value:
+                      exercise.loadUnit != null
+                          ? '${exercise.load} ${exercise.loadUnit}'
+                          : '${exercise.load}',
                 ),
-              _StatPill(
-                label: 'Rest',
-                value: '${exercise.timeBetweenSets}s',
-              ),
+              _StatPill(label: 'Rest', value: '${exercise.timeBetweenSets}s'),
               _StatPill(
                 label: 'Active',
                 value: switch (exercise.type) {
