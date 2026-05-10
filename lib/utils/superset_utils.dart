@@ -55,6 +55,20 @@ int supersetGroupStartIndex(Workout workout, int exerciseIndex) {
   return 0;
 }
 
+/// Returns the workout list index of the last exercise that belongs to the
+/// same superset as the exercise at [exerciseIndex]. Returns [exerciseIndex]
+/// itself if that exercise is not in any superset. Walks forward — relies
+/// on the contiguous-block invariant.
+int supersetGroupEndIndex(Workout workout, int exerciseIndex) {
+  final exercise = workout.exercises[exerciseIndex];
+  final ss = supersetForExercise(workout, exercise.id);
+  if (ss == null) return exerciseIndex;
+  for (var i = exerciseIndex + 1; i < workout.exercises.length; i++) {
+    if (!ss.exerciseIds.contains(workout.exercises[i].id)) return i - 1;
+  }
+  return workout.exercises.length - 1;
+}
+
 /// Returns the effective set count for [exercise] inside [workout]:
 /// `superset.supersetSets` if a member of a superset with an override,
 /// `exercise.sets` otherwise.

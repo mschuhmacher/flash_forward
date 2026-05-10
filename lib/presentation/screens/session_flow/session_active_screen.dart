@@ -222,11 +222,18 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
             );
         }
 
-        // Reps display text: show '-/-' when no rep target is set
-        final repsText =
-            activeExercise.reps != null
-                ? '${progress.currentRep} / ${activeExercise.reps}   reps'
-                : '-/-   reps';
+        // Reps display text. Fixed-duration exercises show only the target
+        // (reps is informational — the user does as many as they can in the
+        // active time, there's no per-rep counter). Other types show
+        // current/target. '-/-' when no target is set.
+        final String repsText;
+        if (activeExercise.reps == null) {
+          repsText = '-/-   reps';
+        } else if (activeExercise.type == ExerciseType.fixedDuration) {
+          repsText = '${activeExercise.reps}   reps';
+        } else {
+          repsText = '${progress.currentRep} / ${activeExercise.reps}   reps';
+        }
 
         return Scaffold(
           appBar: AppBar(

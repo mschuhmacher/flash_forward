@@ -3,7 +3,6 @@ import 'package:flash_forward/data/grade_scales.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flash_forward/models/grade_entry.dart';
 import 'package:flash_forward/models/session.dart';
-import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
@@ -31,25 +30,21 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
       builder: (context, sessionLogData, sessionStateData, child) {
         final activeSession = sessionStateData.activeSession!;
 
-        final progress = sessionStateData.progress;
-        Workout activeWorkout = activeSession.workouts[progress.workoutIndex];
-
-        String nextExerciseString;
-        if (progress.exerciseIndex + 1 < activeWorkout.exercises.length) {
-          nextExerciseString =
-              'Next exercise: \n${activeWorkout.exercises[progress.exerciseIndex + 1].title}';
-        } else if (progress.exerciseIndex + 1 ==
-                activeWorkout.exercises.length &&
-            progress.workoutIndex + 1 < activeSession.workouts.length) {
-          nextExerciseString =
-              'Next exercise: \n${activeSession.workouts[progress.workoutIndex + 1].exercises[0].title}';
-        } else if (progress.exerciseIndex + 1 ==
-                activeWorkout.exercises.length &&
-            progress.workoutIndex + 1 == activeSession.workouts.length) {
+        // "Next exercise" follows the same semantics as the forward nav
+        // button: the next member the user will actually do, including
+        // wrapping within a superset round.
+        final nextStop = sessionStateData.nextStop;
+        final String nextExerciseString;
+        if (nextStop == null) {
           nextExerciseString = 'Next exercise: \nDone';
         } else {
-          nextExerciseString = '';
+          final nextExercise = activeSession
+              .workouts[nextStop.workoutIndex]
+              .exercises[nextStop.exerciseIndex];
+          nextExerciseString = 'Next exercise: \n${nextExercise.title}';
         }
+
+        final previousStop = sessionStateData.previousStop;
 
         return SizedBox(
           height: 100,
@@ -61,15 +56,13 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    (progress.exerciseIndex == 0 && progress.workoutIndex == 0)
+                    previousStop == null
                         ? SizedBox.shrink()
                         : GestureDetector(
                           onTap: sessionStateData.phase == TimerPhase.overtime
                               ? null
                               : () {
-                                  sessionStateData.jumpToExercise(
-                                    sessionStateData.exerciseIndex - 1,
-                                  );
+                                  sessionStateData.jumpToPrevious();
                                 },
                           child: MyIconButton(
                             icon: Icons.arrow_back,
@@ -91,19 +84,12 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                       ),
                     ),
 
-                    // Return true as long as there are more workouts or exercises to be completed. When last exercise of last workout, show complete button
-                    (progress.workoutIndex >= 0 &&
-                            (progress.workoutIndex + 1 <
-                                    activeSession.workouts.length ||
-                                progress.exerciseIndex + 1 <
-                                    activeWorkout.exercises.length))
+                    nextStop != null
                         ? GestureDetector(
                           onTap: sessionStateData.phase == TimerPhase.overtime
                               ? null
                               : () {
-                                  sessionStateData.jumpToExercise(
-                                    sessionStateData.exerciseIndex + 1,
-                                  );
+                                  sessionStateData.jumpToNext();
                                 },
                           child: MyIconButton(
                             icon: Icons.arrow_forward,

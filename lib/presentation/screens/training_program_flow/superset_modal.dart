@@ -13,12 +13,14 @@ class SupersetModalResult {
   final List<String> memberIds;
   final int restSeconds;
   final int supersetSets;
+  final int supersetSetRest;
   final bool dissolveRequested;
 
   const SupersetModalResult({
     required this.memberIds,
     required this.restSeconds,
     required this.supersetSets,
+    required this.supersetSetRest,
     this.dissolveRequested = false,
   });
 }
@@ -46,6 +48,7 @@ class _SupersetModalState extends State<SupersetModal> {
   late final Set<String> _addCandidates;
   late final TextEditingController _restCtrl;
   late final TextEditingController _setsCtrl;
+  late final TextEditingController _setRestCtrl;
 
   @override
   void initState() {
@@ -56,6 +59,8 @@ class _SupersetModalState extends State<SupersetModal> {
       text: '${widget.existing?.restSeconds ?? 15}',
     );
     _setsCtrl = TextEditingController(text: '${_initialSupersetSets()}');
+    _setRestCtrl =
+        TextEditingController(text: '${_initialSupersetSetRest()}');
   }
 
   /// Editing → use existing.supersetSets (or first member's sets if null).
@@ -75,10 +80,29 @@ class _SupersetModalState extends State<SupersetModal> {
     return _members.map((e) => e.sets).reduce((a, b) => a > b ? a : b);
   }
 
+  /// Same logic as supersetSets, but for `timeBetweenSets`. Used as the
+  /// rest between rounds of the superset (routes through exerciseRest in
+  /// the state machine).
+  int _initialSupersetSetRest() {
+    if (widget.existing != null) {
+      final ssr = widget.existing!.supersetSetRest;
+      if (ssr != null) return ssr;
+      if (_members.isNotEmpty) return _members.first.timeBetweenSets;
+      return 60;
+    }
+    if (_members.isEmpty) return 60;
+    final restCounts = _members.map((e) => e.timeBetweenSets).toSet();
+    if (restCounts.length == 1) return restCounts.single;
+    return _members
+        .map((e) => e.timeBetweenSets)
+        .reduce((a, b) => a > b ? a : b);
+  }
+
   @override
   void dispose() {
     _restCtrl.dispose();
     _setsCtrl.dispose();
+    _setRestCtrl.dispose();
     super.dispose();
   }
 
@@ -107,12 +131,15 @@ class _SupersetModalState extends State<SupersetModal> {
     }
     final rest = int.tryParse(_restCtrl.text) ?? 15;
     final sets = int.tryParse(_setsCtrl.text) ?? _initialSupersetSets();
+    final setRest =
+        int.tryParse(_setRestCtrl.text) ?? _initialSupersetSetRest();
     Navigator.pop(
       context,
       SupersetModalResult(
         memberIds: memberIds,
         restSeconds: rest,
         supersetSets: sets,
+        supersetSetRest: setRest,
       ),
     );
   }
@@ -124,6 +151,7 @@ class _SupersetModalState extends State<SupersetModal> {
         memberIds: [],
         restSeconds: 0,
         supersetSets: 0,
+        supersetSetRest: 0,
         dissolveRequested: true,
       ),
     );
@@ -142,6 +170,8 @@ class _SupersetModalState extends State<SupersetModal> {
 
     final mismatched = widget.existing == null &&
         _members.map((e) => e.sets).toSet().length > 1;
+    final restMismatched = widget.existing == null &&
+        _members.map((e) => e.timeBetweenSets).toSet().length > 1;
 
     return AlertDialog(
       title: Text(widget.existing == null ? 'Create superset' : 'Edit superset'),
@@ -246,6 +276,40 @@ class _SupersetModalState extends State<SupersetModal> {
                     width: 60,
                     child: TextFormField(
                       controller: _restCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (restMismatched)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.tertiaryContainer
+                        .withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Members have different rest-between-sets values '
+                    '(${_members.map((e) => e.timeBetweenSets).join(', ')}). '
+                    'Pick the rest between rounds for the whole superset.',
+                    style: context.bodyMedium,
+                  ),
+                ),
+              Row(
+                children: [
+                  const Expanded(child: Text('Rest between rounds (s)')),
+                  SizedBox(
+                    width: 60,
+                    child: TextFormField(
+                      controller: _setRestCtrl,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         isDense: true,

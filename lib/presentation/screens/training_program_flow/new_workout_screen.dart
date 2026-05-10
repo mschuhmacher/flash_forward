@@ -75,12 +75,16 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   late final _descriptionController = TextEditingController(
     text: widget.workout?.description,
   );
+  late final _restBetweenExercisesController = TextEditingController(
+    text: '${widget.workout?.timeBetweenExercises ?? 120}',
+  );
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _itemLabelController.dispose();
+    _restBetweenExercisesController.dispose();
     super.dispose();
   }
 
@@ -105,6 +109,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
               ? null
               : _descriptionController.text.trim(),
         ),
+        timeBetweenExercises:
+            int.tryParse(_restBetweenExercisesController.text.trim()) ??
+                _workout.timeBetweenExercises,
         userId:
             _workout.userId ??
             Provider.of<AuthProvider>(context, listen: false).userId,
@@ -321,6 +328,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       exerciseIds: result.memberIds,
       restSeconds: result.restSeconds,
       supersetSets: result.supersetSets,
+      supersetSetRest: result.supersetSetRest,
     );
     setState(() {
       _workout = _workout.copyWith(
@@ -360,6 +368,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       exerciseIds: result.memberIds,
       restSeconds: result.restSeconds,
       supersetSets: result.supersetSets,
+      supersetSetRest: result.supersetSetRest,
     );
     setState(() {
       _workout = _workout.copyWith(
@@ -608,6 +617,31 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                 ],
               ),
               SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Rest between exercises (s)',
+                      style: context.bodyMedium,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      controller: _restBetweenExercisesController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        fillColor: context.colorScheme.surfaceBright,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
               workout.exercises.isEmpty
                   ? Expanded(
                     child: Center(
@@ -657,6 +691,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                                   : null,
                           supersetPaletteIndex: paletteIndex,
                           supersetSets: superset?.supersetSets,
+                          supersetSetRest: superset?.supersetSetRest,
                           onTap: () async {
                             final result =
                                 await Navigator.push<NewExerciseResult>(
@@ -837,6 +872,12 @@ class _ExerciseCard extends StatelessWidget {
   /// supersetSets — so members of a superset show the shared count.
   final int? supersetSets;
 
+  /// When non-null, the displayed Rest value is overridden by the superset's
+  /// supersetSetRest (between-rounds rest). Members of a superset show the
+  /// shared between-rounds value rather than the underlying exercise's
+  /// `timeBetweenSets`.
+  final int? supersetSetRest;
+
   const _ExerciseCard({
     required this.exercise,
     required this.onTap,
@@ -846,6 +887,7 @@ class _ExerciseCard extends StatelessWidget {
     this.onSaveToCatalog,
     this.supersetPaletteIndex,
     this.supersetSets,
+    this.supersetSetRest,
   });
 
   @override
@@ -972,7 +1014,10 @@ class _ExerciseCard extends StatelessWidget {
                           ? '${exercise.load} ${exercise.loadUnit}'
                           : '${exercise.load}',
                 ),
-              _StatPill(label: 'Rest', value: '${exercise.timeBetweenSets}s'),
+              _StatPill(
+                label: 'Rest',
+                value: '${supersetSetRest ?? exercise.timeBetweenSets}s',
+              ),
               _StatPill(
                 label: 'Active',
                 value: switch (exercise.type) {

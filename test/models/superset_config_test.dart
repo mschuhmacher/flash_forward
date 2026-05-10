@@ -8,6 +8,7 @@ void main() {
         exerciseIds: ['e1', 'e2'],
         restSeconds: 15,
         supersetSets: 4,
+        supersetSetRest: 90,
       );
 
   test('SupersetConfig survives toJson/fromJson round-trip', () {
@@ -17,6 +18,7 @@ void main() {
     expect(restored.exerciseIds, ['e1', 'e2']);
     expect(restored.restSeconds, 15);
     expect(restored.supersetSets, 4);
+    expect(restored.supersetSetRest, 90);
   });
 
   test('SupersetConfig fromJson handles missing supersetSets (null)', () {
@@ -25,17 +27,29 @@ void main() {
     expect(restored.supersetSets, isNull);
   });
 
+  test('SupersetConfig fromJson handles missing supersetSetRest (null)', () {
+    final json = base().toJson()..remove('supersetSetRest');
+    final restored = SupersetConfig.fromJson(json);
+    expect(restored.supersetSetRest, isNull);
+  });
+
   test('copyWith preserves unspecified fields', () {
     final s = base().copyWith(restSeconds: 20);
     expect(s.id, 'ss-1');
     expect(s.exerciseIds, ['e1', 'e2']);
     expect(s.restSeconds, 20);
     expect(s.supersetSets, 4);
+    expect(s.supersetSetRest, 90);
   });
 
   test('copyWith can set supersetSets to a new value', () {
     final s = base().copyWith(supersetSets: 5);
     expect(s.supersetSets, 5);
+  });
+
+  test('copyWith can set supersetSetRest to a new value', () {
+    final s = base().copyWith(supersetSetRest: 120);
+    expect(s.supersetSetRest, 120);
   });
 
   group('Workout.supersets', () {
