@@ -7,9 +7,9 @@ import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/superset_modal.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/superset_modal.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
@@ -934,8 +934,9 @@ class _ExerciseCard extends StatelessWidget {
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
                 onPressed: (_) => onSuperset(),
-                backgroundColor: context.colorScheme.tertiary,
-                foregroundColor: context.colorScheme.onTertiary,
+                backgroundColor: supersetPaletteIndex != null
+                        ? supersetColorForIndex(supersetPaletteIndex!) : kDefaultLabels[exercise.label]?.color ?? context.colorScheme.secondary,
+                foregroundColor: context.colorScheme.onPrimary,
                 icon:
                     supersetPaletteIndex != null
                         ? Icons.edit_rounded

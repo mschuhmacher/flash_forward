@@ -1,5 +1,5 @@
 import 'package:flash_forward/models/superset_config.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
