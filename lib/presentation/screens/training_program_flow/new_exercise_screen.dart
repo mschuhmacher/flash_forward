@@ -146,15 +146,15 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
       // by the parent superset's supersetSets — keep exercise.sets at its
       // original value and surface the new value separately, but only when
       // it actually differs from the existing supersetSets.
-      final ssMembership = widget.parentWorkout != null && widget.exercise != null
+      final supersetMembership = widget.parentWorkout != null && widget.exercise != null
           ? supersetForExercise(widget.parentWorkout!, widget.exercise!.id)
           : null;
       final preservedSets =
-          ssMembership != null ? widget.exercise!.sets : _sets;
+          supersetMembership != null ? widget.exercise!.sets : _sets;
       final supersetSetsChange = NewExerciseResult.computeSupersetSetsChange(
-        membership: ssMembership,
+        membership: supersetMembership,
         displayedSets: _sets,
-        existingSupersetSets: ssMembership?.supersetSets,
+        existingSupersetSets: supersetMembership?.supersetSets,
         exerciseSetsFallback: widget.exercise?.sets ?? _sets,
       );
 
@@ -798,27 +798,24 @@ class _ExerciseTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: SegmentedButton<ExerciseType>(
-        segments: [
-          ButtonSegment(
-            value: ExerciseType.timedReps,
-            label: Text('Timed reps', style: context.bodyMedium,),
-          ),
-          ButtonSegment(
-            value: ExerciseType.fixedDuration,
-            label: Text('Fixed duration', style: context.bodyMedium,),
-          ),
-          ButtonSegment(value: ExerciseType.manual, label: Text('Manual', style: context.bodyMedium,)),
-        ],
-        selected: {value},
-        onSelectionChanged: (selection) => onChanged(selection.first),
-        showSelectedIcon: false,
-        style: ButtonStyle(
-          visualDensity: VisualDensity(horizontal: 0, vertical: -2),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return SegmentedButton<ExerciseType>(
+      segments: [
+        ButtonSegment(
+          value: ExerciseType.timedReps,
+          label: Text('Timed reps', style: context.bodyMedium,),
         ),
+        ButtonSegment(
+          value: ExerciseType.fixedDuration,
+          label: Text('Fixed duration', style: context.bodyMedium,),
+        ),
+        ButtonSegment(value: ExerciseType.manual, label: Text('Manual', style: context.bodyMedium,)),
+      ],
+      selected: {value},
+      onSelectionChanged: (selection) => onChanged(selection.first),
+      showSelectedIcon: false,
+      style: ButtonStyle(
+        visualDensity: VisualDensity(horizontal: 0, vertical: -2),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }

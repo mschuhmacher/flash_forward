@@ -37,7 +37,7 @@ class Exercise {
     this.muscleGroups,
     this.difficulty,
     this.userId,
-    this.type = ExerciseType.timedReps,
+    this.type = ExerciseType.fixedDuration,
     this.sets = 3,
     this.reps = 10,
     this.timeBetweenSets = 60,
@@ -84,7 +84,7 @@ class Exercise {
     difficulty: json['difficulty'],
     userId: json['userId'],
     // Backward-compatible: handle old 'default*' keys from ExerciseTemplate/ExerciseInstance
-    type: ExerciseType.values.byName(json['type'] ?? 'timedReps'),
+    type: ExerciseType.values.byName(json['type'] ?? 'fixedDuration'),
     sets: json['sets'] ?? json['defaultSets'] ?? 3,
     reps: json['reps'] ?? json['defaultReps'],
     timeBetweenSets: json['timeBetweenSets'] ?? json['defaultTimeBetweenSets'] ?? 60,

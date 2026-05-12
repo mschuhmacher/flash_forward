@@ -111,7 +111,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         ),
         timeBetweenExercises:
             int.tryParse(_restBetweenExercisesController.text.trim()) ??
-                _workout.timeBetweenExercises,
+            _workout.timeBetweenExercises,
         userId:
             _workout.userId ??
             Provider.of<AuthProvider>(context, listen: false).userId,
@@ -929,7 +929,8 @@ class _ExerciseCard extends StatelessWidget {
           endActionPane: ActionPane(
             motion: const ScrollMotion(),
             extentRatio: 0.22 * 2,
-            children: [            SizedBox(width: 4),
+            children: [
+              SizedBox(width: 4),
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
                 onPressed: (_) => onSuperset(),
@@ -964,7 +965,6 @@ class _ExerciseCard extends StatelessWidget {
 
   Widget _cardBody(BuildContext context) {
     final body = Container(
-      // margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.colorScheme.surfaceBright,
@@ -1035,21 +1035,19 @@ class _ExerciseCard extends StatelessWidget {
     if (supersetPaletteIndex == null) return body;
     return Stack(
       children: [
-        body,
         Positioned(
-          left: 0,
-          top: 0,
-          bottom: 8,
+          left: 0, top: 8, bottom: 8,
           child: Container(
             width: 4,
             decoration: BoxDecoration(
-              color: supersetColorForIndex(supersetPaletteIndex!),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
-              ),
+              color:supersetColorForIndex(supersetPaletteIndex!),
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 12.0),
+          child: body,
         ),
       ],
     );
