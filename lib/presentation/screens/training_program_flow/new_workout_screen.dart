@@ -110,21 +110,34 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
               for (final entry in result.affectedSessionsByWorkoutId.entries)
                 PropagationSection(
                   itemKind: 'workout',
+                  itemId: entry.key,
                   itemTitle: workout.title,
-                  consumerLabels: entry.value.map((s) => s.title).toList(),
+                  consumerKind: 'sessions',
+                  consumers: [
+                    for (final s in entry.value)
+                      PropagationConsumer(id: s.id, label: s.title),
+                  ],
                 ),
               for (final entry in result.affectedWorkoutsByExerciseId.entries)
                 PropagationSection(
                   itemKind: 'exercise',
+                  itemId: entry.key,
                   itemTitle: bag.exercisesById[entry.key]!.exercise.title,
-                  consumerLabels: entry.value.map((w) => w.title).toList(),
+                  consumerKind: 'workouts',
+                  consumers: [
+                    for (final w in entry.value)
+                      PropagationConsumer(id: w.id, label: w.title),
+                  ],
                 ),
             ];
-            final yes = await showPropagateChangesDialog(
+            final selection = await showPropagateChangesDialog(
               context: context,
               sections: sections,
             );
-            if (yes == true) await presetProvider.propagateBag(bag);
+            if (selection == null) return; // user cancelled — stay on screen
+            if (!selection.isEmpty) {
+              await presetProvider.propagateBag(bag, selection: selection);
+            }
           }
         }
       }

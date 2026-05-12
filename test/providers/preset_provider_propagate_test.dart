@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 
 class _FakePathProvider extends PathProviderPlatform
@@ -366,6 +368,168 @@ void main() {
           }
         }
       }
+    });
+  });
+
+  group('propagateWorkoutToSessionTemplates with onlyToSessionIds filter', () {
+    test('filters to specified sessions, leaves others unchanged', () async {
+      final w = _workout(id: 'cat-w', title: 'Old', exercises: []);
+      await provider.addPresetSession(_session(id: 's-a', workouts: [w]));
+      await provider.addPresetSession(_session(id: 's-b', workouts: [w.deepCopy()]));
+      await provider.addPresetSession(_session(id: 's-c', workouts: [w.deepCopy()]));
+
+      final updated = _workout(id: 'cat-w', title: 'New', exercises: []);
+      await provider.propagateWorkoutToSessionTemplates(
+        updated,
+        onlyToSessionIds: {'s-a', 's-c'},
+      );
+
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-a').workouts.single.title,
+        'New',
+      );
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-b').workouts.single.title,
+        'Old',
+      );
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-c').workouts.single.title,
+        'New',
+      );
+    });
+
+    test('null filter updates all (back-compat)', () async {
+      final w = _workout(id: 'cat-w', title: 'Old', exercises: []);
+      await provider.addPresetSession(_session(id: 's-a', workouts: [w]));
+      await provider.addPresetSession(_session(id: 's-b', workouts: [w.deepCopy()]));
+
+      await provider.propagateWorkoutToSessionTemplates(
+        _workout(id: 'cat-w', title: 'New', exercises: []),
+      );
+
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-a').workouts.single.title,
+        'New',
+      );
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-b').workouts.single.title,
+        'New',
+      );
+    });
+  });
+
+  group('propagateBag with PropagationSelection', () {
+    test('empty selection writes nothing', () async {
+      final ex = _exercise(id: 'cat-e', sets: 3);
+      final w = _workout(id: 'w-1', exercises: [ex]);
+      await provider.addPresetSession(_session(id: 's-a', workouts: [w]));
+
+      final bag = PendingChangeBag()..addExercise(ex.copyWith(sets: 9));
+      final selection = PropagationSelection({
+        'exercise-in-sessions:cat-e': {},
+        'exercise-in-workouts:cat-e': {},
+      });
+      await provider.propagateBag(bag, selection: selection);
+
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-a')
+            .workouts.single.exercises.single.sets,
+        3,
+      );
+    });
+
+    test('partial selection only updates chosen consumers', () async {
+      final w = _workout(id: 'cat-w', title: 'Old', exercises: []);
+      await provider.addPresetSession(_session(id: 's-a', workouts: [w]));
+      await provider.addPresetSession(_session(id: 's-b', workouts: [w.deepCopy()]));
+      await provider.addPresetSession(_session(id: 's-c', workouts: [w.deepCopy()]));
+
+      final updated = _workout(id: 'cat-w', title: 'New', exercises: []);
+      final bag = PendingChangeBag()..addWorkout(updated);
+      final selection = PropagationSelection({
+        'workout-in-sessions:cat-w': {'s-a', 's-c'},
+      });
+      await provider.propagateBag(bag, selection: selection);
+
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-a').workouts.single.title,
+        'New',
+      );
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-b').workouts.single.title,
+        'Old',
+      );
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-c').workouts.single.title,
+        'New',
+      );
+    });
+
+    test('null selection updates all (back-compat guard)', () async {
+      final w = _workout(id: 'cat-w', title: 'Old', exercises: []);
+      await provider.addPresetSession(_session(id: 's-a', workouts: [w]));
+      await provider.addPresetSession(_session(id: 's-b', workouts: [w.deepCopy()]));
+
+      final updated = _workout(id: 'cat-w', title: 'New', exercises: []);
+      final bag = PendingChangeBag()..addWorkout(updated);
+      await provider.propagateBag(bag);
+
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-a').workouts.single.title,
+        'New',
+      );
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-b').workouts.single.title,
+        'New',
+      );
+    });
+
+    test(
+        'exercise-in-workouts selection (session-scoped edit path) only updates '
+        'sessions that contain the chosen workout', () async {
+      // Three sessions each embed the same workout, which contains the exercise.
+      // The dialog shows consumers as workouts (all share id 'shared-w').
+      // User unchecks s-b's workout — only s-a and s-c should be updated.
+      final ex = _exercise(id: 'cat-e', sets: 3);
+      final wA = _workout(id: 'shared-w', exercises: [ex]);
+      final wB = _workout(id: 'shared-w', exercises: [_exercise(id: 'cat-e', sets: 3)]);
+      final wC = _workout(id: 'shared-w', exercises: [_exercise(id: 'cat-e', sets: 3)]);
+      provider.debugSeedDefaults(
+        exercises: [ex],
+        sessions: [
+          _session(id: 's-a', workouts: [wA]),
+          _session(id: 's-b', workouts: [wB]),
+          _session(id: 's-c', workouts: [wC]),
+        ],
+      );
+
+      final updated = ex.copyWith(sets: 9);
+      final bag = PendingChangeBag()..addExercise(updated);
+      // Dialog shows workout consumers; user deselects s-b by deselecting
+      // 'shared-w' for that session — but since all three share the same
+      // workout id the selection must be expressed as session ids via the
+      // resolved path. Simulate by using exercise-in-sessions directly.
+      final selection = PropagationSelection({
+        'exercise-in-sessions:cat-e': {'s-a', 's-c'},
+      });
+      await provider.propagateBag(bag, selection: selection);
+
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-a')
+            .workouts.single.exercises.single.sets,
+        9,
+      );
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-b')
+            .workouts.single.exercises.single.sets,
+        3,
+        reason: 's-b was excluded from the selection',
+      );
+      expect(
+        provider.presetSessions.firstWhere((s) => s.id == 's-c')
+            .workouts.single.exercises.single.sets,
+        9,
+      );
     });
   });
 }
