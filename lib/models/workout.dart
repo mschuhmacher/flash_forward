@@ -1,4 +1,5 @@
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,6 +14,7 @@ class Workout {
     this.difficulty,
     this.equipment,
     required this.timeBetweenExercises,
+    this.supersets = const [],
     this.userId,
     this.notes,
   }) : id = id ?? const Uuid().v4();
@@ -26,6 +28,7 @@ class Workout {
   final String? difficulty;
   final String? equipment;
   final int timeBetweenExercises;
+  final List<SupersetConfig> supersets;
   final String? userId;
   final String? notes;
 
@@ -39,6 +42,7 @@ class Workout {
     'difficulty': difficulty,
     'equipment': equipment,
     'timeBetweenExercises': timeBetweenExercises,
+    'supersets': supersets.map((s) => s.toJson()).toList(),
     'userId': userId,
     'notes': notes,
   };
@@ -56,6 +60,9 @@ class Workout {
     difficulty: json['difficulty'],
     equipment: json['equipment'],
     timeBetweenExercises: json['timeBetweenExercises'] ?? 120,
+    supersets: ((json['supersets']) as List<dynamic>? ?? [])
+        .map((s) => SupersetConfig.fromJson(s as Map<String, dynamic>))
+        .toList(),
     userId: json['userId'],
     notes: json['notes'],
   );
@@ -74,6 +81,7 @@ class Workout {
     Nullable<String>? difficulty,
     Nullable<String>? equipment,
     int? timeBetweenExercises,
+    List<SupersetConfig>? supersets,
     String? userId,
     Nullable<String>? notes,
   }) => Workout(
@@ -86,6 +94,7 @@ class Workout {
     difficulty: difficulty == null ? this.difficulty : difficulty.value,
     equipment: equipment == null ? this.equipment : equipment.value,
     timeBetweenExercises: timeBetweenExercises ?? this.timeBetweenExercises,
+    supersets: supersets ?? this.supersets,
     userId: userId ?? this.userId,
     notes: notes == null ? this.notes : notes.value,
   );
@@ -97,24 +106,56 @@ class Workout {
   /// the copy keeps the source's id and templateId. Mutating one instance
   /// cannot leak into another (deep-copy guarantee), but propagation lookups
   /// (`usagesOfWorkout`) match by id and so naturally find every sibling
-  /// instance.
+  /// instance. `supersets` are independent `SupersetConfig` instances with
+  /// the same `exerciseIds` — exercises kept their IDs, so no remap needed.
   ///
   /// With [keepId] = false: generates a fresh UUID and sets templateId as a
   /// breadcrumb pointing at the source's id. Use only for genuine forks:
   /// slidable Copy (intentional divergence — the user wants to evolve the
   /// copy independently of the original) and starting a session run (the
   /// run record is its own entity, not a template).
-  Workout deepCopy({bool keepId = false}) => Workout(
-    id: keepId ? id : null,
-    templateId: keepId ? templateId : (templateId ?? id),
-    title: title,
-    label: label,
-    description: description,
-    exercises: exercises.map((e) => e.deepCopy(keepId: keepId)).toList(),
-    difficulty: difficulty,
-    equipment: equipment,
-    timeBetweenExercises: timeBetweenExercises,
-    userId: userId,
-    notes: notes,
-  );
+  ///
+  /// **Superset id remap:** when [keepId] is false, exercises receive fresh
+  /// UUIDs. The supersets list's `exerciseIds` field references those IDs,
+  /// so it must be remapped onto the new ones — otherwise every superset
+  /// would silently drop because its members' IDs no longer exist in the
+  /// copied workout. This was a real bug found during the supersets feature
+  /// implementation; the test `Workout.deepCopy carries supersets through`
+  /// guards against regression.
+  Workout deepCopy({bool keepId = false}) {
+    final copiedExercises =
+        exercises.map((e) => e.deepCopy(keepId: keepId)).toList();
+    // When keepId is false, exercises get fresh UUIDs, so supersets'
+    // exerciseIds (which reference the old IDs) must be remapped to the new
+    // ones. Same positional order, since deepCopy preserves it.
+    final List<SupersetConfig> copiedSupersets;
+    if (keepId) {
+      copiedSupersets = supersets.map((s) => s.copyWith()).toList();
+    } else {
+      final idMap = <String, String>{
+        for (var i = 0; i < exercises.length; i++)
+          exercises[i].id: copiedExercises[i].id,
+      };
+      copiedSupersets = supersets.map((s) {
+        final remapped = s.exerciseIds
+            .map((id) => idMap[id] ?? id)
+            .toList(growable: false);
+        return s.copyWith(exerciseIds: remapped);
+      }).toList();
+    }
+    return Workout(
+      id: keepId ? id : null,
+      templateId: keepId ? templateId : (templateId ?? id),
+      title: title,
+      label: label,
+      description: description,
+      exercises: copiedExercises,
+      difficulty: difficulty,
+      equipment: equipment,
+      timeBetweenExercises: timeBetweenExercises,
+      supersets: copiedSupersets,
+      userId: userId,
+      notes: notes,
+    );
+  }
 }

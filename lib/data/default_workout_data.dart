@@ -1,5 +1,6 @@
 // Default workouts
 import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/data/default_exercises.dart';
 
@@ -34,6 +35,19 @@ List<Workout> kDefaultWorkouts = [
       _exerciseRef('no-monies'),
       _exerciseRef('external-rotations'),
     ],
+    supersets: [
+      SupersetConfig(
+        exerciseIds: [
+          'band-assisted-pull-ups',
+          'push-ups',
+          'no-monies',
+          'external-rotations',
+        ],
+        restSeconds: 10,
+        supersetSetRest: 60,
+        supersetSets: 3,
+      ),
+    ],
   ),
 
   Workout(
@@ -53,7 +67,6 @@ List<Workout> kDefaultWorkouts = [
     ],
   ),
 
-
   Workout(
     id: 'strength-training-warm-up',
     title: 'Strength Training Warm-up',
@@ -67,6 +80,19 @@ List<Workout> kDefaultWorkouts = [
       _exerciseRef('shoulder-dislocates'),
       _exerciseRef('push-ups'),
       _exerciseRef('australian-pull-ups'),
+    ],
+    supersets: [
+      SupersetConfig(
+        exerciseIds: [
+          'scapular-pull-ups',
+          'shoulder-dislocates',
+          'push-ups',
+          'australian-pull-ups',
+        ],
+        restSeconds: 10,
+        supersetSetRest: 60,
+        supersetSets: 3,
+      ),
     ],
   ),
 
@@ -449,7 +475,10 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Advanced',
     equipment: 'Hangboard',
     timeBetweenExercises: 180,
-    exercises: [_exerciseRef('max-pick-ups'), _exerciseRef('minimum-edge-hangs')],
+    exercises: [
+      _exerciseRef('max-pick-ups'),
+      _exerciseRef('minimum-edge-hangs'),
+    ],
   ),
 
   Workout(
@@ -599,7 +628,10 @@ List<Workout> kDefaultWorkouts = [
     difficulty: 'Intermediate',
     equipment: 'Wall',
     timeBetweenExercises: 60,
-    exercises: [_exerciseRef('freestanding-handstand'), _exerciseRef('crow-pose')],
+    exercises: [
+      _exerciseRef('freestanding-handstand'),
+      _exerciseRef('crow-pose'),
+    ],
   ),
   Workout(
     id: 'handstand-progression-training',

@@ -1,6 +1,8 @@
 import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/pending_change.dart';
+import 'package:flash_forward/models/superset_config.dart';
+import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
@@ -9,9 +11,42 @@ import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
+import 'package:flash_forward/utils/superset_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
+/// Returned from [NewExerciseScreen] on save. [exercise] always carries the
+/// final exercise. [supersetSetsChange] is non-null only when the screen was
+/// opened with a [parentWorkout], the edited exercise is a superset member,
+/// AND the user changed the sets field — in that case [exercise.sets] is the
+/// pre-existing value (untouched) and [supersetSetsChange] is the new value
+/// the caller should write to the parent superset's `supersetSets` field.
+class NewExerciseResult {
+  final Exercise exercise;
+  final int? supersetSetsChange;
+  const NewExerciseResult({required this.exercise, this.supersetSetsChange});
+
+  /// Decides what value (if any) to surface as `supersetSetsChange`.
+  /// - Returns `null` when the exercise is not in a superset (saves go to
+  ///   the exercise's own `sets`).
+  /// - Returns `null` when the displayed sets value equals the existing
+  ///   `supersetSets` (no-op edit).
+  /// - Returns the new value otherwise.
+  ///
+  /// Extracted as a pure function so the contract — "non-null only on actual
+  /// change" — is unit-testable without spinning up the full edit screen.
+  static int? computeSupersetSetsChange({
+    required SupersetConfig? membership,
+    required int displayedSets,
+    required int? existingSupersetSets,
+    required int exerciseSetsFallback,
+  }) {
+    if (membership == null) return null;
+    final existing = existingSupersetSets ?? exerciseSetsFallback;
+    return displayedSets != existing ? displayedSets : null;
+  }
+}
 
 class NewExerciseScreen extends StatefulWidget {
   final Exercise? exercise;
@@ -21,7 +56,19 @@ class NewExerciseScreen extends StatefulWidget {
   /// Leave false when used as a sub-editor inside another form.
   final bool persistToProvider;
 
-  const NewExerciseScreen({super.key, this.exercise, this.persistToProvider = false});
+  /// When non-null, the screen knows the editing context — i.e. the workout
+  /// that contains this exercise. If the exercise is a superset member, the
+  /// sets field reads/writes the superset's `supersetSets` rather than
+  /// `exercise.sets`, and the result includes a `supersetSetsChange` for the
+  /// caller to apply.
+  final Workout? parentWorkout;
+
+  const NewExerciseScreen({
+    super.key,
+    this.exercise,
+    this.persistToProvider = false,
+    this.parentWorkout,
+  });
 
   @override
   State<NewExerciseScreen> createState() => _NewExerciseScreenState();
@@ -58,7 +105,12 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   late ExerciseType _exerciseType =
       widget.exercise?.type ?? ExerciseType.timedReps;
-  late int _sets = widget.exercise?.sets ?? 3;
+  // For superset members the displayed sets are supersetSets, not the
+  // exercise's own sets. Caller routes the new value back to the superset
+  // on save.
+  late int _sets = widget.parentWorkout != null && widget.exercise != null
+      ? setsForExerciseInWorkout(widget.parentWorkout!, widget.exercise!)
+      : widget.exercise?.sets ?? 3;
   late int? _reps =
       widget.exercise?.reps ?? 10; // null = no target for fixedDuration/manual
   late bool _repsEnabled =
@@ -90,6 +142,22 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
+      // If this exercise is a superset member, the sets field is controlled
+      // by the parent superset's supersetSets — keep exercise.sets at its
+      // original value and surface the new value separately, but only when
+      // it actually differs from the existing supersetSets.
+      final supersetMembership = widget.parentWorkout != null && widget.exercise != null
+          ? supersetForExercise(widget.parentWorkout!, widget.exercise!.id)
+          : null;
+      final preservedSets =
+          supersetMembership != null ? widget.exercise!.sets : _sets;
+      final supersetSetsChange = NewExerciseResult.computeSupersetSetsChange(
+        membership: supersetMembership,
+        displayedSets: _sets,
+        existingSupersetSets: supersetMembership?.supersetSets,
+        exerciseSetsFallback: widget.exercise?.sets ?? _sets,
+      );
+
       final exercise = Exercise(
         id: widget.exercise?.id,
         templateId: widget.exercise?.templateId,
@@ -110,7 +178,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                 : _muscleGroupsController.text.trim(),
         difficulty: _difficulty,
         type: _exerciseType,
-        sets: _sets,
+        sets: preservedSets,
         reps:
             _exerciseType == ExerciseType.timedReps
                 ? (_reps ?? 10)
@@ -159,7 +227,15 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
           }
         }
       }
-      if (mounted) Navigator.pop(context, exercise);
+      if (mounted) {
+        Navigator.pop(
+          context,
+          NewExerciseResult(
+            exercise: exercise,
+            supersetSetsChange: supersetSetsChange,
+          ),
+        );
+      }
     }
   }
 
@@ -288,6 +364,22 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       () => _sets = (_sets + 1).clamp(1, FieldLimits.setLimit),
                     ),
                   ),
+                  if (widget.parentWorkout != null &&
+                      widget.exercise != null &&
+                      supersetForExercise(
+                              widget.parentWorkout!, widget.exercise!.id) !=
+                          null) ...[
+                    const SizedBox(height: 4),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        'Sets are controlled by the superset — changes apply to all members.',
+                        style: context.bodyMedium.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                   SizedBox(height: 8),
 
                   // ── Type-specific fields ──
@@ -714,27 +806,24 @@ class _ExerciseTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: SegmentedButton<ExerciseType>(
-        segments: [
-          ButtonSegment(
-            value: ExerciseType.timedReps,
-            label: Text('Timed reps', style: context.bodyMedium,),
-          ),
-          ButtonSegment(
-            value: ExerciseType.fixedDuration,
-            label: Text('Fixed duration', style: context.bodyMedium,),
-          ),
-          ButtonSegment(value: ExerciseType.manual, label: Text('Manual', style: context.bodyMedium,)),
-        ],
-        selected: {value},
-        onSelectionChanged: (selection) => onChanged(selection.first),
-        showSelectedIcon: false,
-        style: ButtonStyle(
-          visualDensity: VisualDensity(horizontal: 0, vertical: -2),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return SegmentedButton<ExerciseType>(
+      segments: [
+        ButtonSegment(
+          value: ExerciseType.timedReps,
+          label: Text('Timed reps', style: context.bodyMedium,),
         ),
+        ButtonSegment(
+          value: ExerciseType.fixedDuration,
+          label: Text('Fixed duration', style: context.bodyMedium,),
+        ),
+        ButtonSegment(value: ExerciseType.manual, label: Text('Manual', style: context.bodyMedium,)),
+      ],
+      selected: {value},
+      onSelectionChanged: (selection) => onChanged(selection.first),
+      showSelectedIcon: false,
+      style: ButtonStyle(
+        visualDensity: VisualDensity(horizontal: 0, vertical: -2),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }

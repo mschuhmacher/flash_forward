@@ -1,4 +1,4 @@
-enum RestType { getReady, setRest, exerciseRest, overtime, paused }
+enum RestType { getReady, setRest, supersetRest, exerciseRest, overtime, paused }
 
 class RestEvent {
   final RestType restType;
