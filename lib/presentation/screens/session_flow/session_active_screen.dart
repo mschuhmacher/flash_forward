@@ -3,6 +3,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/presentation/widgets/label_badge.dart';
 import 'package:flash_forward/utils/nullable.dart';
+import 'package:flash_forward/utils/superset_utils.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/utils/timer_utils.dart';
@@ -13,9 +14,11 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_bottom_bar.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'dart:io' show Platform;
 
 class ActiveSessionScreen extends StatefulWidget {
   final Session session;
@@ -26,8 +29,38 @@ class ActiveSessionScreen extends StatefulWidget {
   State<ActiveSessionScreen> createState() => _ActiveSessionScreenState();
 }
 
-class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
+// WidgetsBindingObserver lets this widget react to app lifecycle changes.
+// When the app returns to the foreground (e.g. after the screen was locked),
+// didChangeAppLifecycleState fires with AppLifecycleState.resumed. We use
+// that to call reconcileAfterBackground(), which measures how much real time
+// passed while the Dart isolate was suspended and fast-forwards the timer
+// accordingly. It also reschedules any remaining beep notifications from the
+// new position.
+class _ActiveSessionScreenState extends State<ActiveSessionScreen>
+    with WidgetsBindingObserver {
   bool _timerInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final provider = context.read<SessionStateProvider>();
+    if (state == AppLifecycleState.resumed) {
+      provider.setForegrounded(true);
+    } else if (state == AppLifecycleState.paused) {
+      provider.setForegrounded(false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,14 +69,56 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         // Initialize the timer & keep screen awake once when the screen first builds.
         // Passes the session to start(), which deep-copies it internally.
         if (!_timerInitialized) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
             // Guard again in case the widget unmounted before the callback.
             if (!mounted || _timerInitialized) return;
+            final settings = context.read<SettingsProvider>();
             sessionStateData.start(widget.session);
+            sessionStateData.setSoundMode(settings.soundMode);
+            sessionStateData.setRestOvertimeOnBackground(
+              settings.restOvertimeOnBackground,
+            );
             _timerInitialized = true;
 
             // Start keeping screen awake
             WakelockPlus.enable();
+
+            // Android 12+: SCHEDULE_EXACT_ALARM lets us fire beep sounds
+            // exactly on time even when the screen is locked. Show a rationale
+            // dialog before sending the user to the system settings page.
+            // No-op on iOS and on Android where permission is already granted.
+            if (Platform.isAndroid) {
+              final canSchedule =
+                  await sessionStateData.canScheduleExactAlarms();
+              if (!canSchedule && context.mounted) {
+                await showDialog<void>(
+                  context: context,
+                  builder:
+                      (dialogContext) => AlertDialog(
+                        title: const Text('Allow exact alarms'),
+                        content: const Text(
+                          'Flash Forward schedules audio beeps during your session '
+                          'so they fire on time even with the screen locked.\n\n'
+                          'Tap Allow to enable this in Settings.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text('Not now'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(dialogContext);
+                              await sessionStateData
+                                  .requestExactAlarmPermission();
+                            },
+                            child: const Text('Allow'),
+                          ),
+                        ],
+                      ),
+                );
+              }
+            }
           });
         }
 
@@ -110,13 +185,17 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         TextStyle phaseTextStyle = context.h2.copyWith(
           color: context.colorScheme.onPrimary,
         );
+        final effectiveSets =
+            setsForExerciseInWorkout(activeWorkout, activeExercise);
         switch (sessionStateData.phase) {
           case TimerPhase.setRest:
             phaseText = 'rest between sets';
+          case TimerPhase.supersetRest:
+            phaseText = 'superset rest';
           case TimerPhase.rep:
             if (activeExercise.type == ExerciseType.manual) {
               phaseText =
-                  'set ${progress.currentSet} of ${activeExercise.sets}';
+                  'set ${progress.currentSet} of $effectiveSets';
             } else {
               phaseText = 'active';
             }
@@ -136,13 +215,25 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             phaseTextStyle = context.h2.copyWith(
               color: context.colorScheme.secondary,
             );
+          case TimerPhase.overtime:
+            phaseText = 'overtime';
+            phaseTextStyle = context.h2.copyWith(
+              color: context.colorScheme.secondary,
+            );
         }
 
-        // Reps display text: show '-/-' when no rep target is set
-        final repsText =
-            activeExercise.reps != null
-                ? '${progress.currentRep} / ${activeExercise.reps}   reps'
-                : '-/-   reps';
+        // Reps display text. Fixed-duration exercises show only the target
+        // (reps is informational — the user does as many as they can in the
+        // active time, there's no per-rep counter). Other types show
+        // current/target. '-/-' when no target is set.
+        final String repsText;
+        if (activeExercise.reps == null) {
+          repsText = '-/-   reps';
+        } else if (activeExercise.type == ExerciseType.fixedDuration) {
+          repsText = '${activeExercise.reps}   reps';
+        } else {
+          repsText = '${progress.currentRep} / ${activeExercise.reps}   reps';
+        }
 
         return Scaffold(
           appBar: AppBar(
@@ -203,6 +294,30 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (() {
+                              final ss = supersetForExercise(
+                                  activeWorkout, activeExercise.id);
+                              return ss != null;
+                            }())
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Container(
+                                  width: 32,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: () {
+                                      final ss = supersetForExercise(
+                                          activeWorkout, activeExercise.id)!;
+                                      final idx = activeWorkout.supersets
+                                          .indexWhere((s) => s.id == ss.id);
+                                      return idx >= 0
+                                          ? supersetColorForIndex(idx)
+                                          : supersetColor(ss.id);
+                                    }(),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ),
                             Text(
                               activeExercise.title,
                               style: context.h1.copyWith(
@@ -230,7 +345,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                       // ── Timer or manual-advance button ──────────
                       if (isManualRep)
                         _ManualAdvanceButton(
-                          isLastSet: progress.currentSet >= activeExercise.sets,
+                          isLastSet: progress.currentSet >= effectiveSets,
                           onPressed: () => sessionStateData.advanceManually(),
                           color: context.colorScheme.onPrimary,
                         )
@@ -240,7 +355,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           children: [
                             Center(
                               child: Text(
-                                formatDuration(sessionStateData.remaining),
+                                sessionStateData.phase == TimerPhase.overtime
+                                    ? formatDuration(
+                                      sessionStateData.overtimeElapsed,
+                                    )
+                                    : formatDuration(
+                                      sessionStateData.remaining,
+                                    ),
                                 style: context.h1.copyWith(
                                   color: () {
                                     if (sessionStateData.isPaused) {
@@ -251,10 +372,15 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                     } else if (sessionStateData.phase ==
                                         TimerPhase.rep) {
                                       return context.colorScheme.onPrimary;
+                                    } else if (sessionStateData.phase ==
+                                        TimerPhase.overtime) {
+                                      return context.colorScheme.secondary;
                                     } else if ((sessionStateData.phase ==
                                                 TimerPhase.repRest ||
                                             sessionStateData.phase ==
                                                 TimerPhase.setRest ||
+                                            sessionStateData.phase ==
+                                                TimerPhase.supersetRest ||
                                             sessionStateData.phase ==
                                                 TimerPhase.exerciseRest) &&
                                         sessionStateData.remaining <
@@ -270,28 +396,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             ),
                             Positioned(
                               right: 20,
-                              child: _SessionCard(
-                                width: 44,
-                                height: 44,
-                                shadow: false,
-                                child:
-                                    sessionStateData.isPaused
-                                        ? IconButton(
-                                          onPressed: () {
-                                            sessionStateData.resume();
-                                            WakelockPlus.enable();
-                                          },
-                                          icon: Icon(Icons.play_arrow_rounded),
-                                          color: context.colorScheme.onPrimary,
-                                        )
-                                        : IconButton(
-                                          onPressed: () {
-                                            sessionStateData.pause();
-                                            WakelockPlus.disable();
-                                          },
-                                          icon: Icon(Icons.pause_rounded),
-                                          color: context.colorScheme.onPrimary,
-                                        ),
+                              child: _PauseResumeOvertimeButton(
+                                sessionStateData: sessionStateData,
                               ),
                             ),
                           ],
@@ -303,8 +409,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // REPS
-                            _SessionCard(
+                            _RoundedBox(
                               width: 150,
+                              borderColor: context.colorScheme.onPrimary,
                               child: Text(
                                 repsText,
                                 style: context.titleLarge.copyWith(
@@ -315,8 +422,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                               ),
                             ),
                             // LOAD
-                            _SessionCard(
+                            _RoundedBox(
                               width: 180,
+                              borderColor: context.colorScheme.onPrimary,
                               child: Text(
                                 'Load: ${activeExercise.load.toString()} kg',
                                 style: context.titleLarge.copyWith(
@@ -336,27 +444,37 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // MINUS
-                            _SessionCard(
-                              width: 50,
-                              child: IconButton(
-                                onPressed: () {
-                                  sessionStateData.jumpToSet(
-                                    progress.currentSet - 1,
-                                  );
-                                },
-                                icon: Icon(
-                                  Icons.remove_rounded,
-                                  color: context.colorScheme.onPrimary,
-                                  size: 24,
+                            if (sessionStateData.phase !=
+                                TimerPhase.exerciseRest)
+                              _RoundedBox(
+                                width: 50,
+                                borderColor: sessionStateData.phase == TimerPhase.overtime
+                                    ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                    : context.colorScheme.onPrimary,
+                                child: IconButton(
+                                  onPressed: sessionStateData.phase == TimerPhase.overtime
+                                      ? null
+                                      : () {
+                                          sessionStateData.jumpToSet(
+                                            progress.currentSet - 1,
+                                          );
+                                        },
+                                  icon: Icon(
+                                    Icons.remove_rounded,
+                                    color: sessionStateData.phase == TimerPhase.overtime
+                                        ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                        : context.colorScheme.onPrimary,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                            ),
                             SizedBox(width: 8),
                             // SETS
-                            _SessionCard(
+                            _RoundedBox(
                               width: 150,
+                              borderColor: context.colorScheme.onPrimary,
                               child: Text(
-                                '${progress.currentSet} / ${activeExercise.sets}   sets',
+                                '${progress.currentSet} / $effectiveSets   sets',
                                 style: context.titleLarge.copyWith(
                                   color: context.colorScheme.onPrimary,
                                   fontWeight: FontWeight.bold,
@@ -366,38 +484,54 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                             ),
                             SizedBox(width: 8),
                             // PLUS
-                            _SessionCard(
-                              width: 50,
-                              child: IconButton(
-                                onPressed: () {
-                                  sessionStateData.jumpToSet(
-                                    progress.currentSet + 1,
-                                  );
-                                },
-                                icon: Icon(
-                                  Icons.add_rounded,
-                                  color: context.colorScheme.onPrimary,
-                                  size: 24,
+                            if (sessionStateData.phase !=
+                                TimerPhase.exerciseRest)
+                              _RoundedBox(
+                                width: 50,
+                                borderColor: sessionStateData.phase == TimerPhase.overtime
+                                    ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                    : context.colorScheme.onPrimary,
+                                child: IconButton(
+                                  onPressed: sessionStateData.phase == TimerPhase.overtime
+                                      ? null
+                                      : () {
+                                          sessionStateData.jumpToSet(
+                                            progress.currentSet + 1,
+                                          );
+                                        },
+                                  icon: Icon(
+                                    Icons.add_rounded,
+                                    color: sessionStateData.phase == TimerPhase.overtime
+                                        ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                        : context.colorScheme.onPrimary,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                            ),
                             Spacer(),
                             //EDIT
-                            _SessionCard(
+                            _RoundedBox(
                               width: 50,
+                              borderColor: sessionStateData.phase == TimerPhase.overtime
+                                  ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                  : context.colorScheme.onPrimary,
                               child: IconButton(
-                                onPressed: () {
-                                  _showEditExerciseDialog(
-                                    context,
-                                    activeExercise,
-                                    sessionStateData,
-                                    progress.workoutIndex,
-                                    progress.exerciseIndex,
-                                  );
-                                },
+                                onPressed: sessionStateData.phase == TimerPhase.overtime
+                                    ? null
+                                    : () {
+                                        _showEditExerciseDialog(
+                                          context,
+                                          activeExercise,
+                                          sessionStateData,
+                                          progress.workoutIndex,
+                                          progress.exerciseIndex,
+                                        );
+                                      },
                                 icon: Icon(
                                   Icons.edit,
-                                  color: context.colorScheme.onPrimary,
+                                  color: sessionStateData.phase == TimerPhase.overtime
+                                      ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                                      : context.colorScheme.onPrimary,
                                   size: 24,
                                 ),
                               ),
@@ -440,7 +574,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    SessionStateProvider().reset();
+                    context.read<SessionStateProvider>().reset();
                     Navigator.of(context).pop(); // Close the dialog
                     Navigator.of(context).pop(); // Close the session screen
                   },
@@ -466,8 +600,20 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
     final wasAlreadyPaused = sessionStateData.isPaused;
     sessionStateData.pause();
 
+    // For superset members, the sets value displayed/edited in the dialog
+    // is the parent superset's supersetSets, not exercise.sets. The save
+    // path below routes back via updateActiveSupersetSets.
+    final activeWorkout =
+        sessionStateData.activeSession?.workouts[workoutIndex];
+    final ssMembership = activeWorkout != null
+        ? supersetForExercise(activeWorkout, activeExercise.id)
+        : null;
+    final initialSets = activeWorkout != null
+        ? setsForExerciseInWorkout(activeWorkout, activeExercise)
+        : activeExercise.sets;
+
     // Local state — initialized once when sheet opens, applied to provider on save.
-    int localSets = activeExercise.sets;
+    int localSets = initialSets;
     int? localReps = activeExercise.reps;
     bool localRepsEnabled = activeExercise.reps != null;
     int localTimeBetweenSets = activeExercise.timeBetweenSets;
@@ -496,13 +642,27 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             void applyAndClose() {
+              // For superset members, the sets edit goes to supersetSets so
+              // every member of the group reflects the change. Other fields
+              // (reps, load, etc.) stay on the exercise. exercise.sets is
+              // preserved unchanged so removing the exercise from the
+              // superset later restores its original set count.
+              final exerciseEditedSets =
+                  ssMembership != null ? activeExercise.sets : localSets;
+              if (ssMembership != null && localSets != initialSets) {
+                sessionStateData.updateActiveSupersetSets(
+                  workoutIndex: workoutIndex,
+                  exerciseId: activeExercise.id,
+                  newSupersetSets: localSets,
+                );
+              }
               // Apply all local edits to the live session copy via the provider.
               // Uses copyWith (not deepCopy) — keeps the same IDs, only replaces fields.
               sessionStateData.updateActiveExercise(
                 workoutIndex,
                 exerciseIndex,
                 activeExercise.copyWith(
-                  sets: localSets,
+                  sets: exerciseEditedSets,
                   reps: Nullable(localRepsEnabled ? localReps : null),
                   timeBetweenSets: localTimeBetweenSets,
                   timePerRep: localTimePerRep,
@@ -597,18 +757,12 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                               _SessionEditCounterRow(
                                 label: 'Sets',
                                 value: localSets,
-                                minimum: sessionStateData.progress.currentSet,
+                                minimum: 1,
                                 maximum: FieldLimits.setLimit,
                                 onDecrement:
                                     () => setDialogState(() => localSets--),
                                 onIncrement:
-                                    () => setDialogState(
-                                      () =>
-                                          localSets = (localSets + 1).clamp(
-                                            1,
-                                            FieldLimits.setLimit,
-                                          ),
-                                    ),
+                                    () => setDialogState(() => localSets++),
                               ),
                               const _SessionEditDivider(),
 
@@ -618,24 +772,15 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                 _SessionEditCounterRow(
                                   label: 'Reps',
                                   value: localReps ?? 10,
-                                  minimum: sessionStateData.progress.currentRep,
+                                  minimum: 1,
                                   maximum: FieldLimits.repLimit,
                                   onDecrement:
                                       () => setDialogState(
-                                        () =>
-                                            localReps = ((localReps ?? 10) - 1)
-                                                .clamp(
-                                                  sessionStateData
-                                                      .progress
-                                                      .currentRep,
-                                                  FieldLimits.repLimit,
-                                                ),
+                                        () => localReps = (localReps ?? 10) - 1,
                                       ),
                                   onIncrement:
                                       () => setDialogState(
-                                        () =>
-                                            localReps = ((localReps ?? 10) + 1)
-                                                .clamp(1, FieldLimits.repLimit),
+                                        () => localReps = (localReps ?? 10) + 1,
                                       ),
                                 ),
                                 const _SessionEditDivider(),
@@ -950,12 +1095,14 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
                                       value: localRpe.clamp(1, 10),
                                       minimum: 1,
                                       decrement: () {
-                                        if (localRpe > 1)
+                                        if (localRpe > 1) {
                                           setDialogState(() => localRpe--);
+                                        }
                                       },
                                       increment: () {
-                                        if (localRpe < 10)
+                                        if (localRpe < 10) {
                                           setDialogState(() => localRpe++);
+                                        }
                                       },
                                     ),
                                   ],
@@ -1008,6 +1155,53 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
       9 => 'Very hard',
       _ => 'Maximum',
     };
+  }
+}
+
+class _PauseResumeOvertimeButton extends StatelessWidget {
+  final SessionStateProvider sessionStateData;
+
+  const _PauseResumeOvertimeButton({required this.sessionStateData});
+
+  @override
+  Widget build(BuildContext context) {
+    IconData icon = Icons.pause_rounded;
+    Color widgetColor = context.colorScheme.onPrimary;
+    VoidCallback onTap = () {
+      sessionStateData.pause();
+      WakelockPlus.disable();
+    };
+    VoidCallback onLongPress = () {};
+
+    if (sessionStateData.phase == TimerPhase.setRest ||
+        sessionStateData.phase == TimerPhase.exerciseRest ||
+        sessionStateData.phase == TimerPhase.getReady) {
+      onLongPress = sessionStateData.requestManualOvertime;
+    }
+
+    if (sessionStateData.phase == TimerPhase.overtime) {
+      icon = Icons.skip_next_rounded;
+      widgetColor = context.colorScheme.secondary;
+      onTap = sessionStateData.exitOvertime;
+    } else if (sessionStateData.isPaused) {
+      icon = Icons.play_arrow_rounded;
+      onTap = () {
+        sessionStateData.resume();
+        WakelockPlus.enable();
+      };
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: _RoundedBox(
+        width: 44,
+        height: 44,
+        shadow: false,
+        borderColor: widgetColor,
+        child: Icon(icon, color: widgetColor),
+      ),
+    );
   }
 }
 
@@ -1151,18 +1345,20 @@ class _SessionEditDivider extends StatelessWidget {
 /// A styled card used throughout the active session screen.
 /// Renders a fixed-size box with the primary color, rounded corners, a border,
 /// and an optional medium shadow. The child is automatically centered.
-class _SessionCard extends StatelessWidget {
-  const _SessionCard({
+class _RoundedBox extends StatelessWidget {
+  const _RoundedBox({
     required this.width,
     required this.child,
     this.height = 50,
     this.shadow = true,
+    required this.borderColor,
   });
 
   final double width;
   final double height;
   final bool shadow;
   final Widget child;
+  final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1173,7 +1369,7 @@ class _SessionCard extends StatelessWidget {
         color: context.colorScheme.primary,
         boxShadow: shadow ? context.shadowMedium : null,
         borderRadius: BorderRadius.circular(16),
-        border: BoxBorder.all(color: context.colorScheme.onPrimary, width: 2),
+        border: BoxBorder.all(color: borderColor, width: 2),
       ),
       child: Center(child: child),
     );

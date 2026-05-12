@@ -141,6 +141,24 @@ class SessionLogProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Delete a single logged session (local and cloud)
+  Future<void> deleteLoggedSession(String sessionId) async {
+    _loggedSessions.removeWhere((s) => s.id == sessionId);
+    _selectedSessions.removeWhere((s) => s.id == sessionId);
+
+    await SessionLogger.deleteSession(sessionId);
+
+    if (_syncService != null) {
+      try {
+        await _syncService!.deleteSession(sessionId);
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+
+    notifyListeners();
+  }
+
   /// Clear all logged sessions (local and cloud)
   Future<void> clearAllLoggedSessions() async {
     _selectedSessions.clear();

@@ -1,10 +1,11 @@
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -53,6 +54,15 @@ class _ProgramListviewState extends State<ProgramListview> {
   String _query = '';
   String _filterLabel = '';
 
+  List<dynamic> sortListItems(List<dynamic> items) {
+    final labelOrder = kDefaultLabels.keys.toList();
+    return items..sort((a, b) {
+      final labelCompare = labelOrder.indexOf(a.label).compareTo(labelOrder.indexOf(b.label));
+      if (labelCompare != 0) return labelCompare;
+      return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+    });
+  }
+
   Future<void> _copyItem(dynamic item) async {
     final presetProvider = Provider.of<PresetProvider>(context, listen: false);
     final userId = supabase.auth.currentUser?.id;
@@ -75,16 +85,82 @@ class _ProgramListviewState extends State<ProgramListview> {
     }
   }
 
-  Future<void> _deleteItem(dynamic item) async {
+  Future<void> _moveToTrash(dynamic item) async {
     final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    switch (widget.itemType) {
-      case ItemType.sessions:
-        await presetProvider.deleteUserPresetSession((item as Session).id);
-      case ItemType.workouts:
-        await presetProvider.deleteUserPresetWorkout((item as Workout).id);
-      case ItemType.exercises:
-        await presetProvider.deleteUserPresetExercise((item as Exercise).id);
-    }
+    final kind = switch (widget.itemType) {
+      ItemType.sessions => TrashKind.session,
+      ItemType.workouts => TrashKind.workout,
+      ItemType.exercises => TrashKind.exercise,
+    };
+    final references = switch (kind) {
+      TrashKind.workout =>
+        presetProvider.sessionsContainingWorkout(item.id).map((s) => s.title).toList(),
+      TrashKind.exercise =>
+        presetProvider.workoutsContainingExercise(item.id).map((w) => w.title).toList(),
+      TrashKind.session => const <String>[],
+    };
+    final confirm = await _showTrashConfirmationDialog(item.title, references, kind);
+    if (confirm != true) return;
+    await presetProvider.deleteToTrash(id: item.id, kind: kind);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        persist: false,
+        duration: const Duration(seconds: 3),
+        content: Text('Moved "${item.title}" to trash'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            await presetProvider.restoreFromTrash(item.id);
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<bool?> _showTrashConfirmationDialog(
+    String title,
+    List<String> references,
+    TrashKind kind,
+  ) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final String body;
+        if (references.isEmpty) {
+          body =
+              '"$title" will be moved to the trash. You can restore it within 90 days from Settings.';
+        } else {
+          final list = references.map((r) => '• $r').join('\n');
+          final isPlural = references.length > 1;
+          final referenceNoun = switch (kind) {
+            TrashKind.workout => isPlural ? 'sessions' : 'session',
+            TrashKind.exercise => isPlural ? 'workouts' : 'workout',
+            TrashKind.session => isPlural ? 'items' : 'item',
+          };
+          final intro = isPlural ? 'these $referenceNoun' : 'this $referenceNoun';
+          final trailing = isPlural
+              ? 'those $referenceNoun, they keep their own copy.'
+              : 'that $referenceNoun, it keeps its own copy.';
+          body =
+              '"$title" is currently used in $intro:\n$list\n\nMoving it to the trash won\'t affect $trailing';
+        }
+        return AlertDialog(
+          title: const Text('Move to trash?'),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Move to trash'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -120,6 +196,7 @@ class _ProgramListviewState extends State<ProgramListview> {
 
               return matchesTitle && matchesLabel;
             }).toList();
+        sortListItems(filteredListItems);
 
         final scrollController = ScrollController();
 
@@ -145,24 +222,11 @@ class _ProgramListviewState extends State<ProgramListview> {
                   itemBuilder: (BuildContext context, int index) {
                     final item = filteredListItems[index];
 
-                    final bool isUserDefined;
-                    switch (widget.itemType) {
-                      case ItemType.sessions:
-                        isUserDefined = presetData.presetUserSessionIDs
-                            .contains(item.id);
-                      case ItemType.workouts:
-                        isUserDefined = presetData.presetUserWorkoutsIDs
-                            .contains(item.id);
-                      case ItemType.exercises:
-                        isUserDefined = presetData.presetUserExerciseIDs
-                            .contains(item.id);
-                    }
-
-                    return ProgramListviewCard(
+                    return CatalogListviewCard(
                       filteredListItem: item,
                       itemType: widget.itemType,
                       onCopy: () => _copyItem(item),
-                      onDelete: isUserDefined ? () => _deleteItem(item) : null,
+                      onDelete: () => _moveToTrash(item),
                     );
                   },
                 ),
@@ -175,19 +239,19 @@ class _ProgramListviewState extends State<ProgramListview> {
   }
 }
 
-class ProgramListviewCard extends StatelessWidget {
-  const ProgramListviewCard({
+class CatalogListviewCard extends StatelessWidget {
+  const CatalogListviewCard({
     super.key,
     required this.filteredListItem,
     required this.itemType,
     required this.onCopy,
-    this.onDelete,
+    required this.onDelete,
   });
 
   final dynamic filteredListItem;
   final ItemType itemType;
   final VoidCallback onCopy;
-  final VoidCallback? onDelete;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -210,7 +274,10 @@ class ProgramListviewCard extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) => NewWorkoutScreen(workout: filteredListItem),
+                      (context) => NewWorkoutScreen(
+                        workout: filteredListItem,
+                        persistToProvider: true,
+                      ),
                 ),
               );
             case ItemType.exercises:
@@ -218,8 +285,10 @@ class ProgramListviewCard extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) =>
-                          NewExerciseScreen(exercise: filteredListItem),
+                      (context) => NewExerciseScreen(
+                        exercise: filteredListItem,
+                        persistToProvider: true,
+                      ),
                 ),
               );
           }
@@ -238,17 +307,15 @@ class ProgramListviewCard extends StatelessWidget {
                 icon: Icons.copy_rounded,
                 label: 'Copy',
               ),
-              if (onDelete != null) ...[
-                SizedBox(width: 8),
-                SlidableAction(
-                  borderRadius: BorderRadius.circular(12),
-                  onPressed: (_) => onDelete!(),
-                  backgroundColor: context.colorScheme.error,
-                  foregroundColor: context.colorScheme.onError,
-                  icon: Icons.delete_rounded,
-                  label: 'Delete',
-                ),
-              ],
+              SizedBox(width: 8),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (_) => onDelete(),
+                backgroundColor: context.colorScheme.error,
+                foregroundColor: context.colorScheme.onError,
+                icon: Icons.delete_rounded,
+                label: 'Delete',
+              ),
             ],
           ),
           child: Container(
@@ -260,9 +327,9 @@ class ProgramListviewCard extends StatelessWidget {
             child: ListTile(
               contentPadding: EdgeInsets.fromLTRB(6, 0, 16, 0),
               minVerticalPadding: 6,
-              minTileHeight: 90,
+              minTileHeight: 80,
 
-              horizontalTitleGap: 4,
+              horizontalTitleGap: 6,
               leading: SizedBox(
                 width: 32,
                 height: 32,
@@ -272,20 +339,15 @@ class ProgramListviewCard extends StatelessWidget {
                   size: 24,
                 ),
               ),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    filteredListItem.title,
-                    style: context.titleMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  // Icon(Icons.circle),
-                ],
+              title: Text(
+                filteredListItem.title,
+                style: context.titleMedium,
+                overflow: TextOverflow.ellipsis,
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  SizedBox(height: 4),
                   filteredListItem.description != null
                       ? Text(
                         filteredListItem.description!,

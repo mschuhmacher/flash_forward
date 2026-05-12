@@ -37,7 +37,7 @@ class Exercise {
     this.muscleGroups,
     this.difficulty,
     this.userId,
-    this.type = ExerciseType.timedReps,
+    this.type = ExerciseType.fixedDuration,
     this.sets = 3,
     this.reps = 10,
     this.timeBetweenSets = 60,
@@ -84,7 +84,7 @@ class Exercise {
     difficulty: json['difficulty'],
     userId: json['userId'],
     // Backward-compatible: handle old 'default*' keys from ExerciseTemplate/ExerciseInstance
-    type: ExerciseType.values.byName(json['type'] ?? 'timedReps'),
+    type: ExerciseType.values.byName(json['type'] ?? 'fixedDuration'),
     sets: json['sets'] ?? json['defaultSets'] ?? 3,
     reps: json['reps'] ?? json['defaultReps'],
     timeBetweenSets: json['timeBetweenSets'] ?? json['defaultTimeBetweenSets'] ?? 60,
@@ -147,10 +147,23 @@ class Exercise {
     notes: notes == null ? this.notes : notes.value,
   );
 
-  /// Creates an independent copy with a new UUID — use when adding to a workout
-  /// or starting a session so the source is never mutated.
-  Exercise deepCopy() => Exercise(
-    templateId: templateId ?? id,
+  /// Creates an independent Dart copy.
+  ///
+  /// With [keepId] = true (default for propagation, AddItemScreen, and any
+  /// "this is the same logical template, just a separate instance" use case):
+  /// the copy keeps the source's id and templateId. Mutating one instance
+  /// cannot leak into another (deep-copy guarantee), but propagation lookups
+  /// (`usagesOfExercise`) match by id and so naturally find every sibling
+  /// instance.
+  ///
+  /// With [keepId] = false: generates a fresh UUID and sets templateId as a
+  /// breadcrumb pointing at the source's id. Use only for genuine forks:
+  /// slidable Copy (intentional divergence — the user wants to evolve the
+  /// copy independently of the original) and starting a session run (the
+  /// run record is its own entity, not a template).
+  Exercise deepCopy({bool keepId = false}) => Exercise(
+    id: keepId ? id : null,
+    templateId: keepId ? templateId : (templateId ?? id),
     title: title,
     description: description,
     label: label,

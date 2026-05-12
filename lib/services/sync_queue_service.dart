@@ -212,23 +212,25 @@ class SyncQueueService {
     // would cause a "concurrent modification" error mid-loop.
     final queueCopy = List<SyncOperation>.from(_queue);
 
-    for (final operation in queueCopy) {
-      try {
-        final success = await handler(operation);
-        if (success) {
-          // Remove only this specific (id, type) pair so any co-pending
-          // operation for the same entity (e.g. a deleteSession that followed
-          // a successful uploadSession) is preserved for the next retry.
-          await dequeue(operation.id, operation.type);
-          successCount++;
+    try {
+      for (final operation in queueCopy) {
+        try {
+          final success = await handler(operation);
+          if (success) {
+            // Remove only this specific (id, type) pair so any co-pending
+            // operation for the same entity (e.g. a deleteSession that followed
+            // a successful uploadSession) is preserved for the next retry.
+            await dequeue(operation.id, operation.type);
+            successCount++;
+          }
+        } catch (e, stackTrace) {
+          Sentry.captureException(e, stackTrace: stackTrace);
+          // Keep in queue for retry — do not rethrow.
         }
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-        // Keep in queue for retry — do not rethrow.
       }
+    } finally {
+      _isProcessing = false;
     }
-
-    _isProcessing = false;
     return successCount;
   }
 

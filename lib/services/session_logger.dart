@@ -54,6 +54,21 @@ class SessionLogger {
     }
   }
 
+  /// 🔹 Delete a single session by ID from the local log file
+  static Future<void> deleteSession(String sessionId) async {
+    final path = await _getSessionLogFilePath();
+    final file = File(path);
+
+    if (!await file.exists()) return;
+
+    final content = await file.readAsString();
+    if (content.isEmpty) return;
+
+    final List<dynamic> jsonList = jsonDecode(content);
+    jsonList.removeWhere((e) => e['id'] == sessionId);
+    await file.writeAsString(jsonEncode(jsonList), flush: true);
+  }
+
   /// 🔹 Clear all logs (for testing or reset)
   static Future<void> clearLoggedSessions() async {
     final path = await _getSessionLogFilePath();

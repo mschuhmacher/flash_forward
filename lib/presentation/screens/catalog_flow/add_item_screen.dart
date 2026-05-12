@@ -154,7 +154,26 @@ class _AddItemScreenState extends State<AddItemScreen> {
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
                             onPressed: () {
-                              Navigator.pop(context, selectedPresetItems);
+                              // keepId: true so the embedded copy shares the
+                              // catalog id — propagation lookups can find it
+                              // on the very first edit. Each instance is still
+                              // an independent Dart object (deep-copy guarantee).
+                              // Build a concretely-typed list so it matches the
+                              // pushing route's MaterialPageRoute<List<T>>.
+                              switch (widget.itemType) {
+                                case ItemType.workouts:
+                                  final independent = selectedPresetItems
+                                      .cast<Workout>()
+                                      .map((w) => w.deepCopy(keepId: true))
+                                      .toList();
+                                  Navigator.pop(context, independent);
+                                case ItemType.exercises:
+                                  final independent = selectedPresetItems
+                                      .cast<Exercise>()
+                                      .map((e) => e.deepCopy(keepId: true))
+                                      .toList();
+                                  Navigator.pop(context, independent);
+                              }
                             },
                             child: Text(buttonLabel),
                           ),

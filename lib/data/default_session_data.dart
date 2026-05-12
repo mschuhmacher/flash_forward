@@ -3,81 +3,94 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 
 // Helper function for cleaner code
-Workout _findWorkout(String title) {
-  return kDefaultWorkouts.firstWhere((e) => e.title == title);
+Workout _findWorkout(String id) {
+  return kDefaultWorkouts.firstWhere((w) => w.id == id);
 }
 
+// IMPORTANT: IDs are stable keys referenced by trash entries (trash.json and
+// Supabase), session templates (via templateId), and Supabase row keys.
+// Do NOT change an existing id once shipped — doing so will orphan trash entries
+// and template references. When adding a new session, pick a unique kebab-case
+// ID derived from the title.
 final List<Session> kDefaultSessions = [
   Session(
+    id: 'projecting-session',
     title: 'Projecting session',
     description: 'Flash tries and projecting',
     label: 'Limit',
     workouts: [
-      _findWorkout('Climbing Warm-up'),
-      _findWorkout('Flash and limit bouldering'),
-      _findWorkout('Full-Body Strength Workout'),
+      _findWorkout('climbing-warm-up'),
+      _findWorkout('flash-and-limit-bouldering'),
+      _findWorkout('full-body-strength-workout'),
     ],
   ),
   Session(
+    id: 'powerendurance-training',
     title: 'Powerendurance training',
     description: 'Powerendurance',
     label: 'Powerendurance',
     workouts: [
-      _findWorkout('Climbing Warm-up'),
-      _findWorkout('Max Pick-ups & Min Edge Hangs'),
-      _findWorkout('Boulder Pyramid Endurance'),
-      _findWorkout('General Upper-body Strength'),
+      _findWorkout('climbing-warm-up'),
+      _findWorkout('max-pick-ups-and-min-edge-hangs'),
+      _findWorkout('boulder-pyramid-endurance'),
+      _findWorkout('general-upper-body-strength'),
     ],
   ),
   Session(
+    id: 'power-session',
     title: 'Power',
     description: 'Training power',
     label: 'Power',
     workouts: [
-      _findWorkout('Climbing Warm-up'),
-      _findWorkout('Combined Limit Strength'),
-      _findWorkout('Dynamic Climbing Power'),
-      _findWorkout('Upper-body Power'),
+      _findWorkout('climbing-warm-up'),
+      _findWorkout('combined-limit-strength'),
+      _findWorkout('dynamic-climbing-power'),
+      _findWorkout('upper-body-power'),
     ],
   ),
   Session(
+    id: 'volume-session',
     title: 'Volume',
     description: 'Lots of easy climbing',
     label: 'Endurance',
     workouts: [
-      _findWorkout('Climbing Warm-up'),
-      _findWorkout('Route Laps Endurance'),
-      _findWorkout('Full-Body Strength Workout'),
+      _findWorkout('climbing-warm-up'),
+      _findWorkout('route-laps-endurance'),
+      _findWorkout('full-body-strength-workout'),
     ],
   ),
   Session(
+    id: 'full-body-strength-session',
     title: 'Full body strength training',
     description: 'No climbing, just strength and finger training',
     label: 'Strength',
     workouts: [
-      _findWorkout('Strength Training Warm-up'),
-      _findWorkout('Handstand Training'),
-      _findWorkout('Pull-ups & Pick-ups Set'),
-      _findWorkout('Dips and front lever'),
-      _findWorkout('Barbell Strength Training'),
+      _findWorkout('strength-training-warm-up'),
+      _findWorkout('handstand-training'),
+      _findWorkout('pull-ups-and-pick-ups-set'),
+      _findWorkout('dips-and-front-lever'),
+      _findWorkout('barbell-strength-training'),
     ],
   ),
   Session(
+    id: 'daily-fingerboard-stretching',
     title: 'Daily fingerboard and stretching',
     description: 'Quick light fingerboard and stretching',
     label: 'Daily maintenance',
-    workouts: [_findWorkout('Daily Mobility & Light Hangs')],
+    workouts: [_findWorkout('daily-mobility-and-light-hangs')],
   ),
   Session(
+    id: 'daily-evening-stretch',
     title: 'Daily evening stretch',
     description: 'Relaxed stretching at the end of the day',
     label: 'Daily maintenance',
-    workouts: [_findWorkout('Evening Stretch & Recovery')],
+    workouts: [_findWorkout('evening-stretch-and-recovery')],
   ),
   Session(
+    id: 'quick-fingerboarding-session',
     title: 'Quick fingerboarding',
     description: 'As you\'re passing the fingerboard ',
     label: 'Daily maintenance',
-    workouts: [_findWorkout('Quick Fingerboarding')],
+    workouts: [_findWorkout('quick-fingerboarding')],
   ),
 ];

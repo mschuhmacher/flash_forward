@@ -2,10 +2,11 @@ import 'package:flash_forward/constants/urls.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/session_flow/home_screen.dart';
 import 'package:flash_forward/presentation/screens/profile_flow/profile_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_exercise_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/catalog_screen.dart';
+import 'package:flash_forward/presentation/screens/profile_flow/restore_items_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/catalog_screen.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
@@ -13,6 +14,8 @@ import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:provider/provider.dart';
@@ -84,12 +87,18 @@ class _RootScreenState extends State<RootScreen>
                     case 1:
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => NewWorkoutScreen()),
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              NewWorkoutScreen(persistToProvider: true),
+                        ),
                       );
                     case 2:
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => NewExerciseScreen()),
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              NewExerciseScreen(persistToProvider: true),
+                        ),
                       );
                   }
                 },
@@ -163,9 +172,10 @@ class SettingsDrawer extends StatelessWidget {
     return Drawer(
       backgroundColor: context.colorScheme.surfaceBright,
       child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               child: Text('Preferences', style: context.titleLargePrimary),
@@ -240,6 +250,65 @@ class SettingsDrawer extends StatelessWidget {
                             color: context.colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Text('Sound', style: context.titleMedium),
+                            const SizedBox(width: 2),
+                            IconButton(
+                              icon: const Icon(Icons.info_outline_rounded),
+                              iconSize: 18,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _showSoundInfoDialog(context),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownMenu<SoundMode>(
+                          width: double.infinity,
+                          initialSelection: settings.soundMode,
+                          onSelected: (mode) {
+                            if (mode != null) settings.setSoundMode(mode);
+                          },
+                          dropdownMenuEntries: const [
+                            DropdownMenuEntry(
+                              value: SoundMode.both,
+                              label: 'Both',
+                            ),
+                            DropdownMenuEntry(
+                              value: SoundMode.soundsOnly,
+                              label: 'Sounds only',
+                            ),
+                            DropdownMenuEntry(
+                              value: SoundMode.notificationsOnly,
+                              label: 'Notifications only',
+                            ),
+                            DropdownMenuEntry(
+                              value: SoundMode.none,
+                              label: 'None',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Text('Session', style: context.titleMedium),
+                        const SizedBox(height: 4),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'Hold rest on background',
+                            style: context.bodyMedium,
+                          ),
+                          subtitle: Text(
+                            'Automatically extend rest when the app is backgrounded.',
+                            style: context.bodyMedium.copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          value: settings.restOvertimeOnBackground,
+                          onChanged: (value) =>
+                              settings.setRestOvertimeOnBackground(value),
+                        ),
                       ],
                     ),
                   ),
@@ -254,6 +323,16 @@ class SettingsDrawer extends StatelessWidget {
               leading: const Icon(Icons.delete_sweep_rounded),
               title: Text('Clear logs', style: context.bodyLarge),
               onTap: () => _showClearLogsPopUp(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.restore_rounded),
+              title: Text('Restore items', style: context.bodyLarge),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const RestoreItemsScreen(),
+                ),
+              ),
             ),
             const Divider(height: 1),
             Padding(
@@ -285,6 +364,7 @@ class SettingsDrawer extends StatelessWidget {
               onTap: () => _deleteAccount(context),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -433,6 +513,34 @@ class SettingsDrawer extends StatelessWidget {
         (route) => false,
       );
     }
+  }
+
+  void _showSoundInfoDialog(BuildContext context) {
+    final isIOS = Platform.isIOS;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Sound modes', style: dialogContext.h3),
+        content: Text(
+          isIOS
+              ? 'Both: Plays beeps in the app while your screen is on. Schedules notification sounds when the screen locks — note that iOS plays these with your device\'s notification settings, which may include vibration.\n\n'
+                'Sounds only: Beeps play in the app while the screen is on. No notifications when backgrounded.\n\n'
+                'Notifications only: No in-app sounds. Schedules notification sounds when the screen locks (with your device\'s notification settings, which may include vibration).\n\n'
+                'None: All sounds disabled. The timer runs silently.'
+              : 'Both: Plays beeps in the app while the screen is on. Schedules notification sounds when backgrounded — only the app\'s own sounds, no extra vibration.\n\n'
+                'Sounds only: Beeps play in the app while the screen is on. No notifications when backgrounded.\n\n'
+                'Notifications only: No in-app sounds. Schedules notification sounds when backgrounded — only the app\'s own sounds, no extra vibration.\n\n'
+                'None: All sounds disabled. The timer runs silently.',
+          style: dialogContext.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showClearLogsPopUp(BuildContext context) {

@@ -12,7 +12,10 @@ import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
+import 'package:flash_forward/services/audio_beep_player.dart';
+import 'package:flash_forward/services/beep_scheduler.dart';
 import 'package:flash_forward/themes/app_theme.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -25,6 +28,18 @@ void main() async {
 
   // Lock app to portrait mode
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  // Initialize BeepScheduler for OS-level timer beep notifications.
+  final beepScheduler = BeepScheduler(FlutterLocalNotificationsPlugin());
+  await beepScheduler.init();
+
+  // Initialize AudioBeepPlayer for in-app audio playback when foregrounded.
+  final audioPlayer = AudioBeepPlayer();
+  await audioPlayer.init();
+
+  final sessionStateProvider = SessionStateProvider()
+    ..setBeepScheduler(beepScheduler)
+    ..setAudioBeepPlayer(audioPlayer);
 
   final packageInfo = await PackageInfo.fromPlatform();
 
@@ -47,7 +62,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => AuthProvider()),
         ChangeNotifierProvider(create: (context) => SessionLogProvider()),
         ChangeNotifierProvider(create: (context) => PresetProvider()),
-        ChangeNotifierProvider(create: (context) => SessionStateProvider()),
+        ChangeNotifierProvider(create: (_) => sessionStateProvider),
         ChangeNotifierProvider(create: (context) => SettingsProvider()),
       ],
       child: const MyApp(),

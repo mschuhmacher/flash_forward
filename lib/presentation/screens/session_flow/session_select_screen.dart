@@ -8,7 +8,7 @@ import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/data/labels.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_session_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';

@@ -1,14 +1,17 @@
 import 'package:flash_forward/constants/field_limits.dart';
+import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/add_item_screen.dart';
-import 'package:flash_forward/presentation/screens/training_program_flow/new_workout_screen.dart';
-import 'package:flash_forward/presentation/widgets/label_badge.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
+import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
+import 'package:flash_forward/presentation/widgets/workout_card.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
-import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
 import 'package:flash_forward/utils/nullable.dart';
@@ -35,9 +38,13 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
 
   bool get _isNew => widget.session == null;
 
-  // Title, label, workouts are required fields, so session must be initialized with them
   late Session _session =
-      widget.session ?? Session(title: 'title', label: 'label', workouts: []);
+      widget.session?.deepCopy(keepId: true) ??
+      Session(title: 'title', label: 'label', workouts: []);
+
+  /// Accumulates workout and exercise edits from nested drilldowns.
+  /// Flushed to the provider on Save via PresetProvider.commitChanges.
+  final PendingChangeBag _pending = PendingChangeBag();
 
   late final _titleController = TextEditingController(
     text: widget.session?.title,
@@ -85,21 +92,88 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         return;
       }
 
-      final presetProvider = Provider.of<PresetProvider>(
-        context,
-        listen: false,
-      );
+      final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+
       if (_isNew) {
         await presetProvider.addPresetSession(session);
       } else {
-        await presetProvider.updatePresetSession(session);
+        final bag = PendingChangeBag()..setSession(session);
+        for (final wc in _pending.workoutsById.values) {
+          bag.addWorkout(wc.workout);
+        }
+        for (final ec in _pending.exercisesById.values) {
+          bag.addExercise(ec.exercise);
+        }
+        final result = await presetProvider.commitChanges(
+          bag,
+          excludeSessionId: session.id,
+        );
+        if (result.hasAny && mounted) {
+          final sections = <PropagationSection>[
+            for (final entry in result.affectedSessionsByWorkoutId.entries)
+              PropagationSection(
+                itemKind: 'workout',
+                itemId: entry.key,
+                itemTitle: bag.workoutsById[entry.key]!.workout.title,
+                consumerKind: 'sessions',
+                consumers: [
+                  for (final s in entry.value)
+                    PropagationConsumer(id: s.id, label: s.title),
+                ],
+              ),
+            for (final entry in result.affectedWorkoutsByExerciseId.entries)
+              PropagationSection(
+                itemKind: 'exercise',
+                itemId: entry.key,
+                itemTitle: bag.exercisesById[entry.key]!.exercise.title,
+                consumerKind: 'workouts',
+                consumers: [
+                  for (final w in entry.value)
+                    PropagationConsumer(id: w.id, label: w.title),
+                ],
+              ),
+          ];
+          final selection = await showPropagateChangesDialog(
+            context: context,
+            sections: sections,
+          );
+          if (selection == null) return; // user cancelled — stay on screen
+          if (!selection.isEmpty) {
+            await presetProvider.propagateBag(bag, selection: selection);
+          }
+        }
       }
       if (mounted) Navigator.pop(context);
     }
   }
 
+  Future<void> _saveWorkoutToCatalog(Workout workout) async {
+    final pp = Provider.of<PresetProvider>(context, listen: false);
+    final titles = pp.presetWorkouts.map((w) => w.title).toList();
+    String? finalTitle = workout.title;
+    if (titles.contains(workout.title)) {
+      finalTitle = await showRenameOnCollisionDialog(
+        context: context,
+        currentTitle: workout.title,
+        existingTitles: titles,
+      );
+      if (finalTitle == null) return;
+    }
+    await pp.liftToCatalog(
+      item: finalTitle == workout.title ? workout : workout.copyWith(title: finalTitle),
+      kind: TrashKind.workout,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Saved to catalog')),
+    );
+  }
+
+  // Slidable Copy means divergence. Fresh UUID so this card evolves
+  // independently of the original (e.g. a circuits use case where the same
+  // template appears twice with different reps/loads).
   _copyWorkout(Workout workout) {
-    final newWorkout = workout.copyWith();
+    final newWorkout = workout.deepCopy();
     setState(() {
       final index = _session.workouts.indexOf(workout);
       _session.workouts.insert(index + 1, newWorkout);
@@ -107,7 +181,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   }
 
   _deleteWorkout(Workout workout) {
-    // TODO: add in confirmation dialog or snackbar with undo function
     setState(() {
       final index = _session.workouts.indexOf(workout);
       _session.workouts.removeAt(index);
@@ -117,9 +190,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final session = _session;
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-    final existingSessionTitles =
-        presetProvider.presetSessions.map((s) => s.title).toList();
     final Set<String> existingWorkoutIds = {};
 
     if (session.workouts.isNotEmpty) {
@@ -171,12 +241,14 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           horizontal: 8,
                         ),
                       ),
-                      validator:
-                          (v) => FieldValidators.sessionTitle(
-                            v,
-                            existingTitles: existingSessionTitles,
-                            ownTitle: widget.session?.title,
-                          ),
+                      validator: (v) {
+                        final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+                        return FieldValidators.sessionTitle(
+                          v,
+                          existingTitles: presetProvider.presetSessions.map((s) => s.title).toList(),
+                          ownTitle: widget.session?.title,
+                        );
+                      },
                     ),
                   ),
                   SizedBox(width: 8),
@@ -218,11 +290,9 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                       validator: FieldValidators.sessionDescription,
                     ),
                   ),
-                  // if (widget.itemName == 'workout') ...[],
                 ],
               ),
               SizedBox(height: 8),
-              // Expanded(child: Center(child: Text('No workouts added yet!'))),
               session.workouts.isEmpty
                   ? Expanded(
                     child: Center(
@@ -240,6 +310,9 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                       itemCount: session.workouts.length,
                       itemBuilder: (BuildContext context, int index) {
                         final workout = session.workouts[index];
+                        final pp = Provider.of<PresetProvider>(context, listen: false);
+                        final notInCatalog = pp.presetWorkouts.every((w) => w.id != workout.id);
+                        final notInTrash = pp.trashedItems.every((e) => e.id != workout.id);
                         return _WorkoutCard(
                           workout: workout,
                           key: ValueKey(
@@ -247,8 +320,12 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                           ), // prefix index to workout.id to allow multiple instances of same workout in the reorderable list
                           onCopy: () => _copyWorkout(workout),
                           onDelete: () => _deleteWorkout(workout),
+                          onSaveToCatalog: (notInCatalog && notInTrash)
+                              ? () => _saveWorkoutToCatalog(workout)
+                              : null,
                           onTap: () async {
-                            final newWorkout = await Navigator.push<Workout>(
+                            final result = await Navigator.push<
+                                ({Workout workout, PendingChangeBag pending})>(
                               context,
                               MaterialPageRoute(
                                 builder:
@@ -256,11 +333,15 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                                         NewWorkoutScreen(workout: workout),
                               ),
                             );
-                            setState(() {
-                              if (newWorkout != null) {
-                                _session.workouts[index] = newWorkout;
-                              }
-                            });
+                            if (result != null) {
+                              setState(() {
+                                _session.workouts[index] = result.workout;
+                              });
+                              _pending.addWorkout(result.workout);
+                              // Merge the inner bag so nested exercise edits
+                              // also flow up to the session save.
+                              _pending.merge(result.pending);
+                            }
                           },
                         );
                       },
@@ -315,12 +396,17 @@ class _WorkoutCard extends StatelessWidget {
   final VoidCallback onCopy;
   final VoidCallback onDelete;
 
+  /// When non-null, a "Save to catalog" slidable action is shown. Null means
+  /// the action is hidden (the workout is already in the catalog or in trash).
+  final VoidCallback? onSaveToCatalog;
+
   const _WorkoutCard({
     super.key,
     required this.workout,
     required this.onTap,
     required this.onCopy,
     required this.onDelete,
+    this.onSaveToCatalog,
   });
 
   @override
@@ -332,6 +418,17 @@ class _WorkoutCard extends StatelessWidget {
         endActionPane: ActionPane(
           motion: ScrollMotion(),
           children: [
+            if (onSaveToCatalog != null) ...[
+              SizedBox(width: 8),
+              SlidableAction(
+                borderRadius: BorderRadius.circular(12),
+                onPressed: (_) => onSaveToCatalog!(),
+                backgroundColor: context.colorScheme.tertiary,
+                foregroundColor: context.colorScheme.onTertiary,
+                icon: Icons.save_alt_rounded,
+                label: 'Save to catalog',
+              ),
+            ],
             SizedBox(width: 8),
             SlidableAction(
               borderRadius: BorderRadius.circular(12),
@@ -352,134 +449,7 @@ class _WorkoutCard extends StatelessWidget {
             ),
           ],
         ),
-
-        child: Container(
-          margin: EdgeInsets.only(bottom: 8),
-          padding: EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: context.colorScheme.surfaceBright,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: context.colorScheme.onSurface.withValues(alpha: 0.08),
-            ),
-            boxShadow: context.shadowSmall,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      workout.title,
-                      style: context.titleMedium,
-                      maxLines: 2,
-                    ),
-                  ),
-                  LabelBadge(labelKey: workout.label),
-                ],
-              ),
-              if (workout.description != null &&
-                  workout.description!.isNotEmpty) ...[
-                SizedBox(height: 2),
-                Text(
-                  workout.description!,
-                  style: context.bodyMedium.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              if (workout.exercises.isNotEmpty) ...[
-                SizedBox(height: 10),
-                Divider(height: 1),
-                SizedBox(height: 8),
-                // Column headers
-                Row(
-                  children: [
-                    Expanded(child: SizedBox.shrink()),
-                    SizedBox(
-                      width: 40,
-                      child: Text(
-                        'Sets',
-                        style: context.bodyMedium.copyWith(
-                          color: context.colorScheme.onSurfaceVariant,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 40,
-                      child: Text(
-                        'Reps',
-                        style: context.bodyMedium.copyWith(
-                          color: context.colorScheme.onSurfaceVariant,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 60,
-                      child: Text(
-                        'Load',
-                        style: context.bodyMedium.copyWith(
-                          color: context.colorScheme.onSurfaceVariant,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 4),
-                // Exercise rows
-                for (final exercise in workout.exercises)
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 2),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            exercise.title,
-                            style: context.bodyMedium,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 40,
-                          child: Text(
-                            '${exercise.sets}',
-                            style: context.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 40,
-                          child: Text(
-                            '${exercise.reps}',
-                            style: context.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 60,
-                          child: Text(
-                            exercise.load > 0
-                                ? exercise.loadUnit != null
-                                    ? '${exercise.load} ${exercise.loadUnit}'
-                                    : '${exercise.load}'
-                                : '—',
-                            style: context.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ],
-          ),
-        ),
+        child: SessionWorkoutCard(workout: workout),
       ),
     );
   }

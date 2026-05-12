@@ -4,6 +4,7 @@ import 'package:flash_forward/services/supabase_config.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/models/trash_entry.dart';
 
 /// Handles syncing local data with Supabase cloud storage
 /// This allows migration from local-only to cloud-backed storage
@@ -41,6 +42,9 @@ class SupabaseSyncService {
         'description': session.description,
         'completed_at': session.completedAt?.toIso8601String(),
         'workouts': session.workouts.map((w) => w.toJson()).toList(),
+        'set_events': session.setEvents?.map((e) => e.toJson()).toList(),
+        'rest_events': session.restEvents?.map((e) => e.toJson()).toList(),
+        'summary': session.summary?.toJson(),
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
@@ -239,6 +243,75 @@ class SupabaseSyncService {
     }
   }
 
+  // ========== Trash Sync ==========
+
+  // Conflict note: if a device edits an item after another device trashed it,
+  // the edit re-uploads to _userWorkouts. The provider's load order resolves
+  // this on the next sync — trash wins over the user list when both are present.
+
+  /// Upload a trash entry to the cloud
+  /// If upload fails, queues the operation for retry
+  Future<void> uploadTrashEntry(TrashEntry entry, {bool isRetry = false}) async {
+    try {
+      await supabase.from('trash_entries').upsert({
+        'id': entry.id,
+        'user_id': userId,
+        'kind': entry.kind.name,
+        'payload': entry.toJson()['payload'],
+        'deleted_at': entry.deletedAt.toIso8601String(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: entry.id,
+          type: 'uploadTrashEntry',
+          data: entry.toJson(),
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetch all user's trash entries from the cloud
+  Future<List<TrashEntry>> fetchUserTrashEntries() async {
+    final response = await supabase
+        .from('trash_entries')
+        .select()
+        .eq('user_id', userId)
+        .order('deleted_at', ascending: false);
+
+    return (response as List).map((row) {
+      return TrashEntry.fromJson({
+        'kind': row['kind'],
+        'deletedAt': row['deleted_at']?.toString(),
+        'payload': row['payload'],
+      });
+    }).toList();
+  }
+
+  /// Delete a trash entry from the cloud
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteTrashEntry(String id, {bool isRetry = false}) async {
+    try {
+      await supabase
+          .from('trash_entries')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: id,
+          type: 'deleteTrashEntry',
+          data: {'trashEntryId': id},
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
   // ========== Exercise Presets Sync ==========
 
   /// Upload a custom exercise to user's exercise library
@@ -370,6 +443,14 @@ class SupabaseSyncService {
           case 'deleteExercise':
             await deleteExercise(
                 operation.data['exerciseId'] as String, isRetry: true);
+            break;
+          case 'uploadTrashEntry':
+            final entry = TrashEntry.fromJson(operation.data);
+            await uploadTrashEntry(entry, isRetry: true);
+            break;
+          case 'deleteTrashEntry':
+            await deleteTrashEntry(
+                operation.data['trashEntryId'] as String, isRetry: true);
             break;
           default:
             Sentry.captureMessage('Unknown sync operation type: ${operation.type}');
