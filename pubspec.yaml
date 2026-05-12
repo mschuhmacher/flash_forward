@@ -124,5 +124,5 @@ flutter_launcher_icons:
 sentry:
   upload_debug_symbols: true
   upload_source_maps: true
-  project: flutter
+  project: flash_forward
   org: studio-foam
