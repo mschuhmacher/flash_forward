@@ -13,6 +13,7 @@ import 'package:flash_forward/presentation/screens/catalog_flow/superset_modal.d
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
+import 'package:flash_forward/presentation/widgets/unsaved_changes_dialog.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -55,6 +56,21 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         timeBetweenExercises: 120,
       );
 
+  // Captured once so dirty-check has a stable baseline. Empty map for new workouts
+  // so any input immediately reads as dirty.
+  late final Map<String, dynamic> _initialSnapshot = widget.workout?.toJson() ?? {};
+
+  bool get _isDirty {
+    if (_titleController.text.trim() != (widget.workout?.title ?? '')) return true;
+    if (_itemLabelController.text != (widget.workout?.label ?? '')) return true;
+    if (_descriptionController.text.trim() != (widget.workout?.description ?? '')) return true;
+    final initialRest = widget.workout?.timeBetweenExercises ?? 120;
+    if ((int.tryParse(_restBetweenExercisesController.text.trim()) ?? initialRest) != initialRest) return true;
+    final initialExercises = _initialSnapshot['exercises'];
+    final currentExercises = _workout.toJson()['exercises'];
+    return initialExercises.toString() != currentExercises.toString();
+  }
+
   /// Accumulates exercise edits made via nested NewExerciseScreen drilldowns.
   /// Flushed to the provider on Save (standalone) or returned to the parent (nested).
   final PendingChangeBag _pending = PendingChangeBag();
@@ -96,6 +112,14 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('A superset is broken — please re-create it'),
+        ),
+      );
+      return;
+    }
+    if (_workout.exercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add at least one exercise before saving.'),
         ),
       );
       return;
@@ -552,7 +576,23 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       }
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (!_isDirty) {
+          Navigator.of(context).pop();
+          return;
+        }
+        final choice = await showUnsavedChangesDialog(context);
+        if (choice == null) return;
+        if (choice) {
+          await _save();
+        } else {
+          if (context.mounted) Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -884,8 +924,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
         child: Icon(Icons.add),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _ExerciseCard extends StatelessWidget {

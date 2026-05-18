@@ -124,7 +124,24 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
         // Use the provider's active session copy — never the preset directly
         final activeSession = sessionStateData.activeSession;
-        if (activeSession == null) return const Scaffold();
+        if (activeSession == null) {
+          return Scaffold(
+            body: Center(
+              child: Text('Session is empty', style: context.bodyLarge),
+            ),
+          );
+        }
+
+        if (activeSession.workouts.any((w) => w.exercises.isEmpty)) {
+         return Scaffold(
+            body: Center(
+              child: Text(
+                'This session has workouts without exercises. Add exercises to your workouts before starting a session.',
+                style: context.bodyLarge,
+              ),
+            ),
+          );
+        }
 
         final progress = sessionStateData.progress;
 
@@ -185,8 +202,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         TextStyle phaseTextStyle = context.h2.copyWith(
           color: context.colorScheme.onPrimary,
         );
-        final effectiveSets =
-            setsForExerciseInWorkout(activeWorkout, activeExercise);
+        final effectiveSets = setsForExerciseInWorkout(
+          activeWorkout,
+          activeExercise,
+        );
         switch (sessionStateData.phase) {
           case TimerPhase.setRest:
             phaseText = 'rest between sets';
@@ -194,8 +213,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
             phaseText = 'superset rest';
           case TimerPhase.rep:
             if (activeExercise.type == ExerciseType.manual) {
-              phaseText =
-                  'set ${progress.currentSet} of $effectiveSets';
+              phaseText = 'set ${progress.currentSet} of $effectiveSets';
             } else {
               phaseText = 'active';
             }
@@ -296,7 +314,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                           children: [
                             if (() {
                               final ss = supersetForExercise(
-                                  activeWorkout, activeExercise.id);
+                                activeWorkout,
+                                activeExercise.id,
+                              );
                               return ss != null;
                             }())
                               Padding(
@@ -306,8 +326,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                   height: 4,
                                   decoration: BoxDecoration(
                                     color: () {
-                                      final ss = supersetForExercise(
-                                          activeWorkout, activeExercise.id)!;
+                                      final ss =
+                                          supersetForExercise(
+                                            activeWorkout,
+                                            activeExercise.id,
+                                          )!;
                                       final idx = activeWorkout.supersets
                                           .indexWhere((s) => s.id == ss.id);
                                       return idx >= 0
@@ -448,22 +471,30 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                 TimerPhase.exerciseRest)
                               _RoundedBox(
                                 width: 50,
-                                borderColor: sessionStateData.phase == TimerPhase.overtime
-                                    ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                                    : context.colorScheme.onPrimary,
+                                borderColor:
+                                    sessionStateData.phase ==
+                                            TimerPhase.overtime
+                                        ? context.colorScheme.onSurface
+                                            .withValues(alpha: 0.38)
+                                        : context.colorScheme.onPrimary,
                                 child: IconButton(
-                                  onPressed: sessionStateData.phase == TimerPhase.overtime
-                                      ? null
-                                      : () {
-                                          sessionStateData.jumpToSet(
-                                            progress.currentSet - 1,
-                                          );
-                                        },
+                                  onPressed:
+                                      sessionStateData.phase ==
+                                              TimerPhase.overtime
+                                          ? null
+                                          : () {
+                                            sessionStateData.jumpToSet(
+                                              progress.currentSet - 1,
+                                            );
+                                          },
                                   icon: Icon(
                                     Icons.remove_rounded,
-                                    color: sessionStateData.phase == TimerPhase.overtime
-                                        ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                                        : context.colorScheme.onPrimary,
+                                    color:
+                                        sessionStateData.phase ==
+                                                TimerPhase.overtime
+                                            ? context.colorScheme.onSurface
+                                                .withValues(alpha: 0.38)
+                                            : context.colorScheme.onPrimary,
                                     size: 24,
                                   ),
                                 ),
@@ -488,22 +519,30 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                 TimerPhase.exerciseRest)
                               _RoundedBox(
                                 width: 50,
-                                borderColor: sessionStateData.phase == TimerPhase.overtime
-                                    ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                                    : context.colorScheme.onPrimary,
+                                borderColor:
+                                    sessionStateData.phase ==
+                                            TimerPhase.overtime
+                                        ? context.colorScheme.onSurface
+                                            .withValues(alpha: 0.38)
+                                        : context.colorScheme.onPrimary,
                                 child: IconButton(
-                                  onPressed: sessionStateData.phase == TimerPhase.overtime
-                                      ? null
-                                      : () {
-                                          sessionStateData.jumpToSet(
-                                            progress.currentSet + 1,
-                                          );
-                                        },
+                                  onPressed:
+                                      sessionStateData.phase ==
+                                              TimerPhase.overtime
+                                          ? null
+                                          : () {
+                                            sessionStateData.jumpToSet(
+                                              progress.currentSet + 1,
+                                            );
+                                          },
                                   icon: Icon(
                                     Icons.add_rounded,
-                                    color: sessionStateData.phase == TimerPhase.overtime
-                                        ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                                        : context.colorScheme.onPrimary,
+                                    color:
+                                        sessionStateData.phase ==
+                                                TimerPhase.overtime
+                                            ? context.colorScheme.onSurface
+                                                .withValues(alpha: 0.38)
+                                            : context.colorScheme.onPrimary,
                                     size: 24,
                                   ),
                                 ),
@@ -512,26 +551,33 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                             //EDIT
                             _RoundedBox(
                               width: 50,
-                              borderColor: sessionStateData.phase == TimerPhase.overtime
-                                  ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                                  : context.colorScheme.onPrimary,
+                              borderColor:
+                                  sessionStateData.phase == TimerPhase.overtime
+                                      ? context.colorScheme.onSurface
+                                          .withValues(alpha: 0.38)
+                                      : context.colorScheme.onPrimary,
                               child: IconButton(
-                                onPressed: sessionStateData.phase == TimerPhase.overtime
-                                    ? null
-                                    : () {
-                                        _showEditExerciseDialog(
-                                          context,
-                                          activeExercise,
-                                          sessionStateData,
-                                          progress.workoutIndex,
-                                          progress.exerciseIndex,
-                                        );
-                                      },
+                                onPressed:
+                                    sessionStateData.phase ==
+                                            TimerPhase.overtime
+                                        ? null
+                                        : () {
+                                          _showEditExerciseDialog(
+                                            context,
+                                            activeExercise,
+                                            sessionStateData,
+                                            progress.workoutIndex,
+                                            progress.exerciseIndex,
+                                          );
+                                        },
                                 icon: Icon(
                                   Icons.edit,
-                                  color: sessionStateData.phase == TimerPhase.overtime
-                                      ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                                      : context.colorScheme.onPrimary,
+                                  color:
+                                      sessionStateData.phase ==
+                                              TimerPhase.overtime
+                                          ? context.colorScheme.onSurface
+                                              .withValues(alpha: 0.38)
+                                          : context.colorScheme.onPrimary,
                                   size: 24,
                                 ),
                               ),
@@ -605,12 +651,14 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
     // path below routes back via updateActiveSupersetSets.
     final activeWorkout =
         sessionStateData.activeSession?.workouts[workoutIndex];
-    final ssMembership = activeWorkout != null
-        ? supersetForExercise(activeWorkout, activeExercise.id)
-        : null;
-    final initialSets = activeWorkout != null
-        ? setsForExerciseInWorkout(activeWorkout, activeExercise)
-        : activeExercise.sets;
+    final ssMembership =
+        activeWorkout != null
+            ? supersetForExercise(activeWorkout, activeExercise.id)
+            : null;
+    final initialSets =
+        activeWorkout != null
+            ? setsForExerciseInWorkout(activeWorkout, activeExercise)
+            : activeExercise.sets;
 
     // Local state — initialized once when sheet opens, applied to provider on save.
     int localSets = initialSets;
