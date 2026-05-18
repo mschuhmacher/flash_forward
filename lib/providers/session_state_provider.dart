@@ -106,6 +106,12 @@ class SessionStateProvider extends ChangeNotifier {
   bool _isForegrounded = true;
   // Current sound mode — synced from SettingsProvider at session start.
   SoundMode _soundMode = SoundMode.soundsOnly;
+  // How early go/stop beeps fire relative to the actual phase boundary, to
+  // compensate for audio latency and cognitive reaction time.
+  static const Duration _audioLeadTime = Duration(milliseconds: 300);
+  // How early the countdown beep fires. Larger than _audioLeadTime to ensure
+  // the 3-2-1 cadence ends before the go beep fires (gap = 3.2 s).
+  static const Duration _countdownLeadTime = Duration(milliseconds: 500);
   //
   Duration _overtimeElapsed = Duration.zero;
   bool _overtimeWasAutomatic = false;
@@ -900,14 +906,38 @@ class SessionStateProvider extends ChangeNotifier {
           (_soundMode == SoundMode.soundsOnly || _soundMode == SoundMode.both);
 
       if (playInApp) {
-        // Countdown: fire when remaining crosses from >3 s to ≤3 s during
-        // getReady or setRest. The sound file contains the full 3-2-1 cadence.
+        final countdownThreshold = const Duration(seconds: 3) + _countdownLeadTime;
+        // Countdown: fire when remaining crosses the threshold during getReady,
+        // setRest, or supersetRest. Shifted earlier by _countdownLeadTime so the
+        // "3" beep in the cadence lands at exactly 3 s remaining, with a 3.2 s
+        // gap before the go beep (gap = 3 s + _countdownLeadTime - _audioLeadTime).
         if ((prevProgress.phase == TimerPhase.getReady ||
-                prevProgress.phase == TimerPhase.setRest) &&
-            previousRemaining > const Duration(seconds: 3) &&
-            _remaining <= const Duration(seconds: 3) &&
+                prevProgress.phase == TimerPhase.setRest ||
+                prevProgress.phase == TimerPhase.supersetRest) &&
+            previousRemaining > countdownThreshold &&
+            _remaining <= countdownThreshold &&
             _remaining > Duration.zero) {
           _audioPlayer?.play(BeepType.countdown);
+        }
+
+        // Go beep: fires _audioLeadTime before the rep starts, i.e. while still
+        // in the preceding rest/getReady phase with ≤ _audioLeadTime remaining.
+        if ((prevProgress.phase == TimerPhase.getReady ||
+                prevProgress.phase == TimerPhase.setRest ||
+                prevProgress.phase == TimerPhase.repRest ||
+                prevProgress.phase == TimerPhase.supersetRest) &&
+            previousRemaining > _audioLeadTime &&
+            _remaining <= _audioLeadTime) {
+          _audioPlayer?.play(BeepType.go);
+        }
+
+        // Stop beep: fires _audioLeadTime before the rep ends, i.e. while still
+        // in the rep phase with ≤ _audioLeadTime remaining.
+        if (prevProgress.phase == TimerPhase.rep &&
+            _progress.phase == TimerPhase.rep &&
+            previousRemaining > _audioLeadTime &&
+            _remaining <= _audioLeadTime) {
+          _audioPlayer?.play(BeepType.stop);
         }
       }
 
@@ -916,18 +946,6 @@ class SessionStateProvider extends ChangeNotifier {
       // the OS notification API and causing beeps to miss their fire window.
       if (!identical(_progress, prevProgress)) {
         _rescheduleSound();
-        if (playInApp) {
-          // Go beep: entering a rep (from getReady, setRest, or repRest).
-          if (_progress.phase == TimerPhase.rep &&
-              prevProgress.phase != TimerPhase.rep) {
-            _audioPlayer?.play(BeepType.go);
-          }
-          // Stop beep: leaving a rep phase into any rest or completion.
-          else if (prevProgress.phase == TimerPhase.rep &&
-              _progress.phase != TimerPhase.rep) {
-            _audioPlayer?.play(BeepType.stop);
-          }
-        }
       }
       notifyListeners();
     });
@@ -1042,33 +1060,30 @@ class SessionStateProvider extends ChangeNotifier {
     final now = DateTime.now();
     switch (p.phase) {
       case TimerPhase.rep:
-        // Stop beep (microwave-style ding) when the rep duration ends.
-        if (phaseEndAt.isAfter(now)) {
-          beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.stop));
+        // Stop beep fires _audioLeadTime before the rep ends.
+        final stopAt = phaseEndAt.subtract(_audioLeadTime);
+        if (stopAt.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: stopAt, type: BeepType.stop));
         }
       case TimerPhase.getReady:
       case TimerPhase.setRest:
-        // Single countdown notification at 3 s before phase end — the sound
-        // file itself contains three beeps (3, 2, 1). Go beep at phase end.
+      case TimerPhase.supersetRest:
+        // Countdown at 3 s + _countdownLeadTime before phase end so the "3"
+        // beep aligns with 3 s remaining. Go beep _audioLeadTime before end.
         // repRest intentionally excluded — no countdown for inter-rep rests.
-        final t = phaseEndAt.subtract(const Duration(seconds: 3));
-        if (t.isAfter(now)) {
-          beeps.add(ScheduledBeep(at: t, type: BeepType.countdown));
+        final countdownAt = phaseEndAt.subtract(const Duration(seconds: 3) + _countdownLeadTime);
+        if (countdownAt.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: countdownAt, type: BeepType.countdown));
         }
-        if (phaseEndAt.isAfter(now)) {
-          beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
+        final goAt = phaseEndAt.subtract(_audioLeadTime);
+        if (goAt.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: goAt, type: BeepType.go));
         }
       case TimerPhase.repRest:
-        // No countdown for inter-rep rests, but go beep fires at the start of
-        // each rep.
-        if (phaseEndAt.isAfter(now)) {
-          beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
-        }
-      case TimerPhase.supersetRest:
-        // Short mandatory pause between superset members. No countdown — go
-        // beep at end so the user knows the next member's rep starts now.
-        if (phaseEndAt.isAfter(now)) {
-          beeps.add(ScheduledBeep(at: phaseEndAt, type: BeepType.go));
+        // No countdown for inter-rep rests; go beep _audioLeadTime before end.
+        final goAt = phaseEndAt.subtract(_audioLeadTime);
+        if (goAt.isAfter(now)) {
+          beeps.add(ScheduledBeep(at: goAt, type: BeepType.go));
         }
       default:
         break; // exerciseRest, workoutComplete, paused, overtime: no beeps

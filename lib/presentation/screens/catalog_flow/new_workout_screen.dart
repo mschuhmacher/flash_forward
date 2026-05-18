@@ -161,28 +161,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             excludeWorkoutId: workout.id,
           );
 
-          // if (result.hasAny && mounted) {
-          //   final sections = <PropagationSection>[
-          //     for (final entry in result.affectedSessionsByWorkoutId.entries)
-          //       PropagationSection(
-          //         itemKind: 'workout',
-          //         itemTitle: workout.title,
-          //         consumerLabels: entry.value.map((s) => s.title).toList(),
-          //       ),
-          //     for (final entry in result.affectedWorkoutsByExerciseId.entries)
-          //       PropagationSection(
-          //         itemKind: 'exercise',
-          //         itemTitle: bag.exercisesById[entry.key]!.exercise.title,
-          //         consumerLabels: entry.value.map((w) => w.title).toList(),
-          //       ),
-          //   ];
-          //   final yes = await showPropagateChangesDialog(
-          //     context: context,
-          //     sections: sections,
-          //   );
-          //   if (yes == true) await presetProvider.propagateBag(bag);
-          // }
-
           if (result.hasAny && mounted) {
             final sections = <PropagationSection>[
               for (final entry in result.affectedSessionsByWorkoutId.entries)
@@ -1123,7 +1101,7 @@ class _ExerciseCard extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 12.0),
+          padding: const EdgeInsets.only(left: 10.0),
           child: body,
         ),
       ],
