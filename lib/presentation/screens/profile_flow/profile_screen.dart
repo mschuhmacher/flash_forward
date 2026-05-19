@@ -27,8 +27,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // preferences in the SettingsDrawer (which lives outside this widget tree).
     final settings = context.watch<SettingsProvider>();
     return Consumer<AuthProvider>(
-      builder:
-          (context, authProvider, child) => SingleChildScrollView(
+      builder: (context, authProvider, child) {
+        final profile = authProvider.userProfile;
+        if (profile == null) return const SizedBox.shrink();
+        return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,7 +226,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 32),
               ],
             ),
-          ),
+          );
+      },
     );
   }
 }
