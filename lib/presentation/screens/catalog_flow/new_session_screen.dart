@@ -8,6 +8,7 @@ import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_scre
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
+import 'package:flash_forward/presentation/widgets/unsaved_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/workout_card.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
@@ -42,6 +43,20 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       widget.session?.deepCopy(keepId: true) ??
       Session(title: 'title', label: 'label', workouts: []);
 
+  // Captured once at build time so dirty-check has a stable baseline.
+  // New sessions have no widget.session, so the snapshot is empty — any
+  // input will immediately read as dirty.
+  late final Map<String, dynamic> _initialSnapshot = widget.session?.toJson() ?? {};
+
+  bool get _isDirty {
+    if (_titleController.text.trim() != (widget.session?.title ?? '')) return true;
+    if (_itemLabelController.text != (widget.session?.label ?? '')) return true;
+    if (_descriptionController.text.trim() != (widget.session?.description ?? '')) return true;
+    final initialWorkouts = _initialSnapshot['workouts'];
+    final currentWorkouts = _session.toJson()['workouts'];
+    return initialWorkouts.toString() != currentWorkouts.toString();
+  }
+
   /// Accumulates workout and exercise edits from nested drilldowns.
   /// Flushed to the provider on Save via PresetProvider.commitChanges.
   final PendingChangeBag _pending = PendingChangeBag();
@@ -65,6 +80,17 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   }
 
   Future<void> _save() async {
+    if (_session.workouts.isEmpty ||
+        _session.workouts.any((w) => w.exercises.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Every workout must have at least one exercise before saving.',
+          ),
+        ),
+      );
+      return;
+    }
     if (_formKey.currentState!.validate()) {
       final session = _session.copyWith(
         title: _titleController.text.trim(),
@@ -148,6 +174,14 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   }
 
   Future<void> _saveWorkoutToCatalog(Workout workout) async {
+    if (workout.exercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add at least one exercise before saving to catalog.'),
+        ),
+      );
+      return;
+    }
     final pp = Provider.of<PresetProvider>(context, listen: false);
     final titles = pp.presetWorkouts.map((w) => w.title).toList();
     String? finalTitle = workout.title;
@@ -198,7 +232,23 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       }
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (!_isDirty) {
+          Navigator.of(context).pop();
+          return;
+        }
+        final choice = await showUnsavedChangesDialog(context);
+        if (choice == null) return; // cancelled — stay
+        if (choice) {
+          await _save(); // save then pops internally
+        } else {
+          if (context.mounted) Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -386,6 +436,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         },
         child: Icon(Icons.add),
       ),
+    ),
     );
   }
 }

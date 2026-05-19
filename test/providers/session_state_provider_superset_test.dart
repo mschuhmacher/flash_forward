@@ -158,7 +158,7 @@ void main() {
       p.debugSetPhase(TimerPhase.rep);
       // Drive the state machine forward via a backgrounded gap that
       // exceeds the rep phase: rep → exerciseRest@first-member, set=2.
-      p.debugSetLastTickAt(DateTime.now().subtract(const Duration(seconds: 5)));
+      p.debugSetLastTickAt(DateTime.now().subtract(const Duration(seconds: 35)));
       p.reconcileAfterBackground();
       expect(p.progress.phase, TimerPhase.exerciseRest);
       expect(p.progress.exerciseIndex, 0); // pre-advanced back to A

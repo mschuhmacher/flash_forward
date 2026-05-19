@@ -1,0 +1,301 @@
+<style>
+  :root {
+    --ff-bg: #f0f1fe;
+    --ff-surface: #f9faff;
+    --ff-primary: #1c29ec;
+    --ff-secondary: #f0ba49;
+    --ff-text: #030822;
+    --ff-text-muted: #6b6f8a;
+    --ff-border: rgba(28,41,236,0.08);
+    --ff-radius-card: 16px;
+  }
+
+  .ff-screen {
+    background: var(--ff-bg);
+    border-radius: 20px;
+    width: 320px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(28,41,236,0.10);
+    font-family: 'Poppins', system-ui, sans-serif;
+    border: 1px solid rgba(28,41,236,0.08);
+  }
+
+  .ff-appbar {
+    background: transparent;
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ff-appbar .ff-back { color: var(--ff-text); font-size: 18px; }
+  .ff-appbar .ff-title { font-size: 15px; font-weight: 600; color: var(--ff-text); }
+  .ff-appbar .ff-save {
+    background: var(--ff-primary);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+  }
+
+  .ff-form { padding: 12px 14px 20px; display: flex; flex-direction: column; gap: 6px; }
+
+  .ff-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ff-text-muted);
+    padding: 0 4px;
+    margin-bottom: 2px;
+    font-family: inherit;
+  }
+
+  .ff-group {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid var(--ff-border);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    overflow: hidden;
+  }
+
+  .ff-group-row {
+    padding: 8px 14px 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+    flex-direction: column;
+  }
+  .ff-group-row + .ff-group-row {
+    border-top: 1px solid rgba(28,41,236,0.07);
+  }
+
+  .ff-group-row label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ff-primary);
+    text-transform: uppercase;
+    margin-bottom: 1px;
+    font-family: inherit;
+  }
+
+  .ff-row-inner {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .ff-mock-input {
+    font-size: 14px;
+    color: var(--ff-text);
+    font-family: inherit;
+    flex: 1;
+  }
+  .ff-mock-input.muted { color: var(--ff-text-muted); }
+
+  .ff-counter {
+    font-size: 10px;
+    color: var(--ff-text-muted);
+    font-family: inherit;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+
+  /* Title + Label side by side inside the group */
+  .ff-group-row-split {
+    display: flex;
+    border-top: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-group-row-split .ff-split-cell {
+    flex: 1;
+    padding: 8px 14px;
+    display: flex;
+    flex-direction: column;
+  }
+  .ff-group-row-split .ff-split-cell + .ff-split-cell {
+    border-left: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-group-row-split label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ff-primary);
+    text-transform: uppercase;
+    margin-bottom: 1px;
+    font-family: inherit;
+  }
+
+  /* Rest row */
+  .ff-group-row-rest {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-top: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-group-row-rest label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ff-primary);
+    text-transform: uppercase;
+    font-family: inherit;
+  }
+  .ff-rest-stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ff-stepper-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--ff-bg);
+    border: 1.5px solid rgba(28,41,236,0.18);
+    color: var(--ff-primary);
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+    font-weight: 600;
+  }
+  .ff-stepper-val {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ff-text);
+    min-width: 32px;
+    text-align: center;
+    font-family: inherit;
+  }
+
+  /* exercise cards (unchanged) */
+  .ff-exercise-card {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid var(--ff-border);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    padding: 12px 14px;
+  }
+  .ff-exercise-title { font-size: 14px; font-weight: 600; color: var(--ff-text); font-family: inherit; }
+  .ff-exercise-desc { font-size: 12px; color: var(--ff-text-muted); font-family: inherit; margin-top: 1px; }
+  .ff-exercise-divider { border: none; border-top: 1px solid rgba(28,41,236,0.08); margin: 8px 0; }
+  .ff-exercise-stats { display: flex; gap: 14px; flex-wrap: wrap; }
+  .ff-stat { font-size: 12px; font-family: inherit; }
+  .ff-stat .stat-label { color: var(--ff-text-muted); }
+  .ff-stat .stat-val { color: var(--ff-text); font-weight: 500; }
+  .ff-label-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(240,186,73,0.15);
+    color: #c98f00;
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+
+  .ff-screen-wrap {
+    display: flex;
+    justify-content: center;
+  }
+</style>
+
+<h2>Hybrid design — grouped card + blue small-caps labels</h2>
+<p class="subtitle">C layout, B labels, full "Description" text. Scroll down to see how it sits above the exercise list.</p>
+
+<div class="ff-screen-wrap">
+  <div class="ff-screen">
+    <div class="ff-appbar">
+      <span class="ff-back">‹</span>
+      <span class="ff-title">Edit workout</span>
+      <button class="ff-save">Save</button>
+    </div>
+    <div class="ff-form">
+      <div class="ff-group">
+        <!-- Title + Label split row -->
+        <div style="display:flex;">
+          <div class="ff-split-cell" style="flex:3; padding:8px 14px; display:flex; flex-direction:column;">
+            <label style="font-size:10px;font-weight:600;letter-spacing:0.06em;color:var(--ff-primary);text-transform:uppercase;font-family:inherit;margin-bottom:1px;">Title</label>
+            <div style="display:flex;align-items:center;">
+              <div class="ff-mock-input" style="flex:1">Climbing Warm-up</div>
+              <div class="ff-counter">16/30</div>
+            </div>
+          </div>
+          <div class="ff-split-cell" style="flex:2; padding:8px 14px; display:flex; flex-direction:column; border-left:1px solid rgba(28,41,236,0.07);">
+            <label style="font-size:10px;font-weight:600;letter-spacing:0.06em;color:var(--ff-primary);text-transform:uppercase;font-family:inherit;margin-bottom:1px;">Label</label>
+            <div class="ff-mock-input muted">Warm-up ▾</div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="ff-group-row" style="border-top:1px solid rgba(28,41,236,0.07);">
+          <label>Description</label>
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="ff-mock-input" style="flex:1;font-size:13px;">Finger and major muscle groups warm-up</div>
+            <div class="ff-counter">38/100</div>
+          </div>
+        </div>
+
+        <!-- Rest between exercises -->
+        <div class="ff-group-row-rest">
+          <label>Rest between exercises</label>
+          <div class="ff-rest-stepper">
+            <div class="ff-stepper-btn">−</div>
+            <span class="ff-stepper-val">15 s</span>
+            <div class="ff-stepper-btn">+</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exercise list (unchanged, just for context) -->
+      <div style="margin-top:4px;display:flex;flex-direction:column;gap:8px;">
+        <div class="ff-exercise-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <span class="ff-exercise-title">Repeaters</span>
+            <span class="ff-label-badge">🖐 Finger strength</span>
+          </div>
+          <div class="ff-exercise-desc">7s hang, 3s rest on 20mm edge</div>
+          <hr class="ff-exercise-divider">
+          <div class="ff-exercise-stats">
+            <div class="ff-stat"><span class="stat-label">Sets </span><span class="stat-val">4</span></div>
+            <div class="ff-stat"><span class="stat-label">Reps </span><span class="stat-val">3</span></div>
+            <div class="ff-stat"><span class="stat-label">Rest </span><span class="stat-val">180s</span></div>
+            <div class="ff-stat"><span class="stat-label">Active </span><span class="stat-val">21s</span></div>
+          </div>
+        </div>
+        <div class="ff-exercise-card" style="border-left:4px solid #4caf50;padding-left:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <span class="ff-exercise-title">Band-assisted pull-ups</span>
+            <span class="ff-label-badge" style="background:rgba(240,186,73,0.15);color:#c98f00;">↗ Strength</span>
+          </div>
+          <div class="ff-exercise-desc">Dead hang to chin over bar</div>
+          <hr class="ff-exercise-divider">
+          <div class="ff-exercise-stats">
+            <div class="ff-stat"><span class="stat-label">Sets </span><span class="stat-val">3</span></div>
+            <div class="ff-stat"><span class="stat-label">Reps </span><span class="stat-val">8</span></div>
+            <div class="ff-stat"><span class="stat-label">Rest </span><span class="stat-val">120s</span></div>
+            <div class="ff-stat"><span class="stat-label">Active </span><span class="stat-val">5s</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:28px">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Looks good — proceed with this</h3>
+      <p>I'm happy with the hybrid design as shown.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="tweak" onclick="toggleSelect(this)">
+    <div class="letter">~</div>
+    <div class="content">
+      <h3>Close, but I want to tweak something</h3>
+      <p>Tell me what to adjust in the terminal.</p>
+    </div>
+  </div>
+</div>

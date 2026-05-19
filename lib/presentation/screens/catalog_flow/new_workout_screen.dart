@@ -13,6 +13,7 @@ import 'package:flash_forward/presentation/screens/catalog_flow/superset_modal.d
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
+import 'package:flash_forward/presentation/widgets/unsaved_changes_dialog.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -54,6 +55,21 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         exercises: [],
         timeBetweenExercises: 120,
       );
+
+  // Captured once so dirty-check has a stable baseline. Empty map for new workouts
+  // so any input immediately reads as dirty.
+  late final Map<String, dynamic> _initialSnapshot = widget.workout?.toJson() ?? {};
+
+  bool get _isDirty {
+    if (_titleController.text.trim() != (widget.workout?.title ?? '')) return true;
+    if (_itemLabelController.text != (widget.workout?.label ?? '')) return true;
+    if (_descriptionController.text.trim() != (widget.workout?.description ?? '')) return true;
+    final initialRest = widget.workout?.timeBetweenExercises ?? 120;
+    if ((int.tryParse(_restBetweenExercisesController.text.trim()) ?? initialRest) != initialRest) return true;
+    final initialExercises = _initialSnapshot['exercises'];
+    final currentExercises = _workout.toJson()['exercises'];
+    return initialExercises.toString() != currentExercises.toString();
+  }
 
   /// Accumulates exercise edits made via nested NewExerciseScreen drilldowns.
   /// Flushed to the provider on Save (standalone) or returned to the parent (nested).
@@ -100,6 +116,14 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       );
       return;
     }
+    if (_workout.exercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add at least one exercise before saving.'),
+        ),
+      );
+      return;
+    }
     if (_formKey.currentState!.validate()) {
       final workout = _workout.copyWith(
         title: _titleController.text.trim(),
@@ -136,28 +160,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             bag,
             excludeWorkoutId: workout.id,
           );
-
-          // if (result.hasAny && mounted) {
-          //   final sections = <PropagationSection>[
-          //     for (final entry in result.affectedSessionsByWorkoutId.entries)
-          //       PropagationSection(
-          //         itemKind: 'workout',
-          //         itemTitle: workout.title,
-          //         consumerLabels: entry.value.map((s) => s.title).toList(),
-          //       ),
-          //     for (final entry in result.affectedWorkoutsByExerciseId.entries)
-          //       PropagationSection(
-          //         itemKind: 'exercise',
-          //         itemTitle: bag.exercisesById[entry.key]!.exercise.title,
-          //         consumerLabels: entry.value.map((w) => w.title).toList(),
-          //       ),
-          //   ];
-          //   final yes = await showPropagateChangesDialog(
-          //     context: context,
-          //     sections: sections,
-          //   );
-          //   if (yes == true) await presetProvider.propagateBag(bag);
-          // }
 
           if (result.hasAny && mounted) {
             final sections = <PropagationSection>[
@@ -552,7 +554,23 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       }
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (!_isDirty) {
+          Navigator.of(context).pop();
+          return;
+        }
+        final choice = await showUnsavedChangesDialog(context);
+        if (choice == null) return;
+        if (choice) {
+          await _save();
+        } else {
+          if (context.mounted) Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -884,8 +902,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
         child: Icon(Icons.add),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _ExerciseCard extends StatelessWidget {
@@ -1082,7 +1101,7 @@ class _ExerciseCard extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 12.0),
+          padding: const EdgeInsets.only(left: 10.0),
           child: body,
         ),
       ],

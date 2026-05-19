@@ -1,3 +1,4 @@
+import 'package:audio_session/audio_session.dart';
 import 'package:flash_forward/services/beep_scheduler.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -10,6 +11,29 @@ class AudioBeepPlayer {
   final _players = <BeepType, AudioPlayer>{};
 
   Future<void> init() async {
+    // Duck background audio (e.g. Spotify) while a beep plays rather than
+    // interrupting it. On iOS: AVAudioSessionCategoryPlayback + .duckOthers.
+    // On Android: AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK. Both platforms restore
+    // the other app's volume automatically when the beep finishes.
+    // Note: this only applies to foreground (in-app) playback. When the app is
+    // backgrounded, beeps are delivered as OS notification sounds via
+    // BeepScheduler, which bypasses AVAudioSession entirely — those will
+    // interrupt background audio. This is an OS-level constraint on both
+    // iOS and Android and is acceptable UX (user has locked their phone).
+    final audioSession = await AudioSession.instance;
+    await audioSession.configure(const AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playback,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.duckOthers,
+      avAudioSessionMode: AVAudioSessionMode.defaultMode,
+      androidAudioAttributes: AndroidAudioAttributes(
+        contentType: AndroidAudioContentType.sonification,
+        usage: AndroidAudioUsage.assistanceSonification,
+        flags: AndroidAudioFlags.none,
+      ),
+      androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
+      androidWillPauseWhenDucked: false,
+    ));
+
     for (final type in BeepType.values) {
       final player = AudioPlayer();
       final asset = switch (type) {

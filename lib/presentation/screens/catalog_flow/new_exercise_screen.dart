@@ -9,6 +9,7 @@ import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/presentation/widgets/unsaved_changes_dialog.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/utils/superset_utils.dart';
@@ -129,6 +130,36 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   bool get _isNew => widget.exercise == null;
 
+  // Captured once so dirty-check has a stable baseline. New exercises have no
+  // widget.exercise, so any input immediately reads as dirty.
+  bool get _isDirty {
+    final e = widget.exercise;
+    if (_titleController.text.trim() != (e?.title ?? '')) return true;
+    if (_descriptionController.text.trim() != (e?.description ?? '')) return true;
+    if (_label != (e?.label)) return true;
+    if (_equipmentController.text.trim() != (e?.equipment ?? '')) return true;
+    if (_muscleGroupsController.text.trim() != (e?.muscleGroups ?? '')) return true;
+    if (_difficulty != e?.difficulty) return true;
+    if (_loadUnit != e?.loadUnit) return true;
+    final initialLoad = e != null && e.load > 0 ? e.load.toString() : '';
+    if (_loadController.text.trim() != initialLoad) return true;
+    if (_notesController.text.trim() != (e?.notes ?? '')) return true;
+    if (_exerciseType != (e?.type ?? ExerciseType.timedReps)) return true;
+    final initialSets = widget.parentWorkout != null && e != null
+        ? setsForExerciseInWorkout(widget.parentWorkout!, e)
+        : e?.sets ?? 3;
+    if (_sets != initialSets) return true;
+    if (_reps != (e?.reps ?? 10)) return true;
+    if (_repsEnabled != (e?.reps != null)) return true;
+    if (_timeBetweenSets != (e?.timeBetweenSets ?? 60)) return true;
+    if (_timePerRep != (e?.timePerRep ?? 3)) return true;
+    if (_timeBetweenReps != (e?.timeBetweenReps ?? 0)) return true;
+    if (_activeTime != (e?.activeTime ?? 30)) return true;
+    if (_rpeEnabled != (e?.rpe != null)) return true;
+    if (_rpeEnabled && _rpe != (e?.rpe ?? 5)) return true;
+    return false;
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -241,9 +272,25 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (!_isDirty) {
+          Navigator.of(context).pop();
+          return;
+        }
+        final choice = await showUnsavedChangesDialog(context);
+        if (choice == null) return;
+        if (choice) {
+          await _save();
+        } else {
+          if (context.mounted) Navigator.of(context).pop();
+        }
+      },
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
         appBar: AppBar(
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -781,7 +828,8 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   String _rpeLabel(int rpe) {
