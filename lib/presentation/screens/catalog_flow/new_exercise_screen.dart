@@ -3,6 +3,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/presentation/widgets/group_form_card.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
@@ -11,6 +12,7 @@ import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/presentation/widgets/unsaved_changes_dialog.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/utils/superset_utils.dart';
 import 'package:flutter/material.dart';
@@ -316,25 +318,30 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
             children: [
               const KeyboardDismissButton(),
 
-              // ── Title + Label ──────────────────────────────────
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // ── Title / Label / Info grouped card ─────────────
+              GroupFormCard(
                 children: [
-                  Expanded(
-                    flex: 3,
+                  GroupFormRow(
+                    label: 'Title',
+                    trailing: GroupFormCounter(
+                      current: _titleController.text.length,
+                      max: FieldLimits.exerciseTitleMaxLength,
+                    ),
                     child: TextFormField(
                       controller: _titleController,
                       autofocus: _isNew,
                       maxLength: FieldLimits.exerciseTitleMaxLength,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        fillColor: context.colorScheme.surfaceBright,
-                        labelText: 'Title',
-                        labelStyle: context.bodyMedium,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 8,
-                        ),
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        counterText: '',
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                       validator: (value) {
                         final presetProvider = Provider.of<PresetProvider>(context, listen: false);
@@ -346,35 +353,41 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                       },
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
+                  GroupFormRow(
+                    label: 'Label',
                     child: MyLabelDropdownButton(
                       value: _label,
                       onChanged: (value) => setState(() => _label = value),
                       validator: FieldValidators.label,
+                      flat: true,
+                    ),
+                  ),
+                  GroupFormRow(
+                    label: 'Info',
+                    trailing: GroupFormCounter(
+                      current: _descriptionController.text.length,
+                      max: FieldLimits.exerciseDescriptionMaxLength,
+                    ),
+                    child: TextFormField(
+                      controller: _descriptionController,
+                      maxLength: FieldLimits.exerciseDescriptionMaxLength,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      maxLines: null,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        counterText: '',
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      validator: FieldValidators.exerciseDescription,
                     ),
                   ),
                 ],
-              ),
-              SizedBox(height: 8),
-
-              // ── Description ────────────────────────────────────
-              TextFormField(
-                controller: _descriptionController,
-                maxLength: FieldLimits.exerciseDescriptionMaxLength,
-                maxLines: null,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  fillColor: context.colorScheme.surfaceBright,
-                  labelText: 'Description',
-                  labelStyle: context.bodyMedium,
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 8,
-                  ),
-                ),
-                validator: FieldValidators.exerciseDescription,
               ),
               SizedBox(height: 20),
 
@@ -382,23 +395,20 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
               _SectionHeader(title: 'Training'),
               SizedBox(height: 8),
               _SectionCard(
+                header: _ExerciseTypeSelector(
+                  value: _exerciseType,
+                  onChanged:
+                      (type) => setState(() {
+                        _exerciseType = type;
+                        if (type == ExerciseType.timedReps) {
+                          _repsEnabled = true;
+                          _reps ??= 10;
+                        } else {
+                          _repsEnabled = widget.exercise?.reps != null;
+                        }
+                      }),
+                ),
                 children: [
-                  // ── Exercise type selector ──
-                  _ExerciseTypeSelector(
-                    value: _exerciseType,
-                    onChanged:
-                        (type) => setState(() {
-                          _exerciseType = type;
-                          // Reset reps enablement when switching types
-                          if (type == ExerciseType.timedReps) {
-                            _repsEnabled = true;
-                            _reps ??= 10;
-                          } else {
-                            _repsEnabled = widget.exercise?.reps != null;
-                          }
-                        }),
-                  ),
-                  _Divider(),
 
                   // ── Sets (all types) ──
                   _CounterRow(
@@ -685,6 +695,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                 title: 'Details',
                 trailing: Switch(
                   value: _detailsExpanded,
+                  activeThumbColor: context.colorScheme.secondary,
                   onChanged:
                       (value) => setState(() => _detailsExpanded = value),
                 ),
@@ -693,43 +704,55 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                 SizedBox(height: 8),
                 _SectionCard(
                   children: [
-                    TextFormField(
-                      controller: _equipmentController,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        fillColor: context.colorScheme.surfaceBright,
-                        labelText: 'Equipment',
-                        labelStyle: context.bodyMedium,
-                        hintText: 'e.g. Barbell, Dumbbells',
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 8,
+                    GroupFormStackRow(
+                      label: 'Equipment',
+                      accentColor: context.colorScheme.secondary,
+                      child: TextFormField(
+                        controller: _equipmentController,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          hintText: 'e.g. Barbell, Dumbbells',
+                          hintStyle: context.bodyMedium.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
                         ),
                       ),
                     ),
-                    SizedBox(height: 12),
-                    TextFormField(
-                      controller: _muscleGroupsController,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        fillColor: context.colorScheme.surfaceBright,
-                        labelText: 'Muscle Groups',
-                        labelStyle: context.bodyMedium,
-                        hintText: 'e.g. Chest, Triceps',
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 8,
+                    _Divider(),
+                    GroupFormStackRow(
+                      label: 'Muscle Groups',
+                      accentColor: context.colorScheme.secondary,
+                      child: TextFormField(
+                        controller: _muscleGroupsController,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          hintText: 'e.g. Chest, Triceps',
+                          hintStyle: context.bodyMedium.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
                         ),
                       ),
                     ),
-                    SizedBox(height: 16),
+                    _Divider(),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Difficulty',
-                          style: context.bodyMedium.copyWith(
-                            color: context.colorScheme.onSurfaceVariant,
+                          'DIFFICULTY',
+                          style: context.label.copyWith(
+                            color: context.colorScheme.secondary,
                           ),
                         ),
                         SizedBox(height: 8),
@@ -740,6 +763,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                                 return ChoiceChip(
                                   label: Text(d),
                                   selected: _difficulty == d,
+                                  selectedColor: context.colorScheme.secondary,
                                   onSelected:
                                       (selected) => setState(
                                         () => _difficulty = selected ? d : null,
@@ -769,6 +793,7 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                         ),
                         Switch(
                           value: _rpeEnabled,
+                          activeThumbColor: context.colorScheme.secondary,
                           onChanged:
                               (value) => setState(() => _rpeEnabled = value),
                         ),
@@ -852,27 +877,42 @@ class _ExerciseTypeSelector extends StatelessWidget {
 
   const _ExerciseTypeSelector({required this.value, required this.onChanged});
 
+  static const _types = [
+    (ExerciseType.timedReps, 'Timed reps'),
+    (ExerciseType.fixedDuration, 'Fixed'),
+    (ExerciseType.manual, 'Manual'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<ExerciseType>(
-      segments: [
-        ButtonSegment(
-          value: ExerciseType.timedReps,
-          label: Text('Timed reps', style: context.bodyMedium,),
-        ),
-        ButtonSegment(
-          value: ExerciseType.fixedDuration,
-          label: Text('Fixed duration', style: context.bodyMedium,),
-        ),
-        ButtonSegment(value: ExerciseType.manual, label: Text('Manual', style: context.bodyMedium,)),
-      ],
-      selected: {value},
-      onSelectionChanged: (selection) => onChanged(selection.first),
-      showSelectedIcon: false,
-      style: ButtonStyle(
-        visualDensity: VisualDensity(horizontal: 0, vertical: -2),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
+    final secondary = context.colorScheme.secondary;
+    return Row(
+      children: _types.map((entry) {
+        final (type, label) = entry;
+        final selected = value == type;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => onChanged(type),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              color: selected
+                  ? secondary
+                  : Colors.transparent,
+              child: Center(
+                child: Text(
+                  label,
+                  style: context.titleMedium.copyWith(
+                    color: selected
+                        ? context.colorScheme.onSurface
+                        : context.colorScheme.onSurfaceVariant,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -913,7 +953,11 @@ class _OptionalRepsRow extends StatelessWidget {
                 ),
               ],
             ),
-            Switch(value: enabled, onChanged: onToggle),
+            Switch(
+              value: enabled,
+              activeThumbColor: context.colorScheme.secondary,
+              onChanged: onToggle,
+            ),
           ],
         ),
         if (enabled) ...[
@@ -945,28 +989,47 @@ class _SectionHeader extends StatelessWidget {
           trailing != null
               ? Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [Text(title, style: context.titleMedium), trailing!],
+                children: [Text(title, style: context.titleLarge), trailing!],
               )
-              : Text(title, style: context.titleMedium),
+              : Text(title, style: context.titleLarge),
     );
   }
 }
 
 class _SectionCard extends StatelessWidget {
   final List<Widget> children;
-  const _SectionCard({required this.children});
+  final Widget? header;
+  const _SectionCard({required this.children, this.header});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.colorScheme.surfaceBright,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: context.colorScheme.primary.withValues(alpha: 0.08),
+        ),
+        boxShadow: context.shadowSmall,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(25),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (header != null) ...[
+              header!,
+              Divider(height: 1),
+            ],
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

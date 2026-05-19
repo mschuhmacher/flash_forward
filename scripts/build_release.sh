@@ -37,7 +37,7 @@ build_android() {
     --split-debug-info="$SYMBOLS_DIR"
 
   echo "==> Uploading debug symbols to Sentry..."
-  flutter packages pub run sentry_dart_plugin
+  dart run sentry_dart_plugin 2>&1 | grep '^☑' || true
 
   echo ""
   echo "Android done. AAB is at build/app/outputs/bundle/release/app-release.aab"
@@ -52,7 +52,7 @@ build_ios() {
     --release
 
   echo "==> Uploading Dart debug symbols to Sentry..."
-  flutter packages pub run sentry_dart_plugin
+  dart run sentry_dart_plugin 2>&1 | grep '^☑' || true
 
   echo ""
   echo "iOS Dart symbols uploaded."

@@ -11,6 +11,7 @@ class MyLabelDropdownButton extends StatelessWidget {
   final Map<String, Label> labels;
   final String hintText;
   final String labelText;
+  final bool flat;
 
   const MyLabelDropdownButton({
     super.key,
@@ -20,6 +21,7 @@ class MyLabelDropdownButton extends StatelessWidget {
     this.labels = kDefaultLabels,
     this.hintText = 'Label',
     this.labelText = 'Label',
+    this.flat = false,
   });
 
   @override
@@ -32,7 +34,7 @@ class MyLabelDropdownButton extends StatelessWidget {
           initialSelection: value,
           expandedInsets: EdgeInsets.zero,
           hintText: hintText,
-          label: Text(labelText),
+          label: flat ? null : Text(labelText),
           textStyle: context.bodyMedium,
           errorText: state.errorText,
           menuStyle: MenuStyle(
@@ -42,14 +44,28 @@ class MyLabelDropdownButton extends StatelessWidget {
             shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
             ),
-            padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 4, horizontal: 8)
-)
+            padding: WidgetStatePropertyAll(
+              EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            ),
           ),
-          inputDecorationTheme: InputDecorationTheme(
-            fillColor: context.colorScheme.surfaceBright,
-            filled: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          ),
+          inputDecorationTheme:
+              flat
+                  ? const InputDecorationTheme(
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  )
+                  : InputDecorationTheme(
+                    fillColor: context.colorScheme.surfaceBright,
+                    filled: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 8,
+                    ),
+                  ),
           onSelected: (val) {
             state.didChange(val);
             onChanged(val);

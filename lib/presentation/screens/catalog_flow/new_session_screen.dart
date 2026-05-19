@@ -5,6 +5,7 @@ import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
+import 'package:flash_forward/presentation/widgets/group_form_card.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
@@ -17,6 +18,7 @@ import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -274,22 +276,27 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
           child: Column(
             children: [
               SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              GroupFormCard(
                 children: [
-                  Expanded(
-                    flex: 3,
+                  GroupFormRow(
+                    label: 'Title',
+                    trailing: GroupFormCounter(
+                      current: _titleController.text.length,
+                      max: FieldLimits.sessionTitleMaxLength,
+                    ),
                     child: TextFormField(
                       controller: _titleController,
                       maxLength: FieldLimits.sessionTitleMaxLength,
-                      decoration: InputDecoration(
-                        fillColor: context.colorScheme.surfaceBright,
-                        labelText: 'Title',
-                        labelStyle: context.bodyMedium,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 8,
-                        ),
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        counterText: '',
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                       validator: (v) {
                         final presetProvider = Provider.of<PresetProvider>(context, listen: false);
@@ -301,9 +308,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                       },
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
+                  GroupFormRow(
+                    label: 'Label',
                     child: MyLabelDropdownButton(
                       value:
                           _itemLabelController.text.isNotEmpty
@@ -315,27 +321,29 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                         });
                       },
                       validator: FieldValidators.label,
+                      flat: true,
                     ),
                   ),
-                ],
-              ),
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
+                  GroupFormRow(
+                    label: 'Info',
+                    trailing: GroupFormCounter(
+                      current: _descriptionController.text.length,
+                      max: FieldLimits.sessionDescriptionMaxLength,
+                    ),
                     child: TextFormField(
                       controller: _descriptionController,
-                      // autofocus: true,
                       maxLength: FieldLimits.sessionDescriptionMaxLength,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       maxLines: null,
-                      decoration: InputDecoration(
-                        fillColor: context.colorScheme.surfaceBright,
-                        labelText: 'Description',
-                        labelStyle: context.bodyMedium,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 8,
-                        ),
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        counterText: '',
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                       validator: FieldValidators.sessionDescription,
                     ),
