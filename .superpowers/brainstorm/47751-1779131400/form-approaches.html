@@ -1,0 +1,404 @@
+<style>
+  /* Flash Forward design tokens */
+  :root {
+    --ff-bg: #f0f1fe;
+    --ff-surface: #f9faff;
+    --ff-primary: #1c29ec;
+    --ff-secondary: #f0ba49;
+    --ff-text: #030822;
+    --ff-text-muted: #6b6f8a;
+    --ff-border: #c5c8e8;
+    --ff-error: #B3261E;
+    --ff-radius-pill: 25px;
+    --ff-radius-card: 16px;
+  }
+
+  .ff-screen {
+    background: var(--ff-bg);
+    border-radius: 20px;
+    padding: 0;
+    width: 300px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(28,41,236,0.10);
+    font-family: 'Poppins', system-ui, sans-serif;
+    border: 1px solid rgba(28,41,236,0.08);
+  }
+
+  .ff-appbar {
+    background: transparent;
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ff-appbar .ff-back { color: var(--ff-text); font-size: 18px; }
+  .ff-appbar .ff-title { font-size: 15px; font-weight: 600; color: var(--ff-text); }
+  .ff-appbar .ff-save {
+    background: var(--ff-primary);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+  }
+
+  .ff-form { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Approach A: current style, refined ── */
+  .ff-field-pill {
+    position: relative;
+    background: var(--ff-surface);
+    border: 1.5px solid var(--ff-secondary);
+    border-radius: var(--ff-radius-pill);
+    padding: 14px 14px 8px;
+  }
+  .ff-field-pill label {
+    position: absolute;
+    top: -9px;
+    left: 14px;
+    background: var(--ff-surface);
+    padding: 0 4px;
+    font-size: 11px;
+    color: var(--ff-text-muted);
+    font-family: inherit;
+  }
+  .ff-field-pill input, .ff-field-pill .ff-mock-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--ff-text);
+    font-family: inherit;
+    outline: none;
+  }
+  .ff-field-pill .ff-counter {
+    text-align: right;
+    font-size: 10px;
+    color: var(--ff-text-muted);
+    margin-top: 2px;
+  }
+  .ff-row { display: flex; gap: 8px; }
+  .ff-row .ff-field-pill { flex: 1; }
+
+  /* ── Approach B: card-style fields ── */
+  .ff-field-card {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid rgba(28,41,236,0.10);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    padding: 10px 14px;
+  }
+  .ff-field-card label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ff-primary);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+    font-family: inherit;
+  }
+  .ff-field-card .ff-mock-input {
+    font-size: 14px;
+    color: var(--ff-text);
+    font-family: inherit;
+  }
+  .ff-field-card .ff-counter {
+    text-align: right;
+    font-size: 10px;
+    color: var(--ff-text-muted);
+    margin-top: 4px;
+  }
+  .ff-rest-row-card {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid rgba(28,41,236,0.10);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ff-rest-row-card label {
+    font-size: 13px;
+    color: var(--ff-text);
+    font-family: inherit;
+  }
+  .ff-rest-badge {
+    background: var(--ff-secondary);
+    color: var(--ff-text);
+    border-radius: 12px;
+    padding: 4px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+  }
+
+  /* ── Approach C: sectioned / grouped ── */
+  .ff-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ff-text-muted);
+    padding: 0 2px;
+    font-family: inherit;
+  }
+  .ff-group {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid rgba(28,41,236,0.10);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    overflow: hidden;
+  }
+  .ff-group-row {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ff-group-row + .ff-group-row {
+    border-top: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-group-row label {
+    font-size: 12px;
+    color: var(--ff-text-muted);
+    width: 56px;
+    flex-shrink: 0;
+    font-family: inherit;
+  }
+  .ff-group-row .ff-mock-input {
+    font-size: 14px;
+    color: var(--ff-text);
+    font-family: inherit;
+    flex: 1;
+  }
+  .ff-group-row .ff-counter {
+    font-size: 10px;
+    color: var(--ff-text-muted);
+    font-family: inherit;
+  }
+  .ff-group-row-rest {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-top: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-group-row-rest label {
+    font-size: 12px;
+    color: var(--ff-text-muted);
+    font-family: inherit;
+  }
+  .ff-rest-stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ff-stepper-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--ff-bg);
+    border: 1.5px solid var(--ff-border);
+    color: var(--ff-text);
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .ff-stepper-val {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ff-text);
+    min-width: 32px;
+    text-align: center;
+    font-family: inherit;
+  }
+
+  /* comparison layout */
+  .approaches {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .approach-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .approach-col h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+  }
+  .approach-col p {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 220px;
+    line-height: 1.5;
+  }
+  .badge-rec {
+    background: #1c29ec;
+    color: white;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+</style>
+
+<h2>Form field redesign — 3 approaches</h2>
+<p class="subtitle">All use your existing tokens: Poppins, pill borders (r=25), golden secondary, blue primary</p>
+
+<div class="approaches">
+
+  <!-- ── A: Refined pills (current direction, fixed pain points) ── -->
+  <div class="approach-col">
+    <div class="ff-screen">
+      <div class="ff-appbar">
+        <span class="ff-back">‹</span>
+        <span class="ff-title">Edit workout</span>
+        <button class="ff-save">Save</button>
+      </div>
+      <div class="ff-form">
+        <div class="ff-row">
+          <div class="ff-field-pill" style="flex:3">
+            <label>Title</label>
+            <div class="ff-mock-input">Climbing Warm-up</div>
+            <div class="ff-counter">16 / 30</div>
+          </div>
+          <div class="ff-field-pill" style="flex:2; border-color: var(--ff-secondary);">
+            <label>Label</label>
+            <div class="ff-mock-input" style="color:var(--ff-text-muted)">Warm-up ▾</div>
+          </div>
+        </div>
+        <div class="ff-field-pill">
+          <label>Description</label>
+          <div class="ff-mock-input">Finger and major muscle groups warm-up</div>
+          <div class="ff-counter">38 / 100</div>
+        </div>
+        <div class="ff-field-pill" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;">
+          <label style="position:static;background:none;padding:0;font-size:13px;color:var(--ff-text)">Rest between exercises</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="ff-stepper-btn">−</div>
+            <span class="ff-stepper-val">15s</span>
+            <div class="ff-stepper-btn">+</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h3>A — Refined pills</h3>
+    <p>Current shape kept. Counter moves inside field. Rest becomes a stepper inside a pill — no more naked text + bare box mismatch.</p>
+  </div>
+
+  <!-- ── B: Card fields ── -->
+  <div class="approach-col">
+    <div class="ff-screen">
+      <div class="ff-appbar">
+        <span class="ff-back">‹</span>
+        <span class="ff-title">Edit workout</span>
+        <button class="ff-save">Save</button>
+      </div>
+      <div class="ff-form">
+        <div class="ff-row">
+          <div style="flex:3">
+            <div class="ff-field-card">
+              <label>Title</label>
+              <div class="ff-mock-input">Climbing Warm-up</div>
+              <div class="ff-counter">16 / 30</div>
+            </div>
+          </div>
+          <div style="flex:2">
+            <div class="ff-field-card">
+              <label>Label</label>
+              <div class="ff-mock-input" style="color:var(--ff-text-muted)">Warm-up ▾</div>
+            </div>
+          </div>
+        </div>
+        <div class="ff-field-card">
+          <label>Description</label>
+          <div class="ff-mock-input">Finger and major muscle groups warm-up</div>
+          <div class="ff-counter">38 / 100</div>
+        </div>
+        <div class="ff-rest-row-card">
+          <label>Rest between exercises</label>
+          <div class="ff-rest-badge">15 s</div>
+        </div>
+      </div>
+    </div>
+    <h3>B — Card fields</h3>
+    <p>Soft-shadow cards instead of borders. Labels are small-caps in primary blue. Rest gets a golden badge — cohesive with exercise cards below.</p>
+  </div>
+
+  <!-- ── C: Grouped / sectioned ── -->
+  <div class="approach-col">
+    <div class="ff-screen">
+      <div class="ff-appbar">
+        <span class="ff-back">‹</span>
+        <span class="ff-title">Edit workout</span>
+        <button class="ff-save">Save</button>
+      </div>
+      <div class="ff-form">
+        <div class="ff-section-label">Basic info</div>
+        <div class="ff-group">
+          <div class="ff-group-row">
+            <label>Title</label>
+            <div class="ff-mock-input">Climbing Warm-up</div>
+            <div class="ff-counter">16/30</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Label</label>
+            <div class="ff-mock-input" style="color:var(--ff-text-muted)">Warm-up ▾</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Desc</label>
+            <div class="ff-mock-input" style="font-size:12px">Finger and major muscle groups warm-up</div>
+            <div class="ff-counter">38/100</div>
+          </div>
+          <div class="ff-group-row-rest">
+            <label>Rest between sets</label>
+            <div class="ff-rest-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <span class="ff-stepper-val">15s</span>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h3>C — Grouped card</h3>
+    <p>All fields in one grouped card with dividers (iOS Settings style). Most compact. Loses the "individual pill per field" feel of the current design.</p>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top:28px">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Refined pills — keep the shape, fix the details</h3>
+      <p>Counter inside, rest as stepper pill. Least disruptive.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Card fields — softer, more unified</h3>
+      <p>Shadow cards, blue small-caps labels, golden rest badge. More cohesive with exercise cards below.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Grouped card — compact, structured</h3>
+      <p>One container, dividers, iOS-style. Cleanest but changes the feel most.</p>
+    </div>
+  </div>
+</div>

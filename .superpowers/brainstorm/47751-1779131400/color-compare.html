@@ -1,0 +1,473 @@
+<style>
+  :root {
+    --ff-bg: #f0f1fe;
+    --ff-surface: #f9faff;
+    --ff-primary: #1c29ec;
+    --ff-secondary: #f0ba49;
+    --ff-text: #030822;
+    --ff-text-muted: #6b6f8a;
+    --ff-border: rgba(28,41,236,0.08);
+    --ff-radius-card: 16px;
+  }
+
+  /* ── Shared screen shell ── */
+  .ff-screen {
+    background: var(--ff-bg);
+    border-radius: 20px;
+    width: 230px;
+    flex-shrink: 0;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(28,41,236,0.10);
+    font-family: 'Poppins', system-ui, sans-serif;
+    border: 1px solid rgba(28,41,236,0.08);
+  }
+  .ff-appbar {
+    padding: 12px 14px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--ff-bg);
+  }
+  .ff-back { color: var(--ff-text); font-size: 16px; }
+  .ff-title { font-size: 13px; font-weight: 600; color: var(--ff-text); }
+  .ff-save-btn {
+    border: none; border-radius: 20px; padding: 5px 13px;
+    font-size: 11px; font-weight: 600; font-family: inherit; color: white;
+  }
+  .ff-save-btn.blue { background: var(--ff-primary); }
+  .ff-save-btn.yellow { background: var(--ff-secondary); color: var(--ff-text); }
+
+  .ff-body { padding: 8px 10px 18px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Grouped card (C / Info style) ── */
+  .ff-group {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid var(--ff-border);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    overflow: hidden;
+  }
+  .ff-group-row {
+    padding: 6px 11px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .ff-group-row + .ff-group-row { border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-group-row label { font-size: 10px; color: var(--ff-text-muted); width: 34px; flex-shrink: 0; font-family: inherit; }
+  .ff-group-row .ff-val { font-size: 12px; color: var(--ff-text); font-family: inherit; flex: 1; }
+  .ff-group-row .ff-val.muted { color: var(--ff-text-muted); }
+  .ff-group-row .ff-cnt { font-size: 9px; color: var(--ff-text-muted); flex-shrink: 0; }
+
+  /* Rest row inside workout group */
+  .ff-rest-row {
+    padding: 7px 11px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-rest-row label { font-size: 10px; color: var(--ff-text-muted); font-family: inherit; }
+  .ff-stepper { display: flex; align-items: center; background: var(--ff-bg); border-radius: 10px; overflow: hidden; }
+  .ff-stepper-btn { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--ff-text); }
+  .ff-stepper-val { width: 28px; text-align: center; font-size: 12px; font-weight: 600; color: var(--ff-text); font-family: inherit; }
+
+  /* ── Exercise cards (workout screen) ── */
+  .ff-ex-card {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid var(--ff-border);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    padding: 9px 11px;
+  }
+  .ff-ex-card.ss { border-left: 4px solid var(--ss-color); padding-left: 7px; }
+  .ff-ex-title { font-size: 12px; font-weight: 600; color: var(--ff-text); font-family: inherit; }
+  .ff-ex-desc { font-size: 10px; color: var(--ff-text-muted); font-family: inherit; margin-top: 1px; }
+  .ff-ex-hr { border: none; border-top: 1px solid rgba(28,41,236,0.08); margin: 5px 0; }
+  .ff-ex-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ff-stat { font-size: 10px; font-family: inherit; }
+  .ff-stat .sl { color: var(--ff-text-muted); }
+  .ff-stat .sv { color: var(--ff-text); font-weight: 500; }
+  .ff-badge {
+    display: inline-flex; align-items: center;
+    border-radius: 20px; padding: 1px 6px;
+    font-size: 9px; font-family: inherit;
+  }
+  .ff-badge.blue-badge { background: rgba(100,180,255,0.15); color: #1a6fbf; }
+  .ff-badge.yellow-badge { background: rgba(240,186,73,0.20); color: #a06a00; }
+
+  /* ── Section header ── */
+  .ff-section { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; margin-bottom: 5px; }
+  .ff-section-title { font-size: 12px; font-weight: 600; color: var(--ff-text); font-family: inherit; }
+  .ff-toggle { width: 30px; height: 17px; border-radius: 9px; position: relative; flex-shrink: 0; display: inline-block; }
+  .ff-toggle::after { content: ''; position: absolute; right: 2px; top: 1.5px; width: 14px; height: 14px; border-radius: 50%; background: white; }
+  .ff-toggle.blue { background: var(--ff-primary); }
+  .ff-toggle.yellow { background: var(--ff-secondary); }
+
+  /* ── Section card (Training / Details / Notes) ── */
+  .ff-card { background: var(--ff-surface); border-radius: var(--ff-radius-card); border: 1px solid var(--ff-border); box-shadow: 0 1px 4px rgba(28,41,236,0.06); overflow: hidden; }
+
+  /* Type selector */
+  .ff-type-sel { display: flex; border-bottom: 1px solid rgba(28,41,236,0.07); }
+  .ff-type-btn { flex: 1; padding: 6px 2px; text-align: center; font-size: 9px; font-family: inherit; color: var(--ff-text-muted); border: none; background: transparent; }
+  .ff-type-btn:not(:last-child) { border-right: 1px solid rgba(28,41,236,0.07); }
+  .ff-type-btn.active.blue { color: var(--ff-primary); font-weight: 600; background: rgba(28,41,236,0.05); }
+  .ff-type-btn.active.yellow { color: #a06a00; font-weight: 600; background: rgba(240,186,73,0.10); }
+
+  /* Counter rows */
+  .ff-ctr-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; }
+  .ff-ctr-row + .ff-ctr-row { border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-ctr-label { font-size: 11px; font-weight: 500; color: var(--ff-text); font-family: inherit; }
+  .ff-ctr-stepper { display: flex; align-items: center; background: var(--ff-bg); border-radius: 10px; overflow: hidden; }
+  .ff-ctr-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; color: var(--ff-text); }
+  .ff-ctr-val { width: 28px; text-align: center; font-size: 12px; font-weight: 600; color: var(--ff-text); font-family: inherit; }
+
+  /* Load row */
+  .ff-load-row { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-load-ph { flex: 1; font-size: 11px; color: var(--ff-text-muted); font-family: inherit; font-style: italic; }
+  .ff-chip { border: 1.5px solid rgba(28,41,236,0.18); border-radius: 7px; padding: 2px 8px; font-size: 10px; font-weight: 600; color: var(--ff-text); font-family: inherit; }
+  .ff-chip.active.blue { background: var(--ff-primary); color: white; border-color: var(--ff-primary); }
+  .ff-chip.active.yellow { background: var(--ff-secondary); color: var(--ff-text); border-color: var(--ff-secondary); }
+
+  /* Details inline fields */
+  .ff-inline-field { padding: 7px 12px; }
+  .ff-inline-field + .ff-inline-field { border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-inline-field label { font-size: 9px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-family: inherit; display: block; margin-bottom: 1px; }
+  .ff-inline-field label.blue { color: var(--ff-primary); }
+  .ff-inline-field label.yellow { color: #a06a00; }
+  .ff-inline-field .ff-val { font-size: 11px; color: var(--ff-text); font-family: inherit; }
+
+  /* Difficulty chips */
+  .ff-diff-row { padding: 7px 12px; border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-diff-lbl { font-size: 9px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-family: inherit; margin-bottom: 5px; }
+  .ff-diff-lbl.blue { color: var(--ff-primary); }
+  .ff-diff-lbl.yellow { color: #a06a00; }
+  .ff-diff-chips { display: flex; gap: 5px; }
+  .ff-diff-chip { border: 1.5px solid rgba(28,41,236,0.18); border-radius: 20px; padding: 2px 8px; font-size: 10px; color: var(--ff-text-muted); font-family: inherit; }
+  .ff-diff-chip.sel.blue { border-color: var(--ff-primary); color: var(--ff-primary); font-weight: 600; background: rgba(28,41,236,0.06); }
+  .ff-diff-chip.sel.yellow { border-color: var(--ff-secondary); color: #a06a00; font-weight: 600; background: rgba(240,186,73,0.12); }
+
+  /* RPE */
+  .ff-rpe-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-rpe-label { font-size: 11px; font-weight: 500; color: var(--ff-text); font-family: inherit; }
+  .ff-rpe-sub { font-size: 9px; color: var(--ff-text-muted); font-family: inherit; }
+  .ff-rpe-val-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px 8px; border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-rpe-desc { font-size: 10px; color: var(--ff-text-muted); font-family: inherit; }
+
+  /* Notes card */
+  .ff-notes-card { background: var(--ff-surface); border-radius: var(--ff-radius-card); border: 1px solid var(--ff-border); box-shadow: 0 1px 4px rgba(28,41,236,0.06); padding: 9px 12px; font-size: 11px; color: var(--ff-text-muted); font-family: inherit; font-style: italic; min-height: 44px; }
+
+  /* ── Layout ── */
+  .compare-row { display: flex; gap: 16px; justify-content: center; align-items: flex-start; flex-wrap: nowrap; }
+  .compare-col { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .compare-col h3 { font-size: 11px; font-weight: 600; text-align: center; margin: 0; }
+  .compare-col p { font-size: 10px; color: #6b6f8a; text-align: center; max-width: 170px; margin: 0; }
+  .col-group-label { font-size: 11px; font-weight: 700; color: var(--ff-text-muted); text-transform: uppercase; letter-spacing: 0.07em; text-align: center; padding: 0 4px; border-bottom: 2px solid rgba(28,41,236,0.10); padding-bottom: 4px; width: 100%; }
+  .badge { border-radius: 8px; padding: 2px 10px; font-size: 10px; font-weight: 600; }
+  .badge-blue { background: var(--ff-primary); color: white; }
+  .badge-yellow { background: var(--ff-secondary); color: var(--ff-text); }
+</style>
+
+<h2>Color accent comparison</h2>
+<p class="subtitle">Blue vs yellow: workout screen (left pair) · exercise edit screen (right pair)</p>
+
+<div class="compare-row">
+
+  <!-- ════ WORKOUT — BLUE ════ -->
+  <div class="compare-col">
+    <span class="badge badge-blue">Blue</span>
+    <div class="ff-screen">
+      <div class="ff-appbar">
+        <span class="ff-back">‹</span>
+        <span class="ff-title">Edit workout</span>
+        <button class="ff-save-btn blue">Save</button>
+      </div>
+      <div class="ff-body">
+        <div class="ff-group">
+          <div class="ff-group-row">
+            <label>Title</label>
+            <div class="ff-val">Climbing Warm-up</div>
+            <div class="ff-cnt">16/30</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Label</label>
+            <div class="ff-val muted">Warm-up ▾</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Info</label>
+            <div class="ff-val" style="font-size:11px">Finger and major muscle groups</div>
+            <div class="ff-cnt">38/100</div>
+          </div>
+          <div class="ff-rest-row">
+            <label>Rest between exercises</label>
+            <div class="ff-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <div class="ff-stepper-val">15s</div>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="ff-ex-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <span class="ff-ex-title">Repeaters</span>
+              <span class="ff-badge blue-badge">🖐 Finger</span>
+            </div>
+            <div class="ff-ex-desc">7s hang, 3s rest on 20mm edge</div>
+            <hr class="ff-ex-hr">
+            <div class="ff-ex-stats">
+              <div class="ff-stat"><span class="sl">Sets </span><span class="sv">4</span></div>
+              <div class="ff-stat"><span class="sl">Reps </span><span class="sv">3</span></div>
+              <div class="ff-stat"><span class="sl">Rest </span><span class="sv">180s</span></div>
+            </div>
+          </div>
+          <div class="ff-ex-card ss" style="--ss-color:#4caf50">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <span class="ff-ex-title">Pull-ups</span>
+              <span class="ff-badge yellow-badge">↗ Strength</span>
+            </div>
+            <div class="ff-ex-desc">Dead hang to chin over bar</div>
+            <hr class="ff-ex-hr">
+            <div class="ff-ex-stats">
+              <div class="ff-stat"><span class="sl">Sets </span><span class="sv">3</span></div>
+              <div class="ff-stat"><span class="sl">Reps </span><span class="sv">8</span></div>
+              <div class="ff-stat"><span class="sl">Rest </span><span class="sv">120s</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h3>Workout — Blue</h3>
+  </div>
+
+  <!-- ════ WORKOUT — YELLOW ════ -->
+  <div class="compare-col">
+    <span class="badge badge-yellow">Yellow</span>
+    <div class="ff-screen">
+      <div class="ff-appbar">
+        <span class="ff-back">‹</span>
+        <span class="ff-title">Edit workout</span>
+        <button class="ff-save-btn yellow">Save</button>
+      </div>
+      <div class="ff-body">
+        <div class="ff-group">
+          <div class="ff-group-row">
+            <label>Title</label>
+            <div class="ff-val">Climbing Warm-up</div>
+            <div class="ff-cnt">16/30</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Label</label>
+            <div class="ff-val muted">Warm-up ▾</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Info</label>
+            <div class="ff-val" style="font-size:11px">Finger and major muscle groups</div>
+            <div class="ff-cnt">38/100</div>
+          </div>
+          <div class="ff-rest-row">
+            <label>Rest between exercises</label>
+            <div class="ff-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <div class="ff-stepper-val">15s</div>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="ff-ex-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <span class="ff-ex-title">Repeaters</span>
+              <span class="ff-badge blue-badge">🖐 Finger</span>
+            </div>
+            <div class="ff-ex-desc">7s hang, 3s rest on 20mm edge</div>
+            <hr class="ff-ex-hr">
+            <div class="ff-ex-stats">
+              <div class="ff-stat"><span class="sl">Sets </span><span class="sv">4</span></div>
+              <div class="ff-stat"><span class="sl">Reps </span><span class="sv">3</span></div>
+              <div class="ff-stat"><span class="sl">Rest </span><span class="sv">180s</span></div>
+            </div>
+          </div>
+          <div class="ff-ex-card ss" style="--ss-color:#4caf50">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <span class="ff-ex-title">Pull-ups</span>
+              <span class="ff-badge yellow-badge">↗ Strength</span>
+            </div>
+            <div class="ff-ex-desc">Dead hang to chin over bar</div>
+            <hr class="ff-ex-hr">
+            <div class="ff-ex-stats">
+              <div class="ff-stat"><span class="sl">Sets </span><span class="sv">3</span></div>
+              <div class="ff-stat"><span class="sl">Reps </span><span class="sv">8</span></div>
+              <div class="ff-stat"><span class="sl">Rest </span><span class="sv">120s</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h3>Workout — Yellow</h3>
+  </div>
+
+  <!-- ════ EXERCISE — BLUE ════ -->
+  <div class="compare-col">
+    <span class="badge badge-blue">Blue</span>
+    <div class="ff-screen">
+      <div class="ff-appbar">
+        <span class="ff-back">‹</span>
+        <span class="ff-title">Edit Exercise</span>
+        <button class="ff-save-btn blue">Save</button>
+      </div>
+      <div class="ff-body">
+        <div class="ff-group">
+          <div class="ff-group-row">
+            <label>Title</label>
+            <div class="ff-val">Arm Circles</div>
+            <div class="ff-cnt">11/25</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Label</label>
+            <div class="ff-val muted">Warm-up ▾</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Info</label>
+            <div class="ff-val" style="font-size:11px">Large circles with straight arms</div>
+            <div class="ff-cnt">32/100</div>
+          </div>
+        </div>
+        <div>
+          <div class="ff-section"><span class="ff-section-title">Training</span></div>
+          <div class="ff-card">
+            <div class="ff-type-sel">
+              <div class="ff-type-btn active blue">Timed reps</div>
+              <div class="ff-type-btn">Fixed</div>
+              <div class="ff-type-btn">Manual</div>
+            </div>
+            <div class="ff-ctr-row"><span class="ff-ctr-label">Sets</span><div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">2</div><div class="ff-ctr-btn">+</div></div></div>
+            <div class="ff-ctr-row"><span class="ff-ctr-label">Reps</span><div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">20</div><div class="ff-ctr-btn">+</div></div></div>
+            <div class="ff-ctr-row"><span class="ff-ctr-label">Rest between sets</span><div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">0</div><div class="ff-ctr-btn">+</div></div></div>
+            <div class="ff-ctr-row"><span class="ff-ctr-label">Time per rep</span><div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">1</div><div class="ff-ctr-btn">+</div></div></div>
+            <div class="ff-load-row">
+              <div class="ff-load-ph">Load…</div>
+              <div class="ff-chip active blue">kg</div>
+              <div class="ff-chip">lbs</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="ff-section"><span class="ff-section-title">Details</span><span class="ff-toggle blue"></span></div>
+          <div class="ff-card">
+            <div class="ff-inline-field"><label class="blue">Equipment</label><div class="ff-val">None</div></div>
+            <div class="ff-inline-field"><label class="blue">Muscle groups</label><div class="ff-val">Shoulders</div></div>
+            <div class="ff-diff-row">
+              <div class="ff-diff-lbl blue">Difficulty</div>
+              <div class="ff-diff-chips">
+                <div class="ff-diff-chip">Easy</div>
+                <div class="ff-diff-chip sel blue">Medium</div>
+                <div class="ff-diff-chip">Hard</div>
+              </div>
+            </div>
+            <div class="ff-rpe-row">
+              <div><div class="ff-rpe-label">RPE</div><div class="ff-rpe-sub">Rate of Perceived Exertion</div></div>
+              <span class="ff-toggle blue"></span>
+            </div>
+            <div class="ff-rpe-val-row">
+              <span class="ff-rpe-desc">Very light</span>
+              <div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">1</div><div class="ff-ctr-btn">+</div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="ff-section"><span class="ff-section-title">Notes</span></div>
+          <div class="ff-notes-card">Any additional notes…</div>
+        </div>
+      </div>
+    </div>
+    <h3>Exercise — Blue</h3>
+  </div>
+
+  <!-- ════ EXERCISE — YELLOW ════ -->
+  <div class="compare-col">
+    <span class="badge badge-yellow">Yellow</span>
+    <div class="ff-screen">
+      <div class="ff-appbar">
+        <span class="ff-back">‹</span>
+        <span class="ff-title">Edit Exercise</span>
+        <button class="ff-save-btn yellow">Save</button>
+      </div>
+      <div class="ff-body">
+        <div class="ff-group">
+          <div class="ff-group-row">
+            <label>Title</label>
+            <div class="ff-val">Arm Circles</div>
+            <div class="ff-cnt">11/25</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Label</label>
+            <div class="ff-val muted">Warm-up ▾</div>
+          </div>
+          <div class="ff-group-row">
+            <label>Info</label>
+            <div class="ff-val" style="font-size:11px">Large circles with straight arms</div>
+            <div class="ff-cnt">32/100</div>
+          </div>
+        </div>
+        <div>
+          <div class="ff-section"><span class="ff-section-title">Training</span></div>
+          <div class="ff-card">
+            <div class="ff-type-sel">
+              <div class="ff-type-btn active yellow">Timed reps</div>
+              <div class="ff-type-btn">Fixed</div>
+              <div class="ff-type-btn">Manual</div>
+            </div>
+            <div class="ff-ctr-row"><span class="ff-ctr-label">Sets</span><div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">2</div><div class="ff-ctr-btn">+</div></div></div>
+            <div class="ff-ctr-row"><span class="ff-ctr-label">Reps</span><div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">20</div><div class="ff-ctr-btn">+</div></div></div>
+            <div class="ff-ctr-row"><span class="ff-ctr-label">Rest between sets</span><div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">0</div><div class="ff-ctr-btn">+</div></div></div>
+            <div class="ff-ctr-row"><span class="ff-ctr-label">Time per rep</span><div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">1</div><div class="ff-ctr-btn">+</div></div></div>
+            <div class="ff-load-row">
+              <div class="ff-load-ph">Load…</div>
+              <div class="ff-chip active yellow">kg</div>
+              <div class="ff-chip">lbs</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="ff-section"><span class="ff-section-title">Details</span><span class="ff-toggle yellow"></span></div>
+          <div class="ff-card">
+            <div class="ff-inline-field"><label class="yellow">Equipment</label><div class="ff-val">None</div></div>
+            <div class="ff-inline-field"><label class="yellow">Muscle groups</label><div class="ff-val">Shoulders</div></div>
+            <div class="ff-diff-row">
+              <div class="ff-diff-lbl yellow">Difficulty</div>
+              <div class="ff-diff-chips">
+                <div class="ff-diff-chip">Easy</div>
+                <div class="ff-diff-chip sel yellow">Medium</div>
+                <div class="ff-diff-chip">Hard</div>
+              </div>
+            </div>
+            <div class="ff-rpe-row">
+              <div><div class="ff-rpe-label">RPE</div><div class="ff-rpe-sub">Rate of Perceived Exertion</div></div>
+              <span class="ff-toggle yellow"></span>
+            </div>
+            <div class="ff-rpe-val-row">
+              <span class="ff-rpe-desc">Very light</span>
+              <div class="ff-ctr-stepper"><div class="ff-ctr-btn">−</div><div class="ff-ctr-val">1</div><div class="ff-ctr-btn">+</div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="ff-section"><span class="ff-section-title">Notes</span></div>
+          <div class="ff-notes-card">Any additional notes…</div>
+        </div>
+      </div>
+    </div>
+    <h3>Exercise — Yellow</h3>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top:28px">
+  <div class="option" data-choice="blue" onclick="toggleSelect(this)">
+    <div class="letter" style="background:var(--ff-primary);color:white;">B</div>
+    <div class="content"><h3>Blue — implement this</h3></div>
+  </div>
+  <div class="option" data-choice="yellow" onclick="toggleSelect(this)">
+    <div class="letter" style="background:#f0ba49;color:#030822;">Y</div>
+    <div class="content"><h3>Yellow — implement this</h3></div>
+  </div>
+  <div class="option" data-choice="tweak" onclick="toggleSelect(this)">
+    <div class="letter">~</div>
+    <div class="content"><h3>Still want to tweak something</h3></div>
+  </div>
+</div>

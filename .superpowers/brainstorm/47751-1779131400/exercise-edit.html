@@ -1,0 +1,360 @@
+<style>
+  :root {
+    --ff-bg: #f0f1fe;
+    --ff-surface: #f9faff;
+    --ff-primary: #1c29ec;
+    --ff-secondary: #f0ba49;
+    --ff-text: #030822;
+    --ff-text-muted: #6b6f8a;
+    --ff-border: rgba(28,41,236,0.08);
+    --ff-radius-card: 16px;
+  }
+
+  .ff-screen {
+    background: var(--ff-bg);
+    border-radius: 20px;
+    width: 320px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(28,41,236,0.10);
+    font-family: 'Poppins', system-ui, sans-serif;
+    border: 1px solid rgba(28,41,236,0.08);
+  }
+
+  .ff-appbar {
+    background: transparent;
+    padding: 14px 16px 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+    background: var(--ff-bg);
+  }
+  .ff-appbar .ff-back { color: var(--ff-text); font-size: 18px; }
+  .ff-appbar .ff-title { font-size: 15px; font-weight: 600; color: var(--ff-text); }
+  .ff-appbar .ff-save {
+    background: var(--ff-primary); color: white; border: none;
+    border-radius: 20px; padding: 6px 16px;
+    font-size: 13px; font-weight: 500; font-family: inherit;
+  }
+
+  .ff-body { padding: 10px 12px 24px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: 680px; }
+
+  /* ── Grouped card (C / "Info" style) ── */
+  .ff-group {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid var(--ff-border);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    overflow: hidden;
+  }
+  .ff-group-row {
+    padding: 7px 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ff-group-row + .ff-group-row { border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-group-row label {
+    font-size: 11px; color: var(--ff-text-muted);
+    width: 38px; flex-shrink: 0; font-family: inherit;
+  }
+  .ff-group-row .ff-val { font-size: 13px; color: var(--ff-text); font-family: inherit; flex: 1; }
+  .ff-group-row .ff-val.muted { color: var(--ff-text-muted); }
+  .ff-group-row .ff-counter { font-size: 10px; color: var(--ff-text-muted); flex-shrink: 0; }
+
+  /* ── Section header ── */
+  .ff-section {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2px; margin-bottom: 6px;
+  }
+  .ff-section-title {
+    font-size: 13px; font-weight: 600; color: var(--ff-text); font-family: inherit;
+  }
+  /* mock toggle — on */
+  .ff-toggle-on {
+    width: 36px; height: 20px; border-radius: 10px;
+    background: var(--ff-primary); position: relative; flex-shrink: 0; display: inline-block;
+  }
+  .ff-toggle-on::after {
+    content: ''; position: absolute; right: 2px; top: 2px;
+    width: 16px; height: 16px; border-radius: 50%; background: white;
+  }
+  /* mock toggle — off */
+  .ff-toggle-off {
+    width: 36px; height: 20px; border-radius: 10px;
+    background: #ccc; position: relative; flex-shrink: 0; display: inline-block;
+  }
+  .ff-toggle-off::after {
+    content: ''; position: absolute; left: 2px; top: 2px;
+    width: 16px; height: 16px; border-radius: 50%; background: white;
+  }
+
+  /* ── Section card (Training / Details / Notes) ── */
+  .ff-card {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid var(--ff-border);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    overflow: hidden;
+  }
+
+  /* Type selector tabs */
+  .ff-type-selector {
+    display: flex; border-bottom: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-type-btn {
+    flex: 1; padding: 8px 4px; text-align: center;
+    font-size: 11px; font-family: inherit; color: var(--ff-text-muted);
+    border: none; background: transparent;
+  }
+  .ff-type-btn.active {
+    color: var(--ff-primary); font-weight: 600;
+    background: rgba(28,41,236,0.05);
+  }
+  .ff-type-btn:not(:last-child) { border-right: 1px solid rgba(28,41,236,0.07); }
+
+  /* Counter rows */
+  .ff-counter-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+  }
+  .ff-counter-row + .ff-counter-row { border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-counter-label { font-size: 13px; font-weight: 500; color: var(--ff-text); font-family: inherit; }
+  .ff-stepper {
+    display: flex; align-items: center;
+    background: var(--ff-bg); border-radius: 12px; overflow: hidden;
+  }
+  .ff-stepper-btn {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 500; color: var(--ff-text); font-family: inherit;
+  }
+  .ff-stepper-val {
+    width: 34px; text-align: center;
+    font-size: 14px; font-weight: 600; color: var(--ff-text); font-family: inherit;
+  }
+
+  /* Load row */
+  .ff-load-row {
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+    border-top: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-load-input {
+    flex: 1; font-size: 13px; color: var(--ff-text-muted); font-family: inherit; font-style: italic;
+  }
+  .ff-chip {
+    border: 1.5px solid rgba(28,41,236,0.20); border-radius: 8px;
+    padding: 3px 10px; font-size: 12px; font-weight: 600;
+    color: var(--ff-text); font-family: inherit; background: transparent;
+  }
+  .ff-chip.active { background: var(--ff-primary); color: white; border-color: var(--ff-primary); }
+
+  /* ── Details card rows ── */
+  .ff-inline-field {
+    padding: 9px 14px;
+  }
+  .ff-inline-field + .ff-inline-field { border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-inline-field label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+    color: var(--ff-primary); text-transform: uppercase;
+    font-family: inherit; display: block; margin-bottom: 2px;
+  }
+  .ff-inline-field .ff-val { font-size: 13px; color: var(--ff-text-muted); font-family: inherit; font-style: italic; }
+
+  .ff-divider { border: none; border-top: 1px solid rgba(28,41,236,0.07); margin: 0; }
+
+  .ff-diff-row { padding: 10px 14px; border-top: 1px solid rgba(28,41,236,0.07); }
+  .ff-diff-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+    color: var(--ff-primary); text-transform: uppercase;
+    font-family: inherit; margin-bottom: 6px;
+  }
+  .ff-diff-chips { display: flex; gap: 6px; }
+  .ff-diff-chip {
+    border: 1.5px solid rgba(28,41,236,0.18); border-radius: 20px;
+    padding: 3px 12px; font-size: 11px; color: var(--ff-text-muted); font-family: inherit;
+  }
+  .ff-diff-chip.active { border-color: var(--ff-primary); color: var(--ff-primary); font-weight: 600; background: rgba(28,41,236,0.06); }
+
+  /* RPE rows */
+  .ff-rpe-toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-top: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-rpe-label { font-size: 13px; font-weight: 500; color: var(--ff-text); font-family: inherit; }
+  .ff-rpe-sub { font-size: 10px; color: var(--ff-text-muted); font-family: inherit; }
+  .ff-rpe-val-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px 10px; border-top: 1px solid rgba(28,41,236,0.07);
+  }
+  .ff-rpe-desc { font-size: 12px; color: var(--ff-text-muted); font-family: inherit; }
+
+  /* Notes */
+  .ff-notes-card {
+    background: var(--ff-surface);
+    border-radius: var(--ff-radius-card);
+    border: 1px solid var(--ff-border);
+    box-shadow: 0 1px 4px rgba(28,41,236,0.06);
+    padding: 12px 14px;
+    font-size: 12px; color: var(--ff-text-muted); font-family: inherit; font-style: italic;
+    min-height: 60px;
+  }
+
+  .ff-screen-wrap { display: flex; justify-content: center; }
+</style>
+
+<h2>Exercise edit — C style (full scroll)</h2>
+<p class="subtitle">Grouped header card · Training/Details/Notes section cards · "Info" label</p>
+
+<div class="ff-screen-wrap">
+  <div class="ff-screen">
+    <div class="ff-appbar">
+      <span class="ff-back">‹</span>
+      <span class="ff-title">Edit Exercise</span>
+      <button class="ff-save">Save</button>
+    </div>
+
+    <div class="ff-body">
+
+      <!-- ── Title / Label / Info ── -->
+      <div class="ff-group">
+        <div class="ff-group-row">
+          <label>Title</label>
+          <div class="ff-val">Arm Circles</div>
+          <div class="ff-counter">11/25</div>
+        </div>
+        <div class="ff-group-row">
+          <label>Label</label>
+          <div class="ff-val muted">Warm-up ▾</div>
+        </div>
+        <div class="ff-group-row">
+          <label>Info</label>
+          <div class="ff-val" style="font-size:12px">Large circles with straight arms</div>
+          <div class="ff-counter">32/100</div>
+        </div>
+      </div>
+
+      <!-- ── Training ── -->
+      <div>
+        <div class="ff-section">
+          <span class="ff-section-title">Training</span>
+        </div>
+        <div class="ff-card">
+          <div class="ff-type-selector">
+            <div class="ff-type-btn active">Timed reps</div>
+            <div class="ff-type-btn">Fixed duration</div>
+            <div class="ff-type-btn">Manual</div>
+          </div>
+          <div class="ff-counter-row">
+            <span class="ff-counter-label">Sets</span>
+            <div class="ff-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <div class="ff-stepper-val">2</div>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+          <div class="ff-counter-row">
+            <span class="ff-counter-label">Reps</span>
+            <div class="ff-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <div class="ff-stepper-val">20</div>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+          <div class="ff-counter-row">
+            <span class="ff-counter-label">Rest between sets</span>
+            <div class="ff-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <div class="ff-stepper-val">0</div>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+          <div class="ff-counter-row">
+            <span class="ff-counter-label">Time per rep</span>
+            <div class="ff-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <div class="ff-stepper-val">1</div>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+          <div class="ff-counter-row">
+            <span class="ff-counter-label">Rest between reps</span>
+            <div class="ff-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <div class="ff-stepper-val">0</div>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+          <div class="ff-load-row">
+            <div class="ff-load-input">Load…</div>
+            <div class="ff-chip active">kg</div>
+            <div class="ff-chip">lbs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Details ── -->
+      <div>
+        <div class="ff-section">
+          <span class="ff-section-title">Details</span>
+          <span class="ff-toggle-on"></span>
+        </div>
+        <div class="ff-card">
+          <div class="ff-inline-field">
+            <label>Equipment</label>
+            <div class="ff-val">None</div>
+          </div>
+          <div class="ff-inline-field">
+            <label>Muscle groups</label>
+            <div class="ff-val">Shoulders</div>
+          </div>
+          <div class="ff-diff-row">
+            <div class="ff-diff-label">Difficulty</div>
+            <div class="ff-diff-chips">
+              <div class="ff-diff-chip">Easy</div>
+              <div class="ff-diff-chip active">Medium</div>
+              <div class="ff-diff-chip">Hard</div>
+            </div>
+          </div>
+          <hr class="ff-divider">
+          <div class="ff-rpe-toggle-row">
+            <div>
+              <div class="ff-rpe-label">RPE</div>
+              <div class="ff-rpe-sub">Rate of Perceived Exertion</div>
+            </div>
+            <span class="ff-toggle-on"></span>
+          </div>
+          <div class="ff-rpe-val-row">
+            <span class="ff-rpe-desc">Very light</span>
+            <div class="ff-stepper">
+              <div class="ff-stepper-btn">−</div>
+              <div class="ff-stepper-val">1</div>
+              <div class="ff-stepper-btn">+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Notes ── -->
+      <div>
+        <div class="ff-section">
+          <span class="ff-section-title">Notes</span>
+        </div>
+        <div class="ff-notes-card">Any additional notes…</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:28px">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Looks good — implement both screens</h3>
+    </div>
+  </div>
+  <div class="option" data-choice="tweak" onclick="toggleSelect(this)">
+    <div class="letter">~</div>
+    <div class="content">
+      <h3>Still want to tweak something</h3>
+      <p>Tell me in the terminal.</p>
+    </div>
+  </div>
+</div>
