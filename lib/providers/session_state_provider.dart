@@ -1639,6 +1639,13 @@ class SessionStateProvider extends ChangeNotifier {
         return const Duration(seconds: 10);
     }
   }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    timerDisplayNotifier.dispose();
+    super.dispose();
+  }
 }
 
 class _OpenSetDraft {
