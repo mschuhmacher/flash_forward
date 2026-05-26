@@ -115,6 +115,16 @@ class SessionStateProvider extends ChangeNotifier {
   // AudioBeepPlayer bridges this gap with delayed session deactivation so
   // background audio doesn't pop to full volume in between.
   static const Duration _countdownLeadTime = Duration(milliseconds: 400);
+
+  // ─── Timer display notifier ──────────────────────────────────────
+  // Publishes the value the timer widget should currently display.
+  // Updated on every tick (10 Hz) and on any state change that affects
+  // _remaining or _overtimeElapsed. Listeners of this notifier rebuild
+  // independently of the provider's notifyListeners() — the rest of the
+  // screen does not rebuild when this fires.
+  final ValueNotifier<Duration> timerDisplayNotifier =
+      ValueNotifier(Duration.zero);
+
   //
   Duration _overtimeElapsed = Duration.zero;
   bool _overtimeWasAutomatic = false;
@@ -243,6 +253,7 @@ class SessionStateProvider extends ChangeNotifier {
     _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
     _remaining = _getDurationForPhase(_progress);
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -270,6 +281,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     }
     // When within range of list of exercises of workout, go to previous or next
@@ -286,6 +298,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     }
     // When at the last exercise of a workout and not the final exercise of session, go to first exercise of next workout
@@ -304,6 +317,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     }
   }
@@ -353,6 +367,7 @@ class SessionStateProvider extends ChangeNotifier {
     _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
     _remaining = _getDurationForPhase(_progress);
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -534,6 +549,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     } else if (index > 0 && index <= effectiveSets) {
       _progress = SessionProgress(
@@ -546,6 +562,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     } else if (index > effectiveSets) {
       return;
@@ -663,6 +680,7 @@ class SessionStateProvider extends ChangeNotifier {
     _isPaused = false;
     _startTicker();
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -790,6 +808,7 @@ class SessionStateProvider extends ChangeNotifier {
     );
     _remaining = Duration.zero;
     _isPaused = true;
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -808,6 +827,7 @@ class SessionStateProvider extends ChangeNotifier {
         exitOvertime();
         return;
       } else {
+        _syncTimerDisplay();
         notifyListeners();
         return;
       }
@@ -830,6 +850,7 @@ class SessionStateProvider extends ChangeNotifier {
     _lastTickAt = now;
     _advanceByElapsed(gap);
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -872,7 +893,22 @@ class SessionStateProvider extends ChangeNotifier {
       _remaining = _getDurationForPhase(_progress);
     }
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
+  }
+
+  /// Updates [timerDisplayNotifier] to reflect the current displayable
+  /// timer value — `_overtimeElapsed` during overtime, `_remaining`
+  /// otherwise. Call wherever `_remaining` or `_overtimeElapsed` is
+  /// mutated, or whenever the phase transitions between overtime and
+  /// normal.
+  ///
+  /// IMPORTANT: must be called AFTER `_progress` is updated, since it
+  /// reads `_progress.phase` to decide which value to publish.
+  void _syncTimerDisplay() {
+    timerDisplayNotifier.value = _progress.phase == TimerPhase.overtime
+        ? _overtimeElapsed
+        : _remaining;
   }
 
   void _startTicker() {
@@ -1477,6 +1513,7 @@ class SessionStateProvider extends ChangeNotifier {
     _onPhaseTransition(_progress.phase, next.phase, next);
     _progress = next;
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -1502,6 +1539,7 @@ class SessionStateProvider extends ChangeNotifier {
 
     _overtimeElapsed = Duration.zero;
     _overtimeWasAutomatic = false;
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -1537,6 +1575,7 @@ class SessionStateProvider extends ChangeNotifier {
     _onPhaseTransition(_progress.phase, next.phase, next);
     _progress = next;
     _remaining = _getDurationForPhase(_progress);
+    _syncTimerDisplay();
     notifyListeners();
   }
 
