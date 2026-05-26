@@ -916,14 +916,16 @@ class SessionStateProvider extends ChangeNotifier {
     // Stamp the current wall-clock time so the first tick can measure a real
     // elapsed delta.
     _lastTickAt = DateTime.now();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _ticker = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (_isPaused || _progress.phase == TimerPhase.workoutComplete) return;
 
       if (_progress.phase == TimerPhase.overtime) {
         final now = DateTime.now();
         _overtimeElapsed += now.difference(_lastTickAt!);
         _lastTickAt = now;
-        notifyListeners();
+        // High-frequency display update only — do NOT notifyListeners() here.
+        // The screen-wide Consumer would otherwise rebuild 10x per second.
+        _syncTimerDisplay();
         return;
       }
 
@@ -980,13 +982,16 @@ class SessionStateProvider extends ChangeNotifier {
         }
       }
 
-      // Only reschedule when a phase transition occurred. Rescheduling every
-      // tick would cancel and recreate all 64 notifications at 1 Hz, flooding
-      // the OS notification API and causing beeps to miss their fire window.
+      // Only reschedule (and notify Consumer widgets) when a phase
+      // transition occurred. Per-tick display updates flow through the
+      // ValueNotifier below, bypassing the screen-wide rebuild.
       if (!identical(_progress, prevProgress)) {
         _rescheduleSound();
+        notifyListeners();
       }
-      notifyListeners();
+      // Always publish the new display value (10 Hz). Only the timer
+      // widget's ValueListenableBuilder rebuilds in response.
+      _syncTimerDisplay();
     });
   }
 
