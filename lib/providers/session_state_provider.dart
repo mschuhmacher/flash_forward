@@ -109,9 +109,12 @@ class SessionStateProvider extends ChangeNotifier {
   // How early go/stop beeps fire relative to the actual phase boundary, to
   // compensate for audio latency and cognitive reaction time.
   static const Duration _audioLeadTime = Duration(milliseconds: 300);
-  // How early the countdown beep fires. Larger than _audioLeadTime to ensure
-  // the 3-2-1 cadence ends before the go beep fires (gap = 3.2 s).
-  static const Duration _countdownLeadTime = Duration(milliseconds: 500);
+  // How early the countdown beep fires. Larger than _audioLeadTime so the
+  // 3-2-1 cadence ends before the go beep fires (gap = 3.1 s — i.e. 100 ms
+  // between the end of the countdown audio and the go beep). The
+  // AudioBeepPlayer bridges this gap with delayed session deactivation so
+  // background audio doesn't pop to full volume in between.
+  static const Duration _countdownLeadTime = Duration(milliseconds: 400);
   //
   Duration _overtimeElapsed = Duration.zero;
   bool _overtimeWasAutomatic = false;
