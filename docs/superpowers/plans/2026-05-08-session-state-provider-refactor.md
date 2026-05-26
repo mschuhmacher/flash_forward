@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Reassessed 2026-05-19.** Original plan was written 2026-05-08 against `session_state_provider.dart` at 1,212 LOC. Since then the supersets feature shipped completely (commits `ab0ba3f`, `2a22794`, `f4703cb`, `2ec02c3`, `f673b6d`, `035db60`, `8683dcb`, `9eb3c63`, `48a0cb8`, `afc253b`, `ce4e3f9`), plus the `nextStop`/`previousStop`/`jumpToNext`/`jumpToPrevious` navigation API was added for the bottom bar. Provider is now 1,627 LOC. **All literal line-number citations have been removed**; use the method name as the anchor. **The scope of `SessionStateMachine` has grown** to absorb the new pure/near-pure helpers (next-stop calculation, rest-type matching, post-set rest entry) — without this growth, ~200 LOC of pure code stays orphaned on the provider.
+> **Reassessed 2026-05-19.** Original plan was written 2026-05-08 against `session_state_provider.dart` at 1,212 LOC. Since then the supersets feature shipped completely (commits `ab0ba3f`, `2a22794`, `f4703cb`, `2ec02c3`, `f673b6d`, `035db60`, `8683dcb`, `9eb3c63`, `48a0cb8`, `afc253b`, `ce4e3f9`), plus the `nextStop`/`previousStop`/`jumpToNext`/`jumpToPrevious` navigation API was added for the bottom bar. Provider was 1,627 LOC. **All literal line-number citations have been removed**; use the method name as the anchor. **The scope of `SessionStateMachine` has grown** to absorb the new pure/near-pure helpers (next-stop calculation, rest-type matching, post-set rest entry) — without this growth, ~200 LOC of pure code stays orphaned on the provider.
 
-**Goal:** Trim [lib/providers/session_state_provider.dart](../../../lib/providers/session_state_provider.dart) (1,627 LOC) by extracting three plain helper classes — `SessionStateMachine`, `SessionTelemetryRecorder`, `SoundDispatcher` — without splitting the provider into multiple `ChangeNotifier`s. The provider remains the single owner of in-memory session state; the helpers are stateless or own only their own scoped state. Functionality must be preserved bit-for-bit; the existing test suite (`session_state_provider_event_log_test.dart`, `session_state_provider_finalize_test.dart`, `session_state_provider_overtime_test.dart`, `session_state_provider_superset_test.dart`) is the safety net.
+> **Re-reassessed 2026-05-26.** Three commits (`d6be1bb`, `6eebb05`, `c0be838`) plus an audio fix (`2ea37d8`) landed since the 2026-05-19 reassessment. Provider is now 1,681 LOC. Key shape change: the provider gained a `timerDisplayNotifier` (`ValueNotifier<Duration>`), a private `_syncTimerDisplay()` helper, a `dispose()` override, and the ticker moved to 100 ms. The provider now has **two notification channels** — the inherited `ChangeNotifier` (phase transitions only) and the explicit `ValueNotifier` (10 Hz display). Both channels stay on the provider; neither helper takes them over. The audio fix confirmed that countdown and go-beep can fire on the *same tick* by design — the original plan's open question about collapsing into a single `BeepType?` return is now answered: return a list. There's also a new test file (`session_state_provider_timer_display_notifier_test.dart`) that must keep passing.
+
+**Goal:** Trim [lib/providers/session_state_provider.dart](../../../lib/providers/session_state_provider.dart) (1,681 LOC) by extracting three plain helper classes — `SessionStateMachine`, `SessionTelemetryRecorder`, `SoundDispatcher` — without splitting the provider into multiple `ChangeNotifier`s. The provider remains the single owner of in-memory session state and the owner of *both* of its notification channels (`ChangeNotifier` for phase changes, `timerDisplayNotifier` for 10 Hz display). Helpers are stateless or own only their own scoped state. Functionality must be preserved bit-for-bit; the existing test suite (`session_state_provider_event_log_test.dart`, `session_state_provider_finalize_test.dart`, `session_state_provider_overtime_test.dart`, `session_state_provider_superset_test.dart`, `session_state_provider_timer_display_notifier_test.dart`) is the safety net.
 
 **Architecture:** The timer engine, telemetry recording, and sound dispatch are tightly coupled around one in-memory state machine — so splitting them across multiple `ChangeNotifier`s would force coordination on every phase transition (the exact complexity we're trying to avoid). Instead, extract **plain helper classes** that the single `SessionStateProvider` composes:
 
@@ -12,7 +14,7 @@
 - `SessionTelemetryRecorder` — owns `_setEvents`, `_restEvents`, the two draft types, set-level accumulators, `computeSummary`. The provider calls it from `_onPhaseTransition`. State, but scoped to one session run.
 - `SoundDispatcher` — owns `_rescheduleSound`, `_calculateFutureBeeps`, `_addBeepsForPhase`, the in-app beep choices. Provider hands it the phase change + foreground state; it routes to `BeepScheduler` or `AudioBeepPlayer`.
 
-After extraction, `SessionStateProvider` shrinks to ~500 LOC: holds `_progress`, `_remaining`, `_activeSession`, the ticker, the public `start/pause/resume/jumpTo*/jumpToNext/jumpToPrevious/updateActiveExercise/updateActiveSupersetSets` API, and `_onPhaseTransition` orchestration that calls the three helpers.
+After extraction, `SessionStateProvider` shrinks to ~600 LOC: holds `_progress`, `_remaining`, `_activeSession`, the ticker (100 ms), `timerDisplayNotifier`, `_syncTimerDisplay()`, `dispose()`, the public `start/pause/resume/jumpTo*/jumpToNext/jumpToPrevious/updateActiveExercise/updateActiveSupersetSets` API, and `_onPhaseTransition` orchestration that calls the three helpers. (Was targeted at ~500 LOC in the original plan, ~550 after the 05-19 reassessment. The 05-26 ticker work added ~50 LOC that cannot be extracted: 15 `_syncTimerDisplay()` insertion sites, the helper itself, the `dispose()` override, the notifier field.)
 
 **Tech Stack:** Flutter, Provider (ChangeNotifier), Dart, `flutter_test`. No new external dependencies.
 
@@ -23,7 +25,8 @@ After extraction, `SessionStateProvider` shrinks to ~500 LOC: holds `_progress`,
 Before starting this plan:
 
 1. **Superset has shipped.** Confirmed by reassessment on 2026-05-19. The provider includes `TimerPhase.supersetRest`, `setsForExerciseInWorkout`, `updateActiveSupersetSets`, the `_enterPostSetRest` branch (between-rounds rest uses `supersetSetRest`), and the `session_state_provider_superset_test.dart` suite. This plan is built against that shape.
-2. **Plan A may have shipped or not.** This plan is independent of Plan A (PresetProvider refactor). They can be executed in either order. Recommended order is **Plan A first** because Plan A's scope is more stable; Plan B was more thoroughly reshaped by the superset feature.
+2. **100 ms ticker + `timerDisplayNotifier` has shipped.** Confirmed by re-reassessment on 2026-05-26 (commits `d6be1bb`, `6eebb05`, `c0be838`). The provider has `final ValueNotifier<Duration> timerDisplayNotifier`, a private `_syncTimerDisplay()` helper called at 15 mutation sites, a `dispose()` override that cancels the ticker and disposes the notifier, and the ticker runs at 100 ms. `session_state_provider_timer_display_notifier_test.dart` is the canonical exerciser. This plan preserves all of that — see Locked decision 9.
+3. **Plan A may have shipped or not.** This plan is independent of Plan A (PresetProvider refactor). They can be executed in either order. Recommended order is **Plan A first** because Plan A's scope is more stable; Plan B was more thoroughly reshaped by the superset feature and the ticker rework.
 
 ---
 
@@ -42,8 +45,9 @@ Before starting this plan:
 | (no change) | `test/providers/session_state_provider_finalize_test.dart` |
 | (no change) | `test/providers/session_state_provider_overtime_test.dart` |
 | (no change) | `test/providers/session_state_provider_superset_test.dart` |
+| (no change) | `test/providers/session_state_provider_timer_display_notifier_test.dart` |
 
-The 4 existing `session_state_provider_*_test.dart` files exercise the provider's public API. They must not change semantics (one minor edit may be needed if helper extraction introduces a constructor parameter for dependency injection — see Task 1 Step 5). The new test files cover the helpers in isolation.
+The 5 existing `session_state_provider_*_test.dart` files exercise the provider's public API. They must not change semantics (one minor edit may be needed if helper extraction introduces a constructor parameter for dependency injection — see Task 1 Step 5). The new test files cover the helpers in isolation. The `timer_display_notifier_test.dart` file is the canary for any regression in the `_syncTimerDisplay()` call sites — if any of the 15 sites is dropped during the Task 2 or Task 3 migrations, this test catches it.
 
 A new subdirectory `lib/providers/session/` is introduced for helper organisation. The provider file itself stays at the top of `lib/providers/`.
 
@@ -67,7 +71,11 @@ These have been agreed and must not be revisited mid-execution.
 
 7. **The `@visibleForTesting` debug seams stay on the provider** (`debugSetPhase`, `debugSetLastTickAt`, `debugRestEventCount`, `debugRestEventTypes`). They delegate to the helpers internally as needed, but their external surface is unchanged so existing tests work without edits. **`debugSetPhase` has a `supersetRest` branch** that pre-advances `exerciseIndex` and asserts `hasNextInSuperset` — that branch stays on the provider (it's the test seam, not state-machine logic).
 
-8. **Existing tests are the safety net.** Each task ends with `flutter test` returning fully green. If a migrated test fails, the migration is wrong, not the test.
+8. **Two notification channels stay on the provider.** As of commits `d6be1bb`/`6eebb05`/`c0be838`, the provider owns both an inherited `ChangeNotifier` (fires on phase transitions and user actions) AND a public `ValueNotifier<Duration> timerDisplayNotifier` (fires at 10 Hz with the displayable timer value). Neither helper takes over either channel. `_syncTimerDisplay()` reads provider-owned state (`_progress.phase`, `_remaining`, `_overtimeElapsed`) and stays on the provider. The 15 `_syncTimerDisplay()` call sites must be preserved through the Task 2 and Task 3 migrations — see the test-side gate in the File Map.
+
+9. **Beep can fire as a pair on a single tick (countdown + go).** Commit `2ea37d8` fixed the gap between countdown and go-beep; the design relies on both firing within the same ~100 ms tick when the windows overlap. The Task 3 `SoundDispatcher.classifyTickEdge` helper must therefore return a *list* of `BeepType`, not a single `BeepType?`. Stop-beep stays mutually exclusive with the other two (rep→rep only). The original plan's "if you discover during testing that two beeps fired on the same tick, expand to `List<BeepType>`" speculation is now resolved: expand from the start.
+
+10. **Existing tests are the safety net.** Each task ends with `flutter test` returning fully green. If a migrated test fails, the migration is wrong, not the test.
 
 ---
 
@@ -588,7 +596,11 @@ git commit -m "refactor(session): extract SessionTelemetryRecorder for event log
 
 **Why next:** The remaining "non-state-machine" surface in the provider is the sound logic — `_rescheduleSound`, `_calculateFutureBeeps`, `_addBeepsForPhase`, plus the in-app beep selection inside `_startTicker`. Extracting it removes ~80 LOC from the provider and isolates the OS-notification interaction.
 
-**Critical reminder:** The current `_startTicker`'s in-app beep block fires countdown and go beeps from `getReady`, `setRest`, *or* `supersetRest` (this was extended when superset shipped). The `classifyTickEdge` helper must preserve this — the original plan listed only `getReady` and `setRest`.
+**Critical reminders:**
+1. The current `_startTicker`'s in-app beep block fires countdown and go beeps from `getReady`, `setRest`, *or* `supersetRest` (this was extended when superset shipped). The `classifyTickEdge` helper must preserve this — the original plan listed only `getReady` and `setRest`.
+2. **Countdown and go-beep can fire on the same tick** (locked decision 9). Commit `2ea37d8` fixed the gap between them; the design depends on both being able to play within the same ~100 ms tick. `classifyTickEdge` returns `List<BeepType>`, not `BeepType?`. The provider plays every entry in order.
+3. **Ticker runs at 100 ms** (commit `6eebb05`). The early-fire windows (`_audioLeadTime` = 300 ms, `_countdownLeadTime` = 500 ms) are hit on the *first* tick that crosses the threshold — at 100 ms granularity. Helper test fixtures must use ≤ 100 ms deltas between `prevRemaining` and `newRemaining` to avoid false greens that would never occur in production.
+4. **Per-tick rebuilds are bifurcated.** The ticker calls `_syncTimerDisplay()` every tick (10 Hz, `ValueNotifier`), but `notifyListeners()` only on phase transition. The overtime branch in `_startTicker` is "sync only, no notify" — the `SoundDispatcher` extraction must not collapse this distinction. See Step 5.
 
 **Files:**
 - Create: `lib/providers/session/sound_dispatcher.dart`
@@ -603,8 +615,10 @@ Create `test/providers/session/sound_dispatcher_test.dart`. Cover at minimum:
 - `classifyTickEdge` countdown: fires when `previousRemaining > countdownThreshold && current <= countdownThreshold && current > 0` in `getReady` / `setRest` / **`supersetRest`** (all three sources). Test each source phase.
 - `classifyTickEdge` go-beep: fires when leaving any of `getReady` / `setRest` / `repRest` / `supersetRest` with `previousRemaining > leadTime && current <= leadTime` (mirrors the current 4-source list).
 - `classifyTickEdge` stop-beep: fires when `prevPhase == rep && newPhase == rep && previousRemaining > leadTime && current <= leadTime` (the "still in rep, about to end" case).
-- `classifyTickEdge` returns null when `playInApp` is false, when no edge matches, when phases are identical mid-rep, etc.
-- `classifyTickEdge` ordering: countdown can be returned in the same call that would otherwise return go-beep — verify the precedence matches what `_startTicker` does today (the provider's current code is three separate `if` blocks that can both fire on the same tick; the helper should return one but the provider may call it multiple times — see Step 5).
+- `classifyTickEdge` returns empty list when `playInApp` is false, when no edge matches, when phases are identical mid-rep, etc.
+- **`classifyTickEdge` can return countdown AND go-beep in the same call.** Locked decision 9 — verify with a test that synthesises `prevRemaining` just above `countdownThreshold` and `newRemaining` just below `audioLeadTime` (simulating a long-isolated tick that crossed both windows). Expected: `[countdown, go]` in that order.
+- Stop-beep is mutually exclusive with the other two (the `prevPhase == rep && newPhase == rep` guard cannot coexist with the other phase predicates). The helper still returns a list, but stop-beep entries appear alone.
+- Test fixtures use ≤ 100 ms granularity between `prevRemaining` and `newRemaining`. A 1000 ms tick fixture is unrealistic and could mask a regression where the actual 100 ms behaviour fails.
 
 - [ ] **Step 2: Run — verify it fails**
 
@@ -721,14 +735,14 @@ class SoundDispatcher {
     // [Verbatim port.]
   }
 
-  /// Classifies the in-app beep that should fire on a tick boundary, if any.
-  /// Returns the highest-priority beep for the given edge; the provider may
-  /// call this multiple times per tick (for countdown then go) if both apply
-  /// — see the comment in [_startTicker] migration.
+  /// Classifies in-app beeps that should fire on this tick boundary, if any.
+  /// Returns a (possibly empty) list — countdown and go-beep can BOTH fire on
+  /// the same tick (locked decision 9; commit 2ea37d8). Stop-beep is mutually
+  /// exclusive with the other two by phase predicate.
   ///
   /// Source phases for countdown and go-beep include supersetRest, matching
   /// the current _startTicker behavior post-superset.
-  static BeepType? classifyTickEdge({
+  static List<BeepType> classifyTickEdge({
     required TimerPhase prevPhase,
     required TimerPhase newPhase,
     required Duration prevRemaining,
@@ -737,7 +751,8 @@ class SoundDispatcher {
     required Duration audioLeadTime,
     required Duration countdownLeadTime,
   }) {
-    if (!playInApp) return null;
+    if (!playInApp) return const [];
+    final beeps = <BeepType>[];
 
     final countdownThreshold = const Duration(seconds: 3) + countdownLeadTime;
     // Countdown: from getReady/setRest/supersetRest, crossing > threshold → ≤ threshold.
@@ -747,7 +762,7 @@ class SoundDispatcher {
         prevRemaining > countdownThreshold &&
         newRemaining <= countdownThreshold &&
         newRemaining > Duration.zero) {
-      return BeepType.countdown;
+      beeps.add(BeepType.countdown);
     }
     // Go beep: leaving any of the four lead-in phases when ≤ audioLeadTime remains.
     if ((prevPhase == TimerPhase.getReady ||
@@ -756,16 +771,17 @@ class SoundDispatcher {
             prevPhase == TimerPhase.supersetRest) &&
         prevRemaining > audioLeadTime &&
         newRemaining <= audioLeadTime) {
-      return BeepType.go;
+      beeps.add(BeepType.go);
     }
-    // Stop beep: still in rep, about to end.
+    // Stop beep: still in rep, about to end. Mutually exclusive with above
+    // by phase predicate (prevPhase != rep above; prevPhase == rep here).
     if (prevPhase == TimerPhase.rep &&
         newPhase == TimerPhase.rep &&
         prevRemaining > audioLeadTime &&
         newRemaining <= audioLeadTime) {
-      return BeepType.stop;
+      beeps.add(BeepType.stop);
     }
-    return null;
+    return beeps;
   }
 
   /// Calls cancelAll on the underlying scheduler. Convenience for the
@@ -780,7 +796,7 @@ class SoundDispatcher {
 }
 ```
 
-Note on the `classifyTickEdge` return type: the current `_startTicker` has three sequential `if` blocks (countdown, go, stop) that *could* both fire on the same tick if the conditions overlap. In practice the countdown and go conditions are mutually exclusive (countdown crosses the 3s+lead threshold; go crosses the leadTime threshold). But to preserve behaviour exactly, the provider's `_startTicker` migration in Step 5 calls `classifyTickEdge` in *the same order* the original code checks the three branches, and plays whichever the helper returns. If both could fire in theory, only one plays — but a check against `audio_beep_player_test`-equivalent test would catch a difference. Keeping a single-return helper is simpler than threading an enum-list back to the caller.
+Note on the `classifyTickEdge` return type: the helper returns a `List<BeepType>` (locked decision 9). The current `_startTicker` has three sequential `if` blocks (countdown, go, stop) that can each add an entry; countdown + go can both fire on the same tick by design (commit `2ea37d8`'s 3.2 s gap between them collapses to 0 when the tick has just crossed both windows — for example after a long isolate suspension on a short `getReady`). The provider plays each entry in order. The list is empty when no edge matched (the common case).
 
 - [ ] **Step 4: Run the helper tests**
 
@@ -822,7 +838,7 @@ In `lib/providers/session_state_provider.dart`:
     isForegrounded: _isForegrounded,
     mode: _soundMode,
   );
-  final beepType = SoundDispatcher.classifyTickEdge(
+  final beeps = SoundDispatcher.classifyTickEdge(
     prevPhase: prevProgress.phase,
     newPhase: _progress.phase,
     prevRemaining: previousRemaining,
@@ -831,12 +847,16 @@ In `lib/providers/session_state_provider.dart`:
     audioLeadTime: _audioLeadTime,
     countdownLeadTime: _countdownLeadTime,
   );
-  if (beepType != null) _sound.player?.play(beepType);
+  for (final b in beeps) {
+    _sound.player?.play(b);
+  }
   ```
 
-  Note: if you discover during testing that two beeps fired on the same tick before (e.g. countdown then go), expand `classifyTickEdge` to return a `List<BeepType>` and adjust the call site. The single-return implementation above matches the *most-recent in-source ordering* but doesn't run all three checks — verify the existing beep timing tests (manual smoke + `session_state_provider_overtime_test.dart`'s reach into beep behaviour) before committing.
-
-- Update `setForegrounded`, `pause`, `reset`, `_advanceByElapsed` (its `_beepScheduler?.cancelAll()` site), `_enterOvertime`, `exitOvertime` to call `_sound.cancelAll()` and `_sound.reschedule(...)` as needed.
+- **Preserve the ticker's two-channel structure:**
+  - The overtime branch (`if (_progress.phase == TimerPhase.overtime) { ... return; }`) stays "sync only, no notify": call `_syncTimerDisplay()` and return. Do NOT add `notifyListeners()` here.
+  - The main branch keeps the existing pattern: `notifyListeners()` only inside `if (!identical(_progress, prevProgress))` (the phase-transition guard, alongside `_rescheduleSound` → `_sound.reschedule`), and `_syncTimerDisplay()` always at the end of the callback.
+  - The early-return guard `if (_isPaused || _progress.phase == TimerPhase.workoutComplete) return;` stays unchanged.
+- Update `setForegrounded`, `pause`, `reset`, `_advanceByElapsed` (its `_beepScheduler?.cancelAll()` site), `_enterOvertime`, `exitOvertime` to call `_sound.cancelAll()` and `_sound.reschedule(...)` as needed. Do NOT touch the existing `_syncTimerDisplay()` calls in any of these methods — they're orthogonal to the sound work and must remain.
 - Update `canScheduleExactAlarms()` and `requestExactAlarmPermission()` to delegate to `_sound`.
 
 - [ ] **Step 6: Run the full suite**
@@ -887,12 +907,12 @@ wc -l lib/providers/session_state_provider.dart \
       lib/providers/session/session_telemetry_recorder.dart \
       lib/providers/session/sound_dispatcher.dart
 ```
-Expected (rough, updated 2026-05-19 to reflect the bigger helper scope and the supersets-era provider):
-- provider: ~500 LOC
+Expected (rough, updated 2026-05-26 to reflect the bigger helper scope, the supersets-era provider, and the 100 ms ticker work):
+- provider: ~600 LOC (was 500 in original plan, 550 after 05-19 reassessment; bumped because `_syncTimerDisplay` + 15 insertion sites + `dispose()` + the `timerDisplayNotifier` field cannot be extracted)
 - state machine: ~400 LOC (was ~200 in original plan; absorbs nav helpers + post-set rest + match-rest-type)
 - telemetry: ~180 LOC
-- sound dispatcher: ~180 LOC
-- Total: ~1,260 LOC (from 1,627 LOC original) — reduction comes from collapsed boilerplate and tighter file boundaries, not from removing logic.
+- sound dispatcher: ~200 LOC (was 180; the list-return `classifyTickEdge` is marginally bigger)
+- Total: ~1,380 LOC (from 1,681 LOC current) — reduction comes from collapsed boilerplate and tighter file boundaries, not from removing logic.
 
 - [ ] **Step 2: Find any leftover private helpers**
 
@@ -900,6 +920,18 @@ Expected (rough, updated 2026-05-19 to reflect the bigger helper scope and the s
 grep -nE "_calculateNextState|_enterExerciseRest|_enterPostSetRest|_calculateNextStop|_calculatePreviousStop|_firstStopAtOrAfter|_lastStopBefore|_getDurationForPhase|_isOvertimeEligible|_isRestPhase|_matchRestTypeToTimerPhase|_startSetDraft|_closeSetDraft|_startRestDraft|_closeRestDraft|_discardDrafts|_computeSummary|_rescheduleSound|_calculateFutureBeeps|_addBeepsForPhase|_setEvents|_restEvents|_activeSetDraft|_activeRestDraft|_currentSetActiveAccum|_currentSetRepRestAccum|_OpenSetDraft|_OpenRestDraft" lib/providers/session_state_provider.dart
 ```
 Expected: zero matches. Anything that survived means a reference was missed.
+
+- [ ] **Step 2b: Confirm `_syncTimerDisplay()` survived intact**
+
+```bash
+grep -cE "_syncTimerDisplay\(\)" lib/providers/session_state_provider.dart
+```
+Expected: 16 matches (15 call sites + 1 method definition). The call-site count is unchanged from before the refactor — every mutation of `_remaining`, `_overtimeElapsed`, or `_progress.phase` still has its sync immediately before `notifyListeners()` (or in the overtime ticker branch, instead of `notifyListeners()`).
+
+```bash
+grep -nE "timerDisplayNotifier|ValueNotifier" lib/providers/session_state_provider.dart
+```
+Expected: at minimum the field declaration, the `_syncTimerDisplay` body assigning to it, and the `dispose()` call. These three sites must survive the refactor.
 
 - [ ] **Step 3: Static analysis**
 
@@ -932,6 +964,8 @@ Walk through:
 6. **Mid-session superset edit:** edit a superset member's sets mid-session via `updateActiveSupersetSets`; verify all members of the same superset share the new value.
 7. **Superset round walk:** run a superset workout end-to-end. Verify `supersetRest` fires between members, between-rounds rest fires after the last member with more rounds remaining (using `supersetSetRest`), and the group is exited cleanly past `groupEnd` on the last round.
 8. **nextStop/previousStop:** during a session, tap the bottom-bar next/previous buttons. Verify the labels show the right upcoming/previous exercise (solo → next exercise; superset → next member or group exit; previous → mirror).
+9. **Timer text updates smoothly:** during any countdown phase (`getReady`, `setRest`, `supersetRest`), watch the timer text. It must update visibly every ~100 ms with no perceptible step. The surrounding UI (phase chips, next-up labels, progress dots) updates only on phase transition — confirm by watching for any flicker on the non-timer widgets during a tick.
+10. **Hot restart / provider teardown:** trigger a hot restart while a session is running. Confirm no "ValueNotifier disposed" or "listener registered after dispose" errors appear in the console (gated by the `dispose()` override).
 
 Each step that regresses points back to a specific helper extraction.
 
@@ -985,11 +1019,12 @@ git commit -m "refactor(session): lift SessionProgress and TimerPhase into share
 
 - [ ] `flutter test` passes after every numbered task commit (no skipped tasks).
 - [ ] `flutter analyze` returns zero errors after Task 4.
-- [ ] `lib/providers/session_state_provider.dart` is at most 550 LOC after Task 4 (up from the original plan's 500 because the supersets-era provider has more public API surface).
+- [ ] `lib/providers/session_state_provider.dart` is at most 600 LOC after Task 4 (up from the 05-19 plan's 550 because the 100 ms ticker work added the `timerDisplayNotifier`, `_syncTimerDisplay()` plus 15 call sites, and the `dispose()` override — none of which can be extracted).
 - [ ] No file in `lib/providers/session/` exceeds 450 LOC.
-- [ ] The 4 existing `session_state_provider_*_test.dart` files are unchanged or only had `setUp` adjusted (no test-body rewrites).
+- [ ] The 5 existing `session_state_provider_*_test.dart` files (including `timer_display_notifier_test.dart`) are unchanged or only had `setUp` adjusted (no test-body rewrites).
 - [ ] The 3 new helper test files exist and exercise their respective helpers in isolation.
-- [ ] Manual smoke walk in Task 4 Step 5 shows no behavioral regression — including all 8 listed scenarios.
+- [ ] `grep -c "_syncTimerDisplay()" lib/providers/session_state_provider.dart` returns 16 (15 call sites + 1 definition) — same as before the refactor.
+- [ ] Manual smoke walk in Task 4 Step 5 shows no behavioral regression — including all 10 listed scenarios.
 
 ---
 
@@ -997,7 +1032,7 @@ git commit -m "refactor(session): lift SessionProgress and TimerPhase into share
 
 1. **`_onPhaseTransition` is the orchestration heart.** It's called from many sites (every `start`/`pause`/`resume`/`jumpTo*`/`jumpToNext`/`jumpToPrevious`/`enterOvertime`/`exitOvertime`/`advanceByElapsed`/`advanceManually`/`debugSetPhase`). The migration in Task 2 changes how telemetry is driven from inside it. **Mitigation:** Task 2 Step 6 runs the full suite, including `event_log_test.dart` which is the canonical exerciser of this method. A regression there is the canary.
 
-2. **In-app beep timing is sample-sensitive.** The decision-of-which-beep logic in `_startTicker` is currently three sequential `if` blocks; Task 3 collapses them into `SoundDispatcher.classifyTickEdge` returning a single `BeepType?`. If two beeps could *theoretically* fire on the same tick (countdown + go), the collapsed helper plays only one. **Mitigation:** Task 3 Step 5 calls this out; the manual test in Task 3 Step 7 is the only safety net for audio playback (automated tests cannot verify audio). If smoke testing reveals a missing beep, expand the helper to return `List<BeepType>`.
+2. **In-app beep timing is sample-sensitive.** The decision-of-which-beep logic in `_startTicker` is currently three sequential `if` blocks; Task 3 routes them through `SoundDispatcher.classifyTickEdge`, which returns a `List<BeepType>` so countdown + go can both fire on the same tick (locked decision 9). **Mitigation:** Task 3 Step 1 includes a same-tick-pair test case; Task 3 Step 7 is the manual safety net for audio playback. If a beep regresses, check whether the helper's three `if` blocks all `.add(...)` instead of `return`.
 
 3. **supersetRest sources for beeps.** Both the countdown and the go-beep blocks include `supersetRest` as a source phase. The original plan listed only `getReady` and `setRest`. **Mitigation:** Locked decision 5 calls this out; the helper tests in Task 3 Step 1 must include a supersetRest source case.
 
@@ -1012,6 +1047,12 @@ git commit -m "refactor(session): lift SessionProgress and TimerPhase into share
 8. **`nextStop`/`previousStop` are reactive.** They're invoked from `session_active_bottom_bar.dart` on every rebuild (no caching). The helper extraction must not introduce additional computation per call. **Mitigation:** the helper functions are pure and have the same complexity as the original methods — verify the bottom bar still renders cleanly under load (rapid `notifyListeners` from the ticker).
 
 9. **Test-helper imports.** Helper tests import `SessionProgress` and `TimerPhase` from `session_state_provider.dart` (Tasks 1-4). If Task 5 is executed, every test file must update those imports. **Mitigation:** Task 5 Step 2 explicitly lists the test-side updates.
+
+10. **`_syncTimerDisplay()` call sites must survive every migration.** The 15 insertion sites are pre-`notifyListeners()` markers that keep `timerDisplayNotifier` in lockstep with `_progress.phase` / `_remaining` / `_overtimeElapsed`. If Task 2 (telemetry) or Task 3 (sound) inadvertently deletes or reorders one — e.g. by replacing a whole method body during a "verbatim port" pass — the timer text desyncs from state at 10 Hz. The bug is visible but silent (no exception, no test failure unless `session_state_provider_timer_display_notifier_test.dart` exercises that exact site). **Mitigation:** Task 4 Step 2b grep-confirms the count is unchanged.
+
+11. **Ticker overtime branch must stay "sync-only".** The 100 ms ticker has an early-return branch for `TimerPhase.overtime` that calls `_syncTimerDisplay()` but explicitly does NOT call `notifyListeners()` (commit `6eebb05` made this distinction load-bearing — it's the whole reason the screen-wide rebuild doesn't fire at 10 Hz). The Task 3 migration of `_startTicker` touches this region. **Mitigation:** Task 3 Step 5 calls this out under "Preserve the ticker's two-channel structure"; the Step 7 manual test confirms by watching for non-timer widget flicker during overtime.
+
+12. **Helper test fixtures must use ≤ 100 ms granularity.** With the 1 s ticker (pre-`6eebb05`), a test fixture with 500 ms-apart `prevRemaining` / `newRemaining` values was realistic. At 100 ms ticks, a 500 ms gap would never occur — and a `classifyTickEdge` regression that only manifests in the 100-300 ms range would pass such a test. **Mitigation:** Task 3 Step 1 specifies ≤ 100 ms test granularity.
 
 ---
 
