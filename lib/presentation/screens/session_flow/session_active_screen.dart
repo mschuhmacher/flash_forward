@@ -382,7 +382,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                     sessionStateData.timerDisplayNotifier,
                                 builder: (context, displayValue, _) {
                                   return Text(
-                                    formatDuration(displayValue),
+                                    sessionStateData.phase ==
+                                            TimerPhase.overtime
+                                        ? formatDuration(displayValue)
+                                        : formatCountdown(displayValue),
                                     style: context.h1.copyWith(
                                       color: () {
                                         if (sessionStateData.isPaused) {

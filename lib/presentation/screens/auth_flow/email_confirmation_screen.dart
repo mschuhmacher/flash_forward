@@ -104,7 +104,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
             Text('The confirmation email was sent to: \n${widget.email}'),
             SizedBox(height: 16),
 
-            Text(formatDuration(_remainingToResend), style: context.h3),
+            Text(formatCountdown(_remainingToResend), style: context.h3),
             SizedBox(height: 16),
             OutlinedButton(
               onPressed: () {
