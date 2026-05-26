@@ -93,7 +93,7 @@ void main() {
       // At 100ms interval we expect ~3 updates in 350ms. Be generous to
       // accommodate scheduling jitter — assert >= 2.
       expect(updateCount, greaterThanOrEqualTo(2));
-      p.pause();
+      p.dispose();
     });
 
     test('per-tick changes to _remaining do not fire notifyListeners', () async {
@@ -102,7 +102,8 @@ void main() {
       // phase transitions and user actions. The notifier listener (the
       // timer widget) should rebuild every tick.
       final p = SessionStateProvider()..start(fixture);
-      // Consume the start() notification.
+      // Allow the ticker to warm up; attach listeners after the first few
+      // ticks so we measure steady-state behavior.
       await Future.delayed(const Duration(milliseconds: 50));
 
       var changeNotifierFires = 0;
@@ -118,7 +119,7 @@ void main() {
       // ChangeNotifier should NOT have fired — no phase transition occurred.
       expect(changeNotifierFires, 0);
 
-      p.pause();
+      p.dispose();
     });
   });
 }
