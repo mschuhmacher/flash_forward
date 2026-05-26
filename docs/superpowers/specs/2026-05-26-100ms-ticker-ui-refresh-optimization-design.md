@@ -86,9 +86,6 @@ final ValueNotifier<Duration> timerDisplayNotifier =
 /// value — _overtimeElapsed during overtime, _remaining otherwise.
 /// Called wherever _remaining or _overtimeElapsed is mutated, or whenever
 /// the phase transitions between overtime and normal.
-///
-/// IMPORTANT: must be called AFTER _progress is updated, since it reads
-/// _progress.phase to decide which value to publish.
 void _syncTimerDisplay() {
   timerDisplayNotifier.value = _progress.phase == TimerPhase.overtime
       ? _overtimeElapsed
