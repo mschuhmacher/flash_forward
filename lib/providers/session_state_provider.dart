@@ -109,9 +109,22 @@ class SessionStateProvider extends ChangeNotifier {
   // How early go/stop beeps fire relative to the actual phase boundary, to
   // compensate for audio latency and cognitive reaction time.
   static const Duration _audioLeadTime = Duration(milliseconds: 300);
-  // How early the countdown beep fires. Larger than _audioLeadTime to ensure
-  // the 3-2-1 cadence ends before the go beep fires (gap = 3.2 s).
-  static const Duration _countdownLeadTime = Duration(milliseconds: 500);
+  // How early the countdown beep fires. Larger than _audioLeadTime so the
+  // 3-2-1 cadence ends before the go beep fires (gap = 3.1 s — i.e. 100 ms
+  // between the end of the countdown audio and the go beep). The
+  // AudioBeepPlayer bridges this gap with delayed session deactivation so
+  // background audio doesn't pop to full volume in between.
+  static const Duration _countdownLeadTime = Duration(milliseconds: 400);
+
+  // ─── Timer display notifier ──────────────────────────────────────
+  // Publishes the value the timer widget should currently display.
+  // Updated on every tick (10 Hz) and on any state change that affects
+  // _remaining or _overtimeElapsed. Listeners of this notifier rebuild
+  // independently of the provider's notifyListeners() — the rest of the
+  // screen does not rebuild when this fires.
+  final ValueNotifier<Duration> timerDisplayNotifier =
+      ValueNotifier(Duration.zero);
+
   //
   Duration _overtimeElapsed = Duration.zero;
   bool _overtimeWasAutomatic = false;
@@ -240,6 +253,7 @@ class SessionStateProvider extends ChangeNotifier {
     _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
     _remaining = _getDurationForPhase(_progress);
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -267,6 +281,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     }
     // When within range of list of exercises of workout, go to previous or next
@@ -283,6 +298,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     }
     // When at the last exercise of a workout and not the final exercise of session, go to first exercise of next workout
@@ -301,6 +317,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     }
   }
@@ -350,6 +367,7 @@ class SessionStateProvider extends ChangeNotifier {
     _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
     _remaining = _getDurationForPhase(_progress);
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -531,6 +549,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     } else if (index > 0 && index <= effectiveSets) {
       _progress = SessionProgress(
@@ -543,6 +562,7 @@ class SessionStateProvider extends ChangeNotifier {
       _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
+      _syncTimerDisplay();
       notifyListeners();
     } else if (index > effectiveSets) {
       return;
@@ -660,6 +680,7 @@ class SessionStateProvider extends ChangeNotifier {
     _isPaused = false;
     _startTicker();
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -787,6 +808,7 @@ class SessionStateProvider extends ChangeNotifier {
     );
     _remaining = Duration.zero;
     _isPaused = true;
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -805,6 +827,7 @@ class SessionStateProvider extends ChangeNotifier {
         exitOvertime();
         return;
       } else {
+        _syncTimerDisplay();
         notifyListeners();
         return;
       }
@@ -827,6 +850,7 @@ class SessionStateProvider extends ChangeNotifier {
     _lastTickAt = now;
     _advanceByElapsed(gap);
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -869,7 +893,22 @@ class SessionStateProvider extends ChangeNotifier {
       _remaining = _getDurationForPhase(_progress);
     }
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
+  }
+
+  /// Updates [timerDisplayNotifier] to reflect the current displayable
+  /// timer value — `_overtimeElapsed` during overtime, `_remaining`
+  /// otherwise. Call wherever `_remaining` or `_overtimeElapsed` is
+  /// mutated, or whenever the phase transitions between overtime and
+  /// normal.
+  ///
+  /// IMPORTANT: must be called AFTER `_progress` is updated, since it
+  /// reads `_progress.phase` to decide which value to publish.
+  void _syncTimerDisplay() {
+    timerDisplayNotifier.value = _progress.phase == TimerPhase.overtime
+        ? _overtimeElapsed
+        : _remaining;
   }
 
   void _startTicker() {
@@ -877,14 +916,16 @@ class SessionStateProvider extends ChangeNotifier {
     // Stamp the current wall-clock time so the first tick can measure a real
     // elapsed delta.
     _lastTickAt = DateTime.now();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _ticker = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (_isPaused || _progress.phase == TimerPhase.workoutComplete) return;
 
       if (_progress.phase == TimerPhase.overtime) {
         final now = DateTime.now();
         _overtimeElapsed += now.difference(_lastTickAt!);
         _lastTickAt = now;
-        notifyListeners();
+        // High-frequency display update only — do NOT notifyListeners() here.
+        // The screen-wide Consumer would otherwise rebuild 10x per second.
+        _syncTimerDisplay();
         return;
       }
 
@@ -941,13 +982,16 @@ class SessionStateProvider extends ChangeNotifier {
         }
       }
 
-      // Only reschedule when a phase transition occurred. Rescheduling every
-      // tick would cancel and recreate all 64 notifications at 1 Hz, flooding
-      // the OS notification API and causing beeps to miss their fire window.
+      // Only reschedule (and notify Consumer widgets) when a phase
+      // transition occurred. Per-tick display updates flow through the
+      // ValueNotifier below, bypassing the screen-wide rebuild.
       if (!identical(_progress, prevProgress)) {
         _rescheduleSound();
+        notifyListeners();
       }
-      notifyListeners();
+      // Always publish the new display value (10 Hz). Only the timer
+      // widget's ValueListenableBuilder rebuilds in response.
+      _syncTimerDisplay();
     });
   }
 
@@ -1474,6 +1518,7 @@ class SessionStateProvider extends ChangeNotifier {
     _onPhaseTransition(_progress.phase, next.phase, next);
     _progress = next;
     _rescheduleSound();
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -1499,6 +1544,7 @@ class SessionStateProvider extends ChangeNotifier {
 
     _overtimeElapsed = Duration.zero;
     _overtimeWasAutomatic = false;
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -1534,6 +1580,7 @@ class SessionStateProvider extends ChangeNotifier {
     _onPhaseTransition(_progress.phase, next.phase, next);
     _progress = next;
     _remaining = _getDurationForPhase(_progress);
+    _syncTimerDisplay();
     notifyListeners();
   }
 
@@ -1591,6 +1638,13 @@ class SessionStateProvider extends ChangeNotifier {
       case TimerPhase.getReady:
         return const Duration(seconds: 10);
     }
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    timerDisplayNotifier.dispose();
+    super.dispose();
   }
 }
 

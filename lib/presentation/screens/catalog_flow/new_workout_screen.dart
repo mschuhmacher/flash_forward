@@ -10,6 +10,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/superset_modal.dart';
+import 'package:flash_forward/presentation/widgets/group_form_card.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
@@ -20,6 +21,7 @@ import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -65,7 +67,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
     if (_itemLabelController.text != (widget.workout?.label ?? '')) return true;
     if (_descriptionController.text.trim() != (widget.workout?.description ?? '')) return true;
     final initialRest = widget.workout?.timeBetweenExercises ?? 120;
-    if ((int.tryParse(_restBetweenExercisesController.text.trim()) ?? initialRest) != initialRest) return true;
+    if (_timeBetweenExercises != initialRest) return true;
     final initialExercises = _initialSnapshot['exercises'];
     final currentExercises = _workout.toJson()['exercises'];
     return initialExercises.toString() != currentExercises.toString();
@@ -91,16 +93,14 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   late final _descriptionController = TextEditingController(
     text: widget.workout?.description,
   );
-  late final _restBetweenExercisesController = TextEditingController(
-    text: '${widget.workout?.timeBetweenExercises ?? 120}',
-  );
+  late int _timeBetweenExercises =
+      widget.workout?.timeBetweenExercises ?? 120;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _itemLabelController.dispose();
-    _restBetweenExercisesController.dispose();
     super.dispose();
   }
 
@@ -133,9 +133,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
               ? null
               : _descriptionController.text.trim(),
         ),
-        timeBetweenExercises:
-            int.tryParse(_restBetweenExercisesController.text.trim()) ??
-            _workout.timeBetweenExercises,
+        timeBetweenExercises: _timeBetweenExercises,
         userId:
             _workout.userId ??
             Provider.of<AuthProvider>(context, listen: false).userId,
@@ -596,22 +594,27 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           child: Column(
             children: [
               SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              GroupFormCard(
                 children: [
-                  Expanded(
-                    flex: 3,
+                  GroupFormRow(
+                    label: 'Title',
+                    trailing: GroupFormCounter(
+                      current: _titleController.text.length,
+                      max: FieldLimits.workoutTitleMaxLength,
+                    ),
                     child: TextFormField(
                       controller: _titleController,
                       maxLength: FieldLimits.workoutTitleMaxLength,
-                      decoration: InputDecoration(
-                        fillColor: context.colorScheme.surfaceBright,
-                        labelText: 'Title',
-                        labelStyle: context.bodyMedium,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 8,
-                        ),
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        counterText: '',
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                       validator: (v) {
                         final presetProvider = Provider.of<PresetProvider>(
@@ -629,9 +632,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                       },
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
+                  GroupFormRow(
+                    label: 'Label',
                     child: MyLabelDropdownButton(
                       value:
                           _itemLabelController.text.isNotEmpty
@@ -643,53 +645,45 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                         });
                       },
                       validator: FieldValidators.label,
+                      flat: true,
                     ),
                   ),
-                ],
-              ),
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
+                  GroupFormRow(
+                    label: 'Info',
+                    trailing: GroupFormCounter(
+                      current: _descriptionController.text.length,
+                      max: FieldLimits.workoutDescriptionMaxLength,
+                    ),
                     child: TextFormField(
                       controller: _descriptionController,
                       maxLength: FieldLimits.workoutDescriptionMaxLength,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       maxLines: null,
-                      decoration: InputDecoration(
-                        fillColor: context.colorScheme.surfaceBright,
-                        labelText: 'Description',
-                        labelStyle: context.bodyMedium,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 8,
-                        ),
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        counterText: '',
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                       validator: FieldValidators.workoutDescription,
                     ),
                   ),
-                ],
-              ),
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Rest between exercises (s)',
-                      style: context.bodyMedium,
+                  GroupFormRestRow(
+                    label: 'Rest between exercises',
+                    value: _timeBetweenExercises,
+                    minimum: 0,
+                    maximum: FieldLimits.timeLimit,
+                    onDecrement: () => setState(
+                      () => _timeBetweenExercises =
+                          (_timeBetweenExercises - 5).clamp(0, FieldLimits.timeLimit),
                     ),
-                  ),
-                  SizedBox(
-                    width: 80,
-                    child: TextFormField(
-                      controller: _restBetweenExercisesController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        fillColor: context.colorScheme.surfaceBright,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 8,
-                        ),
-                      ),
+                    onIncrement: () => setState(
+                      () => _timeBetweenExercises =
+                          (_timeBetweenExercises + 5).clamp(0, FieldLimits.timeLimit),
                     ),
                   ),
                 ],
@@ -1019,15 +1013,15 @@ class _ExerciseCard extends StatelessWidget {
   }
 
   Widget _cardBody(BuildContext context) {
-    final body = Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.colorScheme.surfaceBright,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: context.colorScheme.onSurface.withValues(alpha: 0.08),
-        ),
-        boxShadow: context.shadowSmall,
+    final supersetColor = supersetPaletteIndex != null
+        ? supersetColorForIndex(supersetPaletteIndex!)
+        : null;
+    final content = Padding(
+      padding: EdgeInsets.only(
+        left: supersetColor != null ? 10 : 14,
+        right: 14,
+        top: 14,
+        bottom: 14,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1087,24 +1081,32 @@ class _ExerciseCard extends StatelessWidget {
         ],
       ),
     );
-    if (supersetPaletteIndex == null) return body;
-    return Stack(
-      children: [
-        Positioned(
-          left: 0, top: 8, bottom: 8,
-          child: Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color:supersetColorForIndex(supersetPaletteIndex!),
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colorScheme.surfaceBright,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: context.colorScheme.onSurface.withValues(alpha: 0.08),
         ),
-        Padding(
-          padding: const EdgeInsets.only(left: 10.0),
-          child: body,
-        ),
-      ],
+        boxShadow: context.shadowSmall,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: supersetColor != null
+            ? Stack(
+                children: [
+                  content,
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(width: 4, color: supersetColor),
+                  ),
+                ],
+              )
+            : content,
+      ),
     );
   }
 }

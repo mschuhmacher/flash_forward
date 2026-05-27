@@ -377,44 +377,47 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                           alignment: Alignment.center,
                           children: [
                             Center(
-                              child: Text(
-                                sessionStateData.phase == TimerPhase.overtime
-                                    ? formatDuration(
-                                      sessionStateData.overtimeElapsed,
-                                    )
-                                    : formatDuration(
-                                      sessionStateData.remaining,
+                              child: ValueListenableBuilder<Duration>(
+                                valueListenable:
+                                    sessionStateData.timerDisplayNotifier,
+                                builder: (context, displayValue, _) {
+                                  return Text(
+                                    sessionStateData.phase ==
+                                            TimerPhase.overtime
+                                        ? formatDuration(displayValue)
+                                        : formatCountdown(displayValue),
+                                    style: context.h1.copyWith(
+                                      color: () {
+                                        if (sessionStateData.isPaused) {
+                                          return context.colorScheme.tertiary;
+                                        } else if (sessionStateData.phase ==
+                                            TimerPhase.getReady) {
+                                          return context.colorScheme.secondary;
+                                        } else if (sessionStateData.phase ==
+                                            TimerPhase.rep) {
+                                          return context.colorScheme.onPrimary;
+                                        } else if (sessionStateData.phase ==
+                                            TimerPhase.overtime) {
+                                          return context.colorScheme.secondary;
+                                        } else if ((sessionStateData.phase ==
+                                                    TimerPhase.repRest ||
+                                                sessionStateData.phase ==
+                                                    TimerPhase.setRest ||
+                                                sessionStateData.phase ==
+                                                    TimerPhase.supersetRest ||
+                                                sessionStateData.phase ==
+                                                    TimerPhase.exerciseRest) &&
+                                            displayValue <
+                                                Duration(seconds: 10)) {
+                                          return context.colorScheme.secondary;
+                                        } else {
+                                          return context.colorScheme.onPrimary;
+                                        }
+                                      }(),
                                     ),
-                                style: context.h1.copyWith(
-                                  color: () {
-                                    if (sessionStateData.isPaused) {
-                                      return context.colorScheme.tertiary;
-                                    } else if (sessionStateData.phase ==
-                                        TimerPhase.getReady) {
-                                      return context.colorScheme.secondary;
-                                    } else if (sessionStateData.phase ==
-                                        TimerPhase.rep) {
-                                      return context.colorScheme.onPrimary;
-                                    } else if (sessionStateData.phase ==
-                                        TimerPhase.overtime) {
-                                      return context.colorScheme.secondary;
-                                    } else if ((sessionStateData.phase ==
-                                                TimerPhase.repRest ||
-                                            sessionStateData.phase ==
-                                                TimerPhase.setRest ||
-                                            sessionStateData.phase ==
-                                                TimerPhase.supersetRest ||
-                                            sessionStateData.phase ==
-                                                TimerPhase.exerciseRest) &&
-                                        sessionStateData.remaining <
-                                            Duration(seconds: 10)) {
-                                      return context.colorScheme.secondary;
-                                    } else {
-                                      return context.colorScheme.onPrimary;
-                                    }
-                                  }(),
-                                ),
-                                textScaler: TextScaler.linear(2.5),
+                                    textScaler: TextScaler.linear(2.5),
+                                  );
+                                },
                               ),
                             ),
                             Positioned(
