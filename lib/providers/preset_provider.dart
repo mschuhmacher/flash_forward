@@ -1,3 +1,4 @@
+import 'package:flash_forward/providers/preset_sync_merger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/data/default_exercises.dart';
@@ -155,7 +156,7 @@ class PresetProvider extends ChangeNotifier {
       final cloudExercises = await _syncService!.fetchUserExercises();
       final pending = _syncService!.syncQueue.pendingOperations;
 
-      _userSessions = mergeWithPendingOps(
+      _userSessions = PresetSyncMerger.mergeWithPendingOps(
         cloudItems: cloudSessions,
         getId: (s) => s.id,
         operationType: 'uploadSession',
@@ -163,7 +164,7 @@ class PresetProvider extends ChangeNotifier {
         fromJson: Session.fromJson,
         pendingOps: pending,
       );
-      _userWorkouts = mergeWithPendingOps(
+      _userWorkouts = PresetSyncMerger.mergeWithPendingOps(
         cloudItems: cloudWorkouts,
         getId: (w) => w.id,
         operationType: 'uploadWorkout',
@@ -171,7 +172,7 @@ class PresetProvider extends ChangeNotifier {
         fromJson: Workout.fromJson,
         pendingOps: pending,
       );
-      _userExercises = mergeWithPendingOps(
+      _userExercises = PresetSyncMerger.mergeWithPendingOps(
         cloudItems: cloudExercises,
         getId: (e) => e.id,
         operationType: 'uploadExercise',
@@ -192,39 +193,6 @@ class PresetProvider extends ChangeNotifier {
     _userExercises = (await PresetLogger.readUserPresetExercises()).toList();
   }
 
-  /// Merges [cloudItems] with items from [pendingOps] that have not yet been
-  /// uploaded (i.e. their id is absent from cloud results).
-  ///
-  /// Only operations matching [operationType] are considered.
-  /// Items with a pending [deleteOperationType] op are excluded — they were
-  /// deleted locally and must not be re-surfaced.
-  /// Cloud always wins when the same id appears in both cloud and upload queue.
-  ///
-  /// Note: [fromJson] receives data serialised by the model's own toJson()
-  /// (camelCase keys from the local queue), not the Supabase column mapping
-  /// used in fetchUser*. Do not swap these callsites.
-  static List<T> mergeWithPendingOps<T>({
-    required List<T> cloudItems,
-    required String Function(T) getId,
-    required String operationType,
-    required String deleteOperationType,
-    required T Function(Map<String, dynamic>) fromJson,
-    required List<SyncOperation> pendingOps,
-  }) {
-    final cloudIds = cloudItems.map(getId).toSet();
-    final deletedIds = pendingOps
-        .where((op) => op.type == deleteOperationType)
-        .map((op) => op.id)
-        .toSet();
-    final unsynced = pendingOps
-        .where((op) =>
-            op.type == operationType &&
-            !cloudIds.contains(op.id) &&
-            !deletedIds.contains(op.id))
-        .map((op) => fromJson(op.data));
-    final filteredCloud = cloudItems.where((item) => !deletedIds.contains(getId(item))).toList();
-    return [...filteredCloud, ...unsynced];
-  }
 
   Future<void> deleteAllUserPresets() async {
     _userSessions = [];

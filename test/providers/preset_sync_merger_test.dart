@@ -1,3 +1,4 @@
+import 'package:flash_forward/providers/preset_sync_merger.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
@@ -19,10 +20,10 @@ SyncOperation _deleteOp(String id) => SyncOperation(
     createdAt: DateTime.now());
 
 void main() {
-  group('PresetProvider.mergeWithPendingOps', () {
+  group('PresetSyncMerger.mergeWithPendingOps', () {
     test('returns cloud items unchanged when queue is empty', () {
       final s = _session('cloud-1');
-      final result = PresetProvider.mergeWithPendingOps<Session>(
+      final result = PresetSyncMerger.mergeWithPendingOps<Session>(
         cloudItems: [s],
         getId: (s) => s.id,
         operationType: 'uploadSession',
@@ -35,7 +36,7 @@ void main() {
 
     test('appends queued item not present in cloud', () {
       final local = _session('local-1');
-      final result = PresetProvider.mergeWithPendingOps<Session>(
+      final result = PresetSyncMerger.mergeWithPendingOps<Session>(
         cloudItems: [],
         getId: (s) => s.id,
         operationType: 'uploadSession',
@@ -48,7 +49,7 @@ void main() {
 
     test('does not duplicate item already in cloud', () {
       final s = _session('shared-1');
-      final result = PresetProvider.mergeWithPendingOps<Session>(
+      final result = PresetSyncMerger.mergeWithPendingOps<Session>(
         cloudItems: [s],
         getId: (s) => s.id,
         operationType: 'uploadSession',
@@ -61,7 +62,7 @@ void main() {
 
     test('ignores queued operations of a different type', () {
       final s = _session('del-1');
-      final result = PresetProvider.mergeWithPendingOps<Session>(
+      final result = PresetSyncMerger.mergeWithPendingOps<Session>(
         cloudItems: [],
         getId: (s) => s.id,
         operationType: 'uploadSession',
@@ -76,7 +77,7 @@ void main() {
       final cloudVersion = _session('s-1');
       final queueVersion =
           Session(id: 's-1', title: 'Stale', label: 'push', workouts: []);
-      final result = PresetProvider.mergeWithPendingOps<Session>(
+      final result = PresetSyncMerger.mergeWithPendingOps<Session>(
         cloudItems: [cloudVersion],
         getId: (s) => s.id,
         operationType: 'uploadSession',
@@ -90,7 +91,7 @@ void main() {
 
     test('does not re-add item when uploadSession and deleteSession are both pending', () {
       final s = _session('s-2');
-      final result = PresetProvider.mergeWithPendingOps<Session>(
+      final result = PresetSyncMerger.mergeWithPendingOps<Session>(
         cloudItems: [],
         getId: (s) => s.id,
         operationType: 'uploadSession',
@@ -103,7 +104,7 @@ void main() {
 
     test('filters out cloud item when a pending delete op exists for its id', () {
       final s = _session('cloud-del-1');
-      final result = PresetProvider.mergeWithPendingOps<Session>(
+      final result = PresetSyncMerger.mergeWithPendingOps<Session>(
         cloudItems: [s],
         getId: (s) => s.id,
         operationType: 'uploadSession',
