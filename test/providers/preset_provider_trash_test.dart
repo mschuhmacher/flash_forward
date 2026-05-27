@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flash_forward/providers/preset_sync_merger.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -365,7 +366,7 @@ void main() {
       final local = [_trashedWorkout(id: 'w-local')];
       final cloud = [_trashedWorkout(id: 'w-cloud')];
 
-      final merged = PresetProvider.mergeTrashCloudAndLocalForTest(local, cloud);
+      final merged = PresetSyncMerger.mergeTrashCloudAndLocal(local, cloud);
 
       expect(merged.map((e) => e.id).toSet(), {'w-local', 'w-cloud'});
     });
@@ -377,7 +378,7 @@ void main() {
       final local = [_trashedWorkout(id: 'w-1', title: 'Old', deletedAt: earlier)];
       final cloud = [_trashedWorkout(id: 'w-1', title: 'New', deletedAt: later)];
 
-      final merged = PresetProvider.mergeTrashCloudAndLocalForTest(local, cloud);
+      final merged = PresetSyncMerger.mergeTrashCloudAndLocal(local, cloud);
 
       expect(merged, hasLength(1));
       expect(merged.single.title, 'New');
@@ -390,7 +391,7 @@ void main() {
       final local = [_trashedWorkout(id: 'w-1', title: 'New', deletedAt: later)];
       final cloud = [_trashedWorkout(id: 'w-1', title: 'Old', deletedAt: earlier)];
 
-      final merged = PresetProvider.mergeTrashCloudAndLocalForTest(local, cloud);
+      final merged = PresetSyncMerger.mergeTrashCloudAndLocal(local, cloud);
 
       expect(merged.single.title, 'New');
     });

@@ -46,39 +46,45 @@ class PresetProvider extends ChangeNotifier {
   // default. Trashed items are hidden from both lists regardless of source.
   List<Session> get presetSessions {
     final userIds = _userSessions.map((s) => s.id).toSet();
-    final trashedIds = _trashedItems
-        .where((e) => e.kind == TrashKind.session)
-        .map((e) => e.id)
-        .toSet();
+    final trashedIds =
+        _trashedItems
+            .where((e) => e.kind == TrashKind.session)
+            .map((e) => e.id)
+            .toSet();
     return [
       ..._defaultSessions.where(
-          (s) => !userIds.contains(s.id) && !trashedIds.contains(s.id)),
+        (s) => !userIds.contains(s.id) && !trashedIds.contains(s.id),
+      ),
       ..._userSessions.where((s) => !trashedIds.contains(s.id)),
     ];
   }
 
   List<Workout> get presetWorkouts {
     final userIds = _userWorkouts.map((w) => w.id).toSet();
-    final trashedIds = _trashedItems
-        .where((e) => e.kind == TrashKind.workout)
-        .map((e) => e.id)
-        .toSet();
+    final trashedIds =
+        _trashedItems
+            .where((e) => e.kind == TrashKind.workout)
+            .map((e) => e.id)
+            .toSet();
     return [
       ..._defaultWorkouts.where(
-          (w) => !userIds.contains(w.id) && !trashedIds.contains(w.id)),
+        (w) => !userIds.contains(w.id) && !trashedIds.contains(w.id),
+      ),
       ..._userWorkouts.where((w) => !trashedIds.contains(w.id)),
     ];
   }
 
   List<Exercise> get presetExercises {
     final userIds = _userExercises.map((e) => e.id).toSet();
-    final trashedIds = _trashedItems
-        .where((e) => e.kind == TrashKind.exercise)
-        .map((e) => e.id)
-        .toSet();
+    final trashedIds =
+        _trashedItems
+            .where((e) => e.kind == TrashKind.exercise)
+            .map((e) => e.id)
+            .toSet();
     return [
       ..._defaultExercises.where(
-          (e) => !userIds.contains(e.id) && !trashedIds.contains(e.id)),
+        (e) => !userIds.contains(e.id) && !trashedIds.contains(e.id),
+      ),
       ..._userExercises.where((e) => !trashedIds.contains(e.id)),
     ];
   }
@@ -111,7 +117,8 @@ class PresetProvider extends ChangeNotifier {
     // If user is logged in, load their cloud data
     if (userId != null) {
       _syncService = SupabaseSyncService(userId: userId);
-      await _syncService!.syncQueue.loadQueue(); // ensure queue loaded before merge
+      await _syncService!.syncQueue
+          .loadQueue(); // ensure queue loaded before merge
       await _loadUserPresetDataFromCloud();
     } else {
       // Load from local storage (fallback for offline/unauthenticated)
@@ -192,7 +199,6 @@ class PresetProvider extends ChangeNotifier {
     _userWorkouts = (await PresetLogger.readUserPresetWorkouts()).toList();
     _userExercises = (await PresetLogger.readUserPresetExercises()).toList();
   }
-
 
   Future<void> deleteAllUserPresets() async {
     _userSessions = [];
@@ -481,9 +487,11 @@ class PresetProvider extends ChangeNotifier {
     final keys = <String>{workoutId};
     if (alsoMatchTemplateId != null) keys.add(alsoMatchTemplateId);
     return presetSessions
-        .where((s) => s.workouts.any(
-              (w) => keys.contains(w.id) || keys.contains(w.templateId),
-            ))
+        .where(
+          (s) => s.workouts.any(
+            (w) => keys.contains(w.id) || keys.contains(w.templateId),
+          ),
+        )
         .toList();
   }
 
@@ -501,8 +509,8 @@ class PresetProvider extends ChangeNotifier {
     final keys = <String>{exerciseId};
     if (alsoMatchTemplateId != null) keys.add(alsoMatchTemplateId);
     bool workoutContains(Workout w) => w.exercises.any(
-          (e) => keys.contains(e.id) || keys.contains(e.templateId),
-        );
+      (e) => keys.contains(e.id) || keys.contains(e.templateId),
+    );
 
     final result = <({Session? session, Workout workout})>[];
     final sessionWorkoutIds = <String>{};
@@ -528,8 +536,7 @@ class PresetProvider extends ChangeNotifier {
 
   /// All sessions whose workouts list contains an item with [id]
   /// (matched by id or templateId). Convenience wrapper over [usagesOfWorkout].
-  List<Session> sessionsContainingWorkout(String id) =>
-      usagesOfWorkout(id);
+  List<Session> sessionsContainingWorkout(String id) => usagesOfWorkout(id);
 
   /// Deduplicated list of workouts (across all sessions) that contain an
   /// exercise with [id] (matched by id or templateId). Convenience wrapper
@@ -554,22 +561,25 @@ class PresetProvider extends ChangeNotifier {
     Workout updated, {
     Set<String>? onlyToSessionIds,
   }) async {
-    final affected = usagesOfWorkout(
-      updated.id,
-      alsoMatchTemplateId: updated.templateId,
-    ).where((s) => onlyToSessionIds == null || onlyToSessionIds.contains(s.id))
-        .toList();
+    final affected =
+        usagesOfWorkout(updated.id, alsoMatchTemplateId: updated.templateId)
+            .where(
+              (s) =>
+                  onlyToSessionIds == null || onlyToSessionIds.contains(s.id),
+            )
+            .toList();
     final matchKeys = <String>{
       updated.id,
       if (updated.templateId != null) updated.templateId!,
     };
     for (final session in affected) {
-      final newWorkouts = session.workouts.map((w) {
-        if (matchKeys.contains(w.id) || matchKeys.contains(w.templateId)) {
-          return updated.deepCopy(keepId: true);
-        }
-        return w;
-      }).toList();
+      final newWorkouts =
+          session.workouts.map((w) {
+            if (matchKeys.contains(w.id) || matchKeys.contains(w.templateId)) {
+              return updated.deepCopy(keepId: true);
+            }
+            return w;
+          }).toList();
       // promoteAndUpdate so default sessions get promoted into _userSessions
       // on first propagation; updatePresetSession would silently no-op for them.
       await promoteAndUpdateSession(session.copyWith(workouts: newWorkouts));
@@ -584,30 +594,37 @@ class PresetProvider extends ChangeNotifier {
     Exercise updated, {
     Set<String>? onlyToSessionIds,
   }) async {
-    final affected = usagesOfExercise(
-      updated.id,
-      alsoMatchTemplateId: updated.templateId,
-    ).map((u) => u.session).whereType<Session>()
-        .where((s) => onlyToSessionIds == null || onlyToSessionIds.contains(s.id))
-        .toSet();
+    final affected =
+        usagesOfExercise(updated.id, alsoMatchTemplateId: updated.templateId)
+            .map((u) => u.session)
+            .whereType<Session>()
+            .where(
+              (s) =>
+                  onlyToSessionIds == null || onlyToSessionIds.contains(s.id),
+            )
+            .toSet();
     final matchKeys = <String>{
       updated.id,
       if (updated.templateId != null) updated.templateId!,
     };
     for (final session in affected) {
-      final newWorkouts = session.workouts.map((w) {
-        final hasMatch = w.exercises.any(
-          (e) => matchKeys.contains(e.id) || matchKeys.contains(e.templateId),
-        );
-        if (!hasMatch) return w;
-        final newExercises = w.exercises.map((e) {
-          if (matchKeys.contains(e.id) || matchKeys.contains(e.templateId)) {
-            return updated.deepCopy(keepId: true);
-          }
-          return e;
-        }).toList();
-        return w.copyWith(exercises: newExercises);
-      }).toList();
+      final newWorkouts =
+          session.workouts.map((w) {
+            final hasMatch = w.exercises.any(
+              (e) =>
+                  matchKeys.contains(e.id) || matchKeys.contains(e.templateId),
+            );
+            if (!hasMatch) return w;
+            final newExercises =
+                w.exercises.map((e) {
+                  if (matchKeys.contains(e.id) ||
+                      matchKeys.contains(e.templateId)) {
+                    return updated.deepCopy(keepId: true);
+                  }
+                  return e;
+                }).toList();
+            return w.copyWith(exercises: newExercises);
+          }).toList();
       await promoteAndUpdateSession(session.copyWith(workouts: newWorkouts));
     }
   }
@@ -632,17 +649,19 @@ class PresetProvider extends ChangeNotifier {
       if (updated.templateId != null) updated.templateId!,
     };
     for (final workout in List<Workout>.from(presetWorkouts)) {
-      if (onlyToWorkoutIds != null && !onlyToWorkoutIds.contains(workout.id)) continue;
+      if (onlyToWorkoutIds != null && !onlyToWorkoutIds.contains(workout.id))
+        continue;
       final hasMatch = workout.exercises.any(
         (e) => matchKeys.contains(e.id) || matchKeys.contains(e.templateId),
       );
       if (!hasMatch) continue;
-      final newExercises = workout.exercises.map((e) {
-        if (matchKeys.contains(e.id) || matchKeys.contains(e.templateId)) {
-          return updated.deepCopy(keepId: true);
-        }
-        return e;
-      }).toList();
+      final newExercises =
+          workout.exercises.map((e) {
+            if (matchKeys.contains(e.id) || matchKeys.contains(e.templateId)) {
+              return updated.deepCopy(keepId: true);
+            }
+            return e;
+          }).toList();
       await promoteAndUpdateWorkout(workout.copyWith(exercises: newExercises));
     }
   }
@@ -692,10 +711,11 @@ class PresetProvider extends ChangeNotifier {
     final sessionsByWorkout = <String, List<Session>>{};
     final workoutsByExercise = <String, List<Workout>>{};
     for (final wc in bag.workoutsById.values) {
-      final sessions = usagesOfWorkout(
-        wc.workout.id,
-        alsoMatchTemplateId: wc.workout.templateId,
-      ).where((s) => s.id != excludeSessionId).toList();
+      final sessions =
+          usagesOfWorkout(
+            wc.workout.id,
+            alsoMatchTemplateId: wc.workout.templateId,
+          ).where((s) => s.id != excludeSessionId).toList();
       if (sessions.isNotEmpty) sessionsByWorkout[wc.workout.id] = sessions;
     }
     // Suppress exercise-level propagation for exercises that live inside a
@@ -752,7 +772,10 @@ class PresetProvider extends ChangeNotifier {
       if (!exerciseIdsInsideBaggedWorkouts.contains(ec.exercise.id)) {
         await propagateExerciseToSessionTemplates(
           ec.exercise,
-          onlyToSessionIds: selection?.sessionIdsFor('exercise', ec.exercise.id),
+          onlyToSessionIds: selection?.sessionIdsFor(
+            'exercise',
+            ec.exercise.id,
+          ),
         );
       }
       await propagateExerciseToWorkouts(
@@ -775,8 +798,9 @@ class PresetProvider extends ChangeNotifier {
   /// locally are unioned in; conflicts are resolved by latest [deletedAt].
   /// Locally-purged ids are also dropped from the cloud trash table.
   Future<void> _loadAndPurgeTrash() async {
-    final purgedIds =
-        await _trashService.purgeOlderThan(const Duration(days: 90));
+    final purgedIds = await _trashService.purgeOlderThan(
+      const Duration(days: 90),
+    );
     _trashedItems = await _trashService.readAll();
     if (_syncService != null) {
       for (final id in purgedIds) {
@@ -788,7 +812,10 @@ class PresetProvider extends ChangeNotifier {
       }
       try {
         final cloud = await _syncService!.fetchUserTrashEntries();
-        _trashedItems = _mergeTrashCloudAndLocal(_trashedItems, cloud);
+        _trashedItems = PresetSyncMerger.mergeTrashCloudAndLocal(
+          _trashedItems,
+          cloud,
+        );
       } catch (e, st) {
         Sentry.captureException(e, stackTrace: st);
       }
@@ -801,31 +828,37 @@ class PresetProvider extends ChangeNotifier {
   /// This drops those rows locally and from the cloud so the catalog matches
   /// the trash filter on disk too, not just at render time.
   Future<void> _selfHealCatalogTrashDrift() async {
-    final trashedWorkoutIds = _trashedItems
-        .where((e) => e.kind == TrashKind.workout)
-        .map((e) => e.id)
-        .toSet();
-    final trashedExerciseIds = _trashedItems
-        .where((e) => e.kind == TrashKind.exercise)
-        .map((e) => e.id)
-        .toSet();
-    final trashedSessionIds = _trashedItems
-        .where((e) => e.kind == TrashKind.session)
-        .map((e) => e.id)
-        .toSet();
+    final trashedWorkoutIds =
+        _trashedItems
+            .where((e) => e.kind == TrashKind.workout)
+            .map((e) => e.id)
+            .toSet();
+    final trashedExerciseIds =
+        _trashedItems
+            .where((e) => e.kind == TrashKind.exercise)
+            .map((e) => e.id)
+            .toSet();
+    final trashedSessionIds =
+        _trashedItems
+            .where((e) => e.kind == TrashKind.session)
+            .map((e) => e.id)
+            .toSet();
 
-    final staleWorkoutIds = _userWorkouts
-        .where((w) => trashedWorkoutIds.contains(w.id))
-        .map((w) => w.id)
-        .toList();
-    final staleExerciseIds = _userExercises
-        .where((e) => trashedExerciseIds.contains(e.id))
-        .map((e) => e.id)
-        .toList();
-    final staleSessionIds = _userSessions
-        .where((s) => trashedSessionIds.contains(s.id))
-        .map((s) => s.id)
-        .toList();
+    final staleWorkoutIds =
+        _userWorkouts
+            .where((w) => trashedWorkoutIds.contains(w.id))
+            .map((w) => w.id)
+            .toList();
+    final staleExerciseIds =
+        _userExercises
+            .where((e) => trashedExerciseIds.contains(e.id))
+            .map((e) => e.id)
+            .toList();
+    final staleSessionIds =
+        _userSessions
+            .where((s) => trashedSessionIds.contains(s.id))
+            .map((s) => s.id)
+            .toList();
 
     if (staleWorkoutIds.isEmpty &&
         staleExerciseIds.isEmpty &&
@@ -880,32 +913,6 @@ class PresetProvider extends ChangeNotifier {
     }
   }
 
-  /// Merges [local] and [cloud] trash lists, deduplicating by id.
-  /// When both lists contain the same id, the entry with the later [deletedAt]
-  /// wins (last-write-wins conflict resolution).
-  @visibleForTesting
-  static List<TrashEntry> mergeTrashCloudAndLocalForTest(
-    List<TrashEntry> local,
-    List<TrashEntry> cloud,
-  ) => _mergeTrashCloudAndLocal(local, cloud);
-
-  static List<TrashEntry> _mergeTrashCloudAndLocal(
-    List<TrashEntry> local,
-    List<TrashEntry> cloud,
-  ) {
-    final byId = <String, TrashEntry>{};
-    for (final e in local) {
-      byId[e.id] = e;
-    }
-    for (final e in cloud) {
-      final existing = byId[e.id];
-      if (existing == null || e.deletedAt.isAfter(existing.deletedAt)) {
-        byId[e.id] = e;
-      }
-    }
-    return byId.values.toList();
-  }
-
   /// Moves the item with [id] of the given [kind] to the trash.
   /// The item is removed from the user list (if present) and from the default
   /// shadow. A [TrashEntry] is persisted locally and uploaded to the cloud.
@@ -919,7 +926,8 @@ class PresetProvider extends ChangeNotifier {
       case TrashKind.workout:
         final src = presetWorkouts.firstWhere(
           (w) => w.id == id,
-          orElse: () => throw StateError('deleteToTrash: workout $id not found'),
+          orElse:
+              () => throw StateError('deleteToTrash: workout $id not found'),
         );
         _userWorkouts.removeWhere((w) => w.id == id);
         await PresetLogger.savePresetToFile(
@@ -930,7 +938,8 @@ class PresetProvider extends ChangeNotifier {
       case TrashKind.exercise:
         final src = presetExercises.firstWhere(
           (e) => e.id == id,
-          orElse: () => throw StateError('deleteToTrash: exercise $id not found'),
+          orElse:
+              () => throw StateError('deleteToTrash: exercise $id not found'),
         );
         _userExercises.removeWhere((e) => e.id == id);
         await PresetLogger.savePresetToFile(
@@ -941,7 +950,8 @@ class PresetProvider extends ChangeNotifier {
       case TrashKind.session:
         final src = presetSessions.firstWhere(
           (s) => s.id == id,
-          orElse: () => throw StateError('deleteToTrash: session $id not found'),
+          orElse:
+              () => throw StateError('deleteToTrash: session $id not found'),
         );
         _userSessions.removeWhere((s) => s.id == id);
         await PresetLogger.savePresetToFile(

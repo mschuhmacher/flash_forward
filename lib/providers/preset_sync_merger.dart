@@ -1,3 +1,4 @@
+import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
 
 class PresetSyncMerger {
@@ -39,5 +40,26 @@ class PresetSyncMerger {
     final filteredCloud =
         cloudItems.where((item) => !deletedIds.contains(getId(item))).toList();
     return [...filteredCloud, ...unsynced];
+  }
+
+  /// Merges [local] and [cloud] trash lists, deduplicating by id.
+  /// When both lists contain the same id, the entry with the later [deletedAt]
+  /// wins (last-write-wins conflict resolution).
+
+  static List<TrashEntry> mergeTrashCloudAndLocal(
+    List<TrashEntry> local,
+    List<TrashEntry> cloud,
+  ) {
+    final byId = <String, TrashEntry>{};
+    for (final e in local) {
+      byId[e.id] = e;
+    }
+    for (final e in cloud) {
+      final existing = byId[e.id];
+      if (existing == null || e.deletedAt.isAfter(existing.deletedAt)) {
+        byId[e.id] = e;
+      }
+    }
+    return byId.values.toList();
   }
 }
