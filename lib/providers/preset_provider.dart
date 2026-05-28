@@ -1,5 +1,6 @@
 import 'package:flash_forward/providers/preset_loader.dart';
 import 'package:flash_forward/providers/preset_sync_merger.dart';
+import 'package:flash_forward/providers/synced_item_ops.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/data/default_exercises.dart';
@@ -187,174 +188,168 @@ class PresetProvider extends ChangeNotifier {
   // New callers editing existing items should use promoteAndUpdate* instead.
   /// Save new user-added presets
   Future<void> addPresetSession(Session session) async {
-    _userSessions.add(session);
-    await PresetLogger.savePresetToFile(
-      'user_preset_sessions.json',
-      _userSessions,
+    await SyncedItemOps.upsert<Session>(
+      list: _userSessions,
+      item: session,
+      getId: (s) => s.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_sessions.json',
+            _userSessions,
+          ),
+      cloudOp:
+          _syncService == null ? null : (s) => _syncService!.uploadSession(s),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-
-    // Save to cloud if available
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadSession(session);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
 
     notifyListeners();
   }
 
   Future<void> updatePresetSession(Session session) async {
-    final index = _userSessions.indexWhere((s) => s.id == session.id);
-    if (index == -1) return;
-    _userSessions[index] = session;
-    await PresetLogger.savePresetToFile(
-      'user_preset_sessions.json',
-      _userSessions,
+    await SyncedItemOps.upsert<Session>(
+      list: _userSessions,
+      item: session,
+      getId: (s) => s.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_sessions.json',
+            _userSessions,
+          ),
+      cloudOp:
+          _syncService == null ? null : (s) => _syncService!.uploadSession(s),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadSession(session);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
     notifyListeners();
   }
 
   // Remove user added preset session
   Future<void> deleteUserPresetSession(String id) async {
-    _userSessions.removeWhere((s) => s.id == id);
-
-    await PresetLogger.savePresetToFile(
-      'user_preset_sessions.json',
-      _userSessions,
+    await SyncedItemOps.removeById<Session>(
+      list: _userSessions,
+      id: id,
+      getId: (s) => s.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_sessions.json',
+            _userSessions,
+          ),
+      cloudOp:
+          _syncService == null ? null : () => _syncService!.deleteSession(id),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-
-    if (_syncService != null) {
-      try {
-        await _syncService!.deleteSession(id);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
-
     notifyListeners();
   }
 
   // Remove user added preset workout
   Future<void> deleteUserPresetWorkout(String id) async {
-    _userWorkouts.removeWhere((w) => w.id == id);
-
-    await PresetLogger.savePresetToFile(
-      'user_preset_workouts.json',
-      _userWorkouts,
+    await SyncedItemOps.removeById<Workout>(
+      list: _userWorkouts,
+      id: id,
+      getId: (w) => w.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_workouts.json',
+            _userWorkouts,
+          ),
+      cloudOp:
+          _syncService == null ? null : () => _syncService!.deleteWorkout(id),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-
-    // Delete from cloud if available
-    if (_syncService != null) {
-      try {
-        await _syncService!.deleteWorkout(id);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
-
     notifyListeners();
   }
 
   // Remove user added preset exercise
   Future<void> deleteUserPresetExercise(String id) async {
-    _userExercises.removeWhere((e) => e.id == id);
-
-    await PresetLogger.savePresetToFile(
-      'user_preset_exercises.json',
-      _userExercises,
+    await SyncedItemOps.removeById<Exercise>(
+      list: _userExercises,
+      id: id,
+      getId: (e) => e.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_exercises.json',
+            _userExercises,
+          ),
+      cloudOp:
+          _syncService == null ? null : () => _syncService!.deleteExercise(id),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-
-    // Delete from cloud if available
-    if (_syncService != null) {
-      try {
-        await _syncService!.deleteExercise(id);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
-
     notifyListeners();
   }
 
   Future<void> addPresetWorkout(Workout workout) async {
-    _userWorkouts.add(workout);
-    await PresetLogger.savePresetToFile(
-      'user_preset_workouts.json',
-      _userWorkouts,
+    await SyncedItemOps.upsert<Workout>(
+      list: _userWorkouts,
+      item: workout,
+      getId: (w) => w.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_workouts.json',
+            _userWorkouts,
+          ),
+      cloudOp:
+          _syncService == null ? null : (w) => _syncService!.uploadWorkout(w),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-    // Save to cloud if available
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadWorkout(workout);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
-
     notifyListeners();
   }
 
   Future<void> updatePresetWorkout(Workout workout) async {
-    final index = _userWorkouts.indexWhere((w) => w.id == workout.id);
-    if (index == -1) return;
-    _userWorkouts[index] = workout;
-    await PresetLogger.savePresetToFile(
-      'user_preset_workouts.json',
-      _userWorkouts,
+    await SyncedItemOps.upsert<Workout>(
+      list: _userWorkouts,
+      item: workout,
+      getId: (w) => w.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_workouts.json',
+            _userWorkouts,
+          ),
+      cloudOp:
+          _syncService == null ? null : (w) => _syncService!.uploadWorkout(w),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadWorkout(workout);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
     notifyListeners();
   }
 
   Future<void> updatePresetExercise(Exercise exercise) async {
-    final index = _userExercises.indexWhere((e) => e.id == exercise.id);
-    if (index == -1) return;
-    _userExercises[index] = exercise;
-    await PresetLogger.savePresetToFile(
-      'user_preset_exercises.json',
-      _userExercises,
+    await SyncedItemOps.upsert<Exercise>(
+      list: _userExercises,
+      item: exercise,
+      getId: (e) => e.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_exercises.json',
+            _userExercises,
+          ),
+      cloudOp:
+          _syncService == null ? null : (e) => _syncService!.uploadExercise(e),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadExercise(exercise);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
     notifyListeners();
   }
 
   Future<void> addPresetExercise(Exercise exercise) async {
-    _userExercises.add(exercise);
-    await PresetLogger.savePresetToFile(
-      'user_preset_exercises.json',
-      _userExercises,
+    await SyncedItemOps.upsert<Exercise>(
+      list: _userExercises,
+      item: exercise,
+      getId: (e) => e.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_exercises.json',
+            _userExercises,
+          ),
+      cloudOp:
+          _syncService == null ? null : (e) => _syncService!.uploadExercise(e),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-
-    // Save to cloud if available
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadExercise(exercise);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
-
     notifyListeners();
   }
 
@@ -363,65 +358,56 @@ class PresetProvider extends ChangeNotifier {
   // replace in place on subsequent saves. Idempotent on retry.
 
   Future<void> promoteAndUpdateWorkout(Workout updated) async {
-    final i = _userWorkouts.indexWhere((w) => w.id == updated.id);
-    if (i == -1) {
-      _userWorkouts.add(updated);
-    } else {
-      _userWorkouts[i] = updated;
-    }
-    await PresetLogger.savePresetToFile(
-      'user_preset_workouts.json',
-      _userWorkouts,
+    await SyncedItemOps.upsert<Workout>(
+      list: _userWorkouts,
+      item: updated,
+      getId: (w) => w.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_workouts.json',
+            _userWorkouts,
+          ),
+      cloudOp:
+          _syncService == null ? null : (w) => _syncService!.uploadWorkout(w),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadWorkout(updated);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
     notifyListeners();
   }
 
   Future<void> promoteAndUpdateExercise(Exercise updated) async {
-    final i = _userExercises.indexWhere((e) => e.id == updated.id);
-    if (i == -1) {
-      _userExercises.add(updated);
-    } else {
-      _userExercises[i] = updated;
-    }
-    await PresetLogger.savePresetToFile(
-      'user_preset_exercises.json',
-      _userExercises,
+    await SyncedItemOps.upsert<Exercise>(
+      list: _userExercises,
+      item: updated,
+      getId: (e) => e.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_exercises.json',
+            _userExercises,
+          ),
+      cloudOp:
+          _syncService == null ? null : (e) => _syncService!.uploadExercise(e),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadExercise(updated);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
     notifyListeners();
   }
 
   Future<void> promoteAndUpdateSession(Session updated) async {
-    final i = _userSessions.indexWhere((s) => s.id == updated.id);
-    if (i == -1) {
-      _userSessions.add(updated);
-    } else {
-      _userSessions[i] = updated;
-    }
-    await PresetLogger.savePresetToFile(
-      'user_preset_sessions.json',
-      _userSessions,
+    await SyncedItemOps.upsert<Session>(
+      list: _userSessions,
+      item: updated,
+      getId: (s) => s.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_sessions.json',
+            _userSessions,
+          ),
+      cloudOp:
+          _syncService == null ? null : (s) => _syncService!.uploadSession(s),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
-    if (_syncService != null) {
-      try {
-        await _syncService!.uploadSession(updated);
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-      }
-    }
     notifyListeners();
   }
 

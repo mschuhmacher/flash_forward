@@ -2,7 +2,7 @@
 
 > **Source plan:** [docs/superpowers/plans/2026-05-08-preset-provider-refactor.md](../superpowers/plans/2026-05-08-preset-provider-refactor.md)
 >
-> **Goal:** Split [lib/providers/preset_provider.dart](../../lib/providers/preset_provider.dart) (1,187 LOC) into focused units — `CatalogProvider`, `TrashProvider`, `EditCommitController`, `SyncStatusProvider` — with three helpers (`PresetSyncMerger`, `PresetLoader`, `PersistedListWriter`). Add `refreshAfterSignIn` seam on Catalog and Trash for the upcoming demo-before-signin feature.
+> **Goal:** Split [lib/providers/preset_provider.dart](../../lib/providers/preset_provider.dart) (1,187 LOC) into focused units — `CatalogProvider`, `TrashProvider`, `EditCommitController`, `SyncStatusProvider` — with three helpers (`PresetSyncMerger`, `PresetLoader`, `SyncedItemOps`). Add `refreshAfterSignIn` seam on Catalog and Trash for the upcoming demo-before-signin feature.
 >
 > **Help levels:** Each task starts in **default mode** (Why/What/Details, Socratic chat). Use `/hint`, `/answer`, or `/fullanswer` to escalate for the current task only. Reset to default on the next task.
 >
@@ -17,7 +17,7 @@
 | 1 | `[ ]` | Extract `PresetSyncMerger.mergeWithPendingOps` |
 | 2 | `[ ]` | Add `mergeTrashCloudAndLocal` to `PresetSyncMerger` |
 | 3 | `[ ]` | Extract `PresetLoader` |
-| 4 | `[ ]` | Introduce `PersistedListWriter` and migrate `PresetProvider`'s CRUD (⚡ first-of-12) |
+| 4 | `[ ]` | Introduce `SyncedItemOps` and migrate `PresetProvider`'s CRUD (⚡ first-of-12) |
 | 5 | `[ ]` | Introduce `SyncStatusProvider` |
 | 6 | `[ ]` | Add catalog mutation surface for trash (prep for `TrashProvider`) |
 | 7 | `[ ]` | Implement `TrashProvider` (file + stub test) |
@@ -129,28 +129,28 @@ This shapes two decisions baked into Tasks 7 and 10:
 
 ---
 
-## [ ] Task 4 of 14: Introduce `PersistedListWriter` and migrate `PresetProvider`'s CRUD
+## [ ] Task 4 of 14: Introduce `SyncedItemOps` and migrate `PresetProvider`'s CRUD
 
 **Why:** The 12 add/update/delete methods in `PresetProvider` follow an identical 4-step recipe (mutate list → save JSON → cloud op + Sentry → notify). Collapsing them into one generic helper removes ~200 LOC of boilerplate and gives the new providers (Tasks 5–9) a cleaner shape to inherit.
 
-**What (overview):** A new `PersistedListWriter` helper has two static methods (`upsert<T>`, `removeById<T>`). The first add/update/delete method in `PresetProvider` is migrated to use them. After review, the remaining 11 methods are migrated by the instructor.
+**What (overview):** A new `SyncedItemOps` helper has two static methods (`upsert<T>`, `removeById<T>`). The first add/update/delete method in `PresetProvider` is migrated to use them. After review, the remaining 11 methods are migrated by the instructor.
 
 ⚡ **First of 12 — do this one yourself. Claude handles the remaining 11 after your first migration passes review.**
 
 **Details:**
-- New file: `lib/providers/persisted_list_writer.dart`. Class `PersistedListWriter` with a private constructor. No Flutter import — keep it framework-free.
+- New file: `lib/providers/synced_item_ops.dart`. Class `SyncedItemOps` with a private constructor. No Flutter import — keep it framework-free.
 - `upsert<T>` signature (named parameters): `list: List<T>`, `item: T`, `getId: String Function(T)`, `saveLocal: Future<void> Function()`, `cloudOp: Future<void> Function(T)?`, `onCloudError: void Function(Object, StackTrace)?`. Returns `Future<void>`.
   - Behaviour: if `getId(item)` matches an existing list entry, replace it in place; otherwise append. Then await `saveLocal()`. If `cloudOp` non-null, await it inside `try/catch`; on catch, call `onCloudError` if provided. **`saveLocal` errors propagate; `cloudOp` errors are swallowed after `onCloudError`.** This mirrors today's "best-effort cloud, strict local" semantics.
 - `removeById<T>` signature: `list`, `id: String`, `getId`, `saveLocal`, `cloudOp: Future<void> Function()?` (note: no item argument — delete is by id), `onCloudError`. Behaviour: remove all matching entries from `list`, then `saveLocal` + optional `cloudOp` with the same error semantics.
 - The helper does NOT call `notifyListeners` — the caller does that after the future completes. Keeps the helper free of Flutter.
-- New test file: `test/providers/persisted_list_writer_test.dart`. Five tests covering: upsert adds new, upsert replaces in place, removeById removes, upsert swallows cloud errors and forwards to `onCloudError`, removeById propagates saveLocal errors. Use a simple in-test `_Item` class with `id` and `value` to avoid pulling in app models.
+- New test file: `test/providers/synced_item_ops_test.dart`. Five tests covering: upsert adds new, upsert replaces in place, removeById removes, upsert swallows cloud errors and forwards to `onCloudError`, removeById propagates saveLocal errors. Use a simple in-test `_Item` class with `id` and `value` to avoid pulling in app models.
 - Choose **one** method in `PresetProvider` to migrate first — pick `addPresetSession` (the simplest add). The migrated method passes `_userSessions` as `list`, `session` as `item`, `(s) => s.id` as `getId`, the existing `PresetLogger.savePresetToFile('user_preset_sessions.json', _userSessions)` invocation as `saveLocal`, `_syncService == null ? null : (s) => _syncService!.uploadSession(s)` as `cloudOp`, and `Sentry.captureException` as `onCloudError`. After the helper call, `notifyListeners()`.
 - External method name stays the same (`addPresetSession`) — name changes happen in Task 12.
 - `scripts/run_tests.sh` is green before you say done. The 5 existing PresetProvider test files exercise add/update/delete paths heavily — any failure means the helper's semantics drift from the inlined original.
 
 **Files:**
-- Create: `lib/providers/persisted_list_writer.dart`
-- Create: `test/providers/persisted_list_writer_test.dart`
+- Create: `lib/providers/synced_item_ops.dart`
+- Create: `test/providers/synced_item_ops_test.dart`
 - Modify: `lib/providers/preset_provider.dart` (one method only — the rest happens after review)
 
 > *Current help level: **default**. Use `/hint`, `/answer`, or `/fullanswer` to escalate.*
@@ -475,7 +475,7 @@ This shapes two decisions baked into Tasks 7 and 10:
 
 - [ ] `scripts/run_tests.sh` passes after every task commit (no skipped tasks).
 - [ ] `flutter analyze` returns zero errors after Task 14.
-- [ ] Total LOC across `catalog_provider.dart` + `trash_provider.dart` + `edit_commit_controller.dart` + `sync_status_provider.dart` + `preset_loader.dart` + `preset_sync_merger.dart` + `persisted_list_writer.dart` is 600–750 LOC.
+- [ ] Total LOC across `catalog_provider.dart` + `trash_provider.dart` + `edit_commit_controller.dart` + `sync_status_provider.dart` + `preset_loader.dart` + `preset_sync_merger.dart` + `synced_item_ops.dart` is 600–750 LOC.
 - [ ] No file in that set exceeds 600 LOC.
 - [ ] All 15 known call sites (production + test files) updated.
 - [ ] Both `refreshAfterSignIn` methods exist (Task 14 grep confirms).
