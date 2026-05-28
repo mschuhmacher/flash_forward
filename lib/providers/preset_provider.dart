@@ -1,3 +1,4 @@
+import 'package:flash_forward/providers/preset_loader.dart';
 import 'package:flash_forward/providers/preset_sync_merger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -119,10 +120,16 @@ class PresetProvider extends ChangeNotifier {
       _syncService = SupabaseSyncService(userId: userId);
       await _syncService!.syncQueue
           .loadQueue(); // ensure queue loaded before merge
-      await _loadUserPresetDataFromCloud();
+      final loaded = await PresetLoader.loadFromCloud(_syncService!);
+      _userSessions = loaded.sessions;
+      _userWorkouts = loaded.workouts;
+      _userExercises = loaded.exercises;
     } else {
       // Load from local storage (fallback for offline/unauthenticated)
-      await _loadUserPresetDataFromLocal();
+      final local = await PresetLoader.loadFromLocal();
+      _userSessions = local.sessions;
+      _userWorkouts = local.workouts;
+      _userExercises = local.exercises;
     }
 
     await _loadAndPurgeTrash();
@@ -151,53 +158,6 @@ class PresetProvider extends ChangeNotifier {
   @visibleForTesting
   void debugSeedTrash(List<TrashEntry> entries) {
     _trashedItems = List.from(entries);
-  }
-
-  /// Load user presets from Supabase cloud
-  Future<void> _loadUserPresetDataFromCloud() async {
-    if (_syncService == null) return;
-
-    try {
-      final cloudSessions = await _syncService!.fetchUserSessions();
-      final cloudWorkouts = await _syncService!.fetchUserWorkouts();
-      final cloudExercises = await _syncService!.fetchUserExercises();
-      final pending = _syncService!.syncQueue.pendingOperations;
-
-      _userSessions = PresetSyncMerger.mergeWithPendingOps(
-        cloudItems: cloudSessions,
-        getId: (s) => s.id,
-        operationType: 'uploadSession',
-        deleteOperationType: 'deleteSession',
-        fromJson: Session.fromJson,
-        pendingOps: pending,
-      );
-      _userWorkouts = PresetSyncMerger.mergeWithPendingOps(
-        cloudItems: cloudWorkouts,
-        getId: (w) => w.id,
-        operationType: 'uploadWorkout',
-        deleteOperationType: 'deleteWorkout',
-        fromJson: Workout.fromJson,
-        pendingOps: pending,
-      );
-      _userExercises = PresetSyncMerger.mergeWithPendingOps(
-        cloudItems: cloudExercises,
-        getId: (e) => e.id,
-        operationType: 'uploadExercise',
-        deleteOperationType: 'deleteExercise',
-        fromJson: Exercise.fromJson,
-        pendingOps: pending,
-      );
-    } catch (e, stackTrace) {
-      Sentry.captureException(e, stackTrace: stackTrace);
-      await _loadUserPresetDataFromLocal();
-    }
-  }
-
-  /// Loads user-added presets if they exist
-  Future<void> _loadUserPresetDataFromLocal() async {
-    _userSessions = (await PresetLogger.readUserPresetSessions()).toList();
-    _userWorkouts = (await PresetLogger.readUserPresetWorkouts()).toList();
-    _userExercises = (await PresetLogger.readUserPresetExercises()).toList();
   }
 
   Future<void> deleteAllUserPresets() async {
