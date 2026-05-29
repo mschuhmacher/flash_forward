@@ -411,6 +411,43 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Temporary wrapper functions for during the refactoring work. deleting these at the end (task 12)
+  @protected
+  Future<void> upsertUserSession(Session session) =>
+      promoteAndUpdateSession(session);
+  @protected
+  Future<void> upsertUserWorkout(Workout workout) =>
+      promoteAndUpdateWorkout(workout);
+  @protected
+  Future<void> upsertUserExercise(Exercise exercise) =>
+      promoteAndUpdateExercise(exercise);
+  @protected
+  Future<void> removeUserSessionLocal(String id) async {
+    _userSessions.removeWhere((s) => s.id == id);
+    await PresetLogger.savePresetToFile(
+      'user_preset_sessions.json',
+      _userSessions,
+    );
+  }
+
+  @protected
+  Future<void> removeUserWorkoutLocal(String id) async {
+    _userWorkouts.removeWhere((w) => w.id == id);
+    await PresetLogger.savePresetToFile(
+      'user_preset_workouts.json',
+      _userWorkouts,
+    );
+  }
+
+  @protected
+  Future<void> removeUserExerciseLocal(String id) async {
+    _userExercises.removeWhere((e) => e.id == id);
+    await PresetLogger.savePresetToFile(
+      'user_preset_exercises.json',
+      _userExercises,
+    );
+  }
+
   // ── Propagation: catalog edits → session templates ────────────────────────
   //
   // When a user edits a catalog workout/exercise, embedded copies in session
