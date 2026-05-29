@@ -1,4 +1,5 @@
 import 'package:flash_forward/presentation/screens/root_screen.dart';
+import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
@@ -28,10 +29,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
   Future<void> _initializeApp() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // Run initialization with minimum 2 second display time
+    // Run initialization with display time
     await Future.wait([
       _loadData(),
-      Future.delayed(const Duration(seconds: 1, milliseconds: 500)),
+      Future.delayed(const Duration(seconds: 1)),
     ]);
 
     if (!mounted) return;
@@ -69,7 +70,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
     await authProvider.init();
 
     if (!mounted) return;
-    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    final settingsProvider = Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
     await settingsProvider.init();
 
     // If user is authenticated, load their data
@@ -88,8 +92,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
         listen: false,
       );
 
+      TrashProvider trashProvider = context.read<TrashProvider>();
+      presetProvider.attachTrashProvider(trashProvider);
       await sessionLogProvider.init(userId: userId);
-      await presetProvider.init(userId: userId);
+      await presetProvider.init(userId: userId, trash: trashProvider);
 
       // Process any pending sync operations from previous offline sessions
       await sessionLogProvider.processPendingSync();

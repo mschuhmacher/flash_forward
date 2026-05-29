@@ -1,3 +1,5 @@
+import 'package:flash_forward/models/trash_entry.dart';
+import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_sync_merger.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flash_forward/models/session.dart';
@@ -18,6 +20,24 @@ SyncOperation _deleteOp(String id) => SyncOperation(
     type: 'deleteSession',
     data: {},
     createdAt: DateTime.now());
+
+Workout _workout({required String id, String title = 'W'}) => Workout(
+      id: id,
+      title: title,
+      label: 'push',
+      exercises: [],
+      timeBetweenExercises: 60,
+    );
+
+TrashEntry _trashedWorkout({
+  required String id,
+  String title = 'W',
+  DateTime? deletedAt,
+}) =>
+    TrashEntry.workout(
+      workout: _workout(id: id, title: title),
+      deletedAt: deletedAt ?? DateTime(2025, 1, 1),
+    );
 
 void main() {
   group('PresetSyncMerger.mergeWithPendingOps', () {
@@ -113,6 +133,50 @@ void main() {
         pendingOps: [_deleteOp(s.id)],
       );
       expect(result, isEmpty);
+    });
+  });
+
+  group('PresetSyncMerger.mergeTrashCloudAndLocal', () {
+    test('union of disjoint lists', () {
+      final local = [_trashedWorkout(id: 'w-local')];
+      final cloud = [_trashedWorkout(id: 'w-cloud')];
+
+      final merged = PresetSyncMerger.mergeTrashCloudAndLocal(local, cloud);
+
+      expect(merged.map((e) => e.id).toSet(), {'w-local', 'w-cloud'});
+    });
+
+    test('cloud entry with later deletedAt wins on conflict', () {
+      final earlier = DateTime(2025, 1, 1);
+      final later = DateTime(2025, 6, 1);
+
+      final local = [
+        _trashedWorkout(id: 'w-1', title: 'Old', deletedAt: earlier)
+      ];
+      final cloud = [
+        _trashedWorkout(id: 'w-1', title: 'New', deletedAt: later)
+      ];
+
+      final merged = PresetSyncMerger.mergeTrashCloudAndLocal(local, cloud);
+
+      expect(merged, hasLength(1));
+      expect(merged.single.title, 'New');
+    });
+
+    test('local entry with later deletedAt is kept over cloud', () {
+      final earlier = DateTime(2025, 1, 1);
+      final later = DateTime(2025, 6, 1);
+
+      final local = [
+        _trashedWorkout(id: 'w-1', title: 'New', deletedAt: later)
+      ];
+      final cloud = [
+        _trashedWorkout(id: 'w-1', title: 'Old', deletedAt: earlier)
+      ];
+
+      final merged = PresetSyncMerger.mergeTrashCloudAndLocal(local, cloud);
+
+      expect(merged.single.title, 'New');
     });
   });
 }

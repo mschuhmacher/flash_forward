@@ -1,4 +1,5 @@
 import 'package:flash_forward/presentation/screens/root_screen.dart';
+import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
@@ -130,16 +131,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget? _banner(BuildContext context) {
     if (widget.showEmailConfirmationMessage) {
-      return _infoBanner(context, Icons.mail_outline,
-          'Please check your email to confirm your account before logging in.');
+      return _infoBanner(
+        context,
+        Icons.mail_outline,
+        'Please check your email to confirm your account before logging in.',
+      );
     }
     if (widget.showEmailConfirmedMessage) {
-      return _infoBanner(context, Icons.check_circle_outline,
-          'Your email has been confirmed. Please sign in.');
+      return _infoBanner(
+        context,
+        Icons.check_circle_outline,
+        'Your email has been confirmed. Please sign in.',
+      );
     }
     if (widget.showPasswordResetMessage) {
-      return _infoBanner(context, Icons.check_circle_outline,
-          'Your password has been updated. Please sign in.');
+      return _infoBanner(
+        context,
+        Icons.check_circle_outline,
+        'Your password has been updated. Please sign in.',
+      );
     }
     return null;
   }
@@ -192,8 +202,10 @@ class _LoginScreenState extends State<LoginScreen> {
         listen: false,
       );
 
+      TrashProvider trashProvider = context.read<TrashProvider>();
+      presetProvider.attachTrashProvider(trashProvider);
       await sessionLogProvider.init(userId: userId);
-      await presetProvider.init(userId: userId);
+      await presetProvider.init(userId: userId, trash: trashProvider);
 
       if (!mounted) return;
 

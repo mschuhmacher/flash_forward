@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/providers/sync_status_provider.dart';
+import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
@@ -37,15 +39,17 @@ void main() async {
   final audioPlayer = AudioBeepPlayer();
   await audioPlayer.init();
 
-  final sessionStateProvider = SessionStateProvider()
-    ..setBeepScheduler(beepScheduler)
-    ..setAudioBeepPlayer(audioPlayer);
+  final sessionStateProvider =
+      SessionStateProvider()
+        ..setBeepScheduler(beepScheduler)
+        ..setAudioBeepPlayer(audioPlayer);
 
   final packageInfo = await PackageInfo.fromPlatform();
 
   await SentryFlutter.init(
     (options) {
-      options.dsn = kDebugMode ? '' : const String.fromEnvironment('SENTRY_DSN');
+      options.dsn =
+          kDebugMode ? '' : const String.fromEnvironment('SENTRY_DSN');
       options.environment = kDebugMode ? 'debug' : 'production';
       options.release =
           'flash_forward@${packageInfo.version}+${packageInfo.buildNumber}';
@@ -56,18 +60,41 @@ void main() async {
       options.replay.sessionSampleRate = 0.1;
       options.replay.onErrorSampleRate = 1.0;
     },
-    appRunner: () => runApp(SentryWidget(child:
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
-        ChangeNotifierProvider(create: (context) => SessionLogProvider()),
-        ChangeNotifierProvider(create: (context) => PresetProvider()),
-        ChangeNotifierProvider(create: (_) => sessionStateProvider),
-        ChangeNotifierProvider(create: (context) => SettingsProvider()),
-      ],
-      child: const MyApp(),
-    ),
-  )),
+    appRunner:
+        () => runApp(
+          SentryWidget(
+            child: MultiProvider(
+              providers: [
+                ChangeNotifierProvider(create: (context) => AuthProvider()),
+                ChangeNotifierProvider(
+                  create: (context) => SessionLogProvider(),
+                ),
+                ChangeNotifierProvider(
+                  create: (context) => SyncStatusProvider(),
+                ),
+                ChangeNotifierProvider(create: (context) => PresetProvider()),
+                ChangeNotifierProxyProvider2<
+                  PresetProvider,
+                  SyncStatusProvider,
+                  TrashProvider
+                >(
+                  create:
+                      (context) => TrashProvider(
+                        catalog: context.read<PresetProvider>(),
+                        syncStatus: context.read<SyncStatusProvider>(),
+                      ),
+                  update:
+                      (context, value, value2, previous) =>
+                          previous ??
+                          TrashProvider(catalog: value, syncStatus: value2),
+                ),
+                ChangeNotifierProvider(create: (_) => sessionStateProvider),
+                ChangeNotifierProvider(create: (context) => SettingsProvider()),
+              ],
+              child: const MyApp(),
+            ),
+          ),
+        ),
   );
 }
 
@@ -121,7 +148,8 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: lightAppTheme,
       darkTheme: darkAppTheme,
-      themeMode: ThemeMode.light, // switch to system when better dark mode colors set
+      themeMode:
+          ThemeMode.light, // switch to system when better dark mode colors set
       home: const LoadingScreen(),
     );
   }
