@@ -412,16 +412,23 @@ class PresetProvider extends ChangeNotifier {
   }
 
   // Temporary wrapper functions for during the refactoring work. deleting these at the end (task 12)
-  @protected
+  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
+  /// public catalog API — prefer the existing upsert*/delete* methods.
   Future<void> upsertUserSession(Session session) =>
       promoteAndUpdateSession(session);
-  @protected
+
+  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
+  /// public catalog API — prefer the existing upsert*/delete* methods.
   Future<void> upsertUserWorkout(Workout workout) =>
       promoteAndUpdateWorkout(workout);
-  @protected
+
+  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
+  /// public catalog API — prefer the existing upsert*/delete* methods.
   Future<void> upsertUserExercise(Exercise exercise) =>
       promoteAndUpdateExercise(exercise);
-  @protected
+
+  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
+  /// public catalog API — prefer the existing upsert*/delete* methods.
   Future<void> removeUserSessionLocal(String id) async {
     _userSessions.removeWhere((s) => s.id == id);
     await PresetLogger.savePresetToFile(
@@ -430,7 +437,8 @@ class PresetProvider extends ChangeNotifier {
     );
   }
 
-  @protected
+  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
+  /// public catalog API — prefer the existing upsert*/delete* methods.
   Future<void> removeUserWorkoutLocal(String id) async {
     _userWorkouts.removeWhere((w) => w.id == id);
     await PresetLogger.savePresetToFile(
@@ -439,7 +447,8 @@ class PresetProvider extends ChangeNotifier {
     );
   }
 
-  @protected
+  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
+  /// public catalog API — prefer the existing upsert*/delete* methods.
   Future<void> removeUserExerciseLocal(String id) async {
     _userExercises.removeWhere((e) => e.id == id);
     await PresetLogger.savePresetToFile(
