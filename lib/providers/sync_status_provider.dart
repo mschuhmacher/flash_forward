@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 /// Why:
 /// - centralised SupabaseSyncService instance per user for the whole app.
 /// - one place to query its status.
-/// - previously each domain provider (PresetProvider, SessionLogProvider) owned
+/// - previously each domain provider (CatalogProvider, SessionLogProvider) owned
 ///   its own service instance, which meant duplicated sync queues and ambiguous
 ///   pending-count totals. Centralising here also lets CatalogProvider and
 ///   TrashProvider share one service and unblocks the demo-before-signin flow.

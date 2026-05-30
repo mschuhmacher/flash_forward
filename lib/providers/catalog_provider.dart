@@ -5,7 +5,6 @@ import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/data/default_exercises.dart';
-import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/data/default_workout_data.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/trash_entry.dart';
@@ -14,7 +13,6 @@ import 'package:flash_forward/services/preset_logger.dart';
 import 'package:flash_forward/services/supabase_sync_service.dart';
 import '../models/session.dart';
 import '../data/default_session_data.dart';
-import '../models/pending_change.dart';
 
 /// Responsibilities:
 /// - Holds in-memory state of all presets (sessions, workouts, exercises).
@@ -27,7 +25,7 @@ import '../models/pending_change.dart';
 /// This provider manages the app's active preset data, keeping the UI
 /// reactive while separating mutable user data from the immutable defaults.
 
-class PresetProvider extends ChangeNotifier {
+class CatalogProvider extends ChangeNotifier {
   List<Session> _defaultSessions = [];
   List<Workout> _defaultWorkouts = [];
   List<Exercise> _defaultExercises = [];
@@ -40,7 +38,9 @@ class PresetProvider extends ChangeNotifier {
 
   void attachTrashProvider(TrashProvider trash) {
     _trash = trash;
-    // Register notifyListeners from PresetProvider as listener on TrashProvider
+    // Forward TrashProvider's notifications through this catalog so listeners
+    // of the catalog see trash mutations too (e.g. the merged-list getters
+    // re-render when something is moved to trash).
     trash.addListener(notifyListeners);
   }
 
@@ -202,32 +202,19 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // These add/update methods are still used by the _isNew add path in edit
-  // screens, by _copyItem in catalog, and by propagation helpers internally.
-  // New callers editing existing items should use promoteAndUpdate* instead.
-  /// Save new user-added presets
-  Future<void> addPresetSession(Session session) async {
-    await SyncedItemOps.upsert<Session>(
-      list: _userSessions,
-      item: session,
-      getId: (s) => s.id,
-      saveLocal:
-          () => PresetLogger.savePresetToFile(
-            'user_preset_sessions.json',
-            _userSessions,
-          ),
-      cloudOp:
-          _syncStatus?.service == null
-              ? null
-              : (s) => _syncStatus!.service!.uploadSession(s),
-      onCloudError:
-          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
-    );
+  // ── CRUD ──────────────────────────────────────────────────────────────────
+  //
+  // Single canonical operation per kind:
+  //   upsertSession / upsertWorkout / upsertExercise — append on first save
+  //   (promotes a default into the user list at the same id, where it shadows
+  //   the default), replace in place on subsequent saves. Idempotent on retry.
+  //   deleteSession / deleteWorkout / deleteExercise — remove from user list +
+  //   delete the cloud row.
+  //   removeSessionLocal / removeWorkoutLocal / removeExerciseLocal — for
+  //   TrashProvider's restore/lift/heal flows. Skip the cloud delete because
+  //   the trash entry's upload is what the cloud sees.
 
-    notifyListeners();
-  }
-
-  Future<void> updatePresetSession(Session session) async {
+  Future<void> upsertSession(Session session) async {
     await SyncedItemOps.upsert<Session>(
       list: _userSessions,
       item: session,
@@ -247,8 +234,47 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Remove user added preset session
-  Future<void> deleteUserPresetSession(String id) async {
+  Future<void> upsertWorkout(Workout workout) async {
+    await SyncedItemOps.upsert<Workout>(
+      list: _userWorkouts,
+      item: workout,
+      getId: (w) => w.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_workouts.json',
+            _userWorkouts,
+          ),
+      cloudOp:
+          _syncStatus?.service == null
+              ? null
+              : (w) => _syncStatus!.service!.uploadWorkout(w),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
+    );
+    notifyListeners();
+  }
+
+  Future<void> upsertExercise(Exercise exercise) async {
+    await SyncedItemOps.upsert<Exercise>(
+      list: _userExercises,
+      item: exercise,
+      getId: (e) => e.id,
+      saveLocal:
+          () => PresetLogger.savePresetToFile(
+            'user_preset_exercises.json',
+            _userExercises,
+          ),
+      cloudOp:
+          _syncStatus?.service == null
+              ? null
+              : (e) => _syncStatus!.service!.uploadExercise(e),
+      onCloudError:
+          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
+    );
+    notifyListeners();
+  }
+
+  Future<void> deleteSession(String id) async {
     await SyncedItemOps.removeById<Session>(
       list: _userSessions,
       id: id,
@@ -268,8 +294,7 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Remove user added preset workout
-  Future<void> deleteUserPresetWorkout(String id) async {
+  Future<void> deleteWorkout(String id) async {
     await SyncedItemOps.removeById<Workout>(
       list: _userWorkouts,
       id: id,
@@ -289,8 +314,7 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Remove user added preset exercise
-  Future<void> deleteUserPresetExercise(String id) async {
+  Future<void> deleteExercise(String id) async {
     await SyncedItemOps.removeById<Exercise>(
       list: _userExercises,
       id: id,
@@ -310,169 +334,10 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addPresetWorkout(Workout workout) async {
-    await SyncedItemOps.upsert<Workout>(
-      list: _userWorkouts,
-      item: workout,
-      getId: (w) => w.id,
-      saveLocal:
-          () => PresetLogger.savePresetToFile(
-            'user_preset_workouts.json',
-            _userWorkouts,
-          ),
-      cloudOp:
-          _syncStatus?.service == null
-              ? null
-              : (w) => _syncStatus!.service!.uploadWorkout(w),
-      onCloudError:
-          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
-    );
-    notifyListeners();
-  }
-
-  Future<void> updatePresetWorkout(Workout workout) async {
-    await SyncedItemOps.upsert<Workout>(
-      list: _userWorkouts,
-      item: workout,
-      getId: (w) => w.id,
-      saveLocal:
-          () => PresetLogger.savePresetToFile(
-            'user_preset_workouts.json',
-            _userWorkouts,
-          ),
-      cloudOp:
-          _syncStatus?.service == null
-              ? null
-              : (w) => _syncStatus!.service!.uploadWorkout(w),
-      onCloudError:
-          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
-    );
-    notifyListeners();
-  }
-
-  Future<void> updatePresetExercise(Exercise exercise) async {
-    await SyncedItemOps.upsert<Exercise>(
-      list: _userExercises,
-      item: exercise,
-      getId: (e) => e.id,
-      saveLocal:
-          () => PresetLogger.savePresetToFile(
-            'user_preset_exercises.json',
-            _userExercises,
-          ),
-      cloudOp:
-          _syncStatus?.service == null
-              ? null
-              : (e) => _syncStatus!.service!.uploadExercise(e),
-      onCloudError:
-          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
-    );
-    notifyListeners();
-  }
-
-  Future<void> addPresetExercise(Exercise exercise) async {
-    await SyncedItemOps.upsert<Exercise>(
-      list: _userExercises,
-      item: exercise,
-      getId: (e) => e.id,
-      saveLocal:
-          () => PresetLogger.savePresetToFile(
-            'user_preset_exercises.json',
-            _userExercises,
-          ),
-      cloudOp:
-          _syncStatus?.service == null
-              ? null
-              : (e) => _syncStatus!.service!.uploadExercise(e),
-      onCloudError:
-          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
-    );
-    notifyListeners();
-  }
-
-  // Single entry point used by the edit flow: append on first save (promotes a
-  // default into the user list at the same id, where it shadows the default),
-  // replace in place on subsequent saves. Idempotent on retry.
-
-  Future<void> promoteAndUpdateWorkout(Workout updated) async {
-    await SyncedItemOps.upsert<Workout>(
-      list: _userWorkouts,
-      item: updated,
-      getId: (w) => w.id,
-      saveLocal:
-          () => PresetLogger.savePresetToFile(
-            'user_preset_workouts.json',
-            _userWorkouts,
-          ),
-      cloudOp:
-          _syncStatus?.service == null
-              ? null
-              : (w) => _syncStatus!.service!.uploadWorkout(w),
-      onCloudError:
-          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
-    );
-    notifyListeners();
-  }
-
-  Future<void> promoteAndUpdateExercise(Exercise updated) async {
-    await SyncedItemOps.upsert<Exercise>(
-      list: _userExercises,
-      item: updated,
-      getId: (e) => e.id,
-      saveLocal:
-          () => PresetLogger.savePresetToFile(
-            'user_preset_exercises.json',
-            _userExercises,
-          ),
-      cloudOp:
-          _syncStatus?.service == null
-              ? null
-              : (e) => _syncStatus!.service!.uploadExercise(e),
-      onCloudError:
-          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
-    );
-    notifyListeners();
-  }
-
-  Future<void> promoteAndUpdateSession(Session updated) async {
-    await SyncedItemOps.upsert<Session>(
-      list: _userSessions,
-      item: updated,
-      getId: (s) => s.id,
-      saveLocal:
-          () => PresetLogger.savePresetToFile(
-            'user_preset_sessions.json',
-            _userSessions,
-          ),
-      cloudOp:
-          _syncStatus?.service == null
-              ? null
-              : (s) => _syncStatus!.service!.uploadSession(s),
-      onCloudError:
-          (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
-    );
-    notifyListeners();
-  }
-
-  // Temporary wrapper functions for during the refactoring work. deleting these at the end (task 12)
-  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
-  /// public catalog API — prefer the existing upsert*/delete* methods.
-  Future<void> upsertUserSession(Session session) =>
-      promoteAndUpdateSession(session);
-
-  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
-  /// public catalog API — prefer the existing upsert*/delete* methods.
-  Future<void> upsertUserWorkout(Workout workout) =>
-      promoteAndUpdateWorkout(workout);
-
-  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
-  /// public catalog API — prefer the existing upsert*/delete* methods.
-  Future<void> upsertUserExercise(Exercise exercise) =>
-      promoteAndUpdateExercise(exercise);
-
-  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
-  /// public catalog API — prefer the existing upsert*/delete* methods.
-  Future<void> removeUserSessionLocal(String id) async {
+  /// Used by TrashProvider for restore/lift/heal flows. Removes the entry
+  /// locally without uploading a cloud delete — the trash entry's upload is
+  /// what the cloud sees.
+  Future<void> removeSessionLocal(String id) async {
     _userSessions.removeWhere((s) => s.id == id);
     await PresetLogger.savePresetToFile(
       'user_preset_sessions.json',
@@ -480,9 +345,8 @@ class PresetProvider extends ChangeNotifier {
     );
   }
 
-  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
-  /// public catalog API — prefer the existing upsert*/delete* methods.
-  Future<void> removeUserWorkoutLocal(String id) async {
+  /// Used by TrashProvider for restore/lift/heal flows. See [removeSessionLocal].
+  Future<void> removeWorkoutLocal(String id) async {
     _userWorkouts.removeWhere((w) => w.id == id);
     await PresetLogger.savePresetToFile(
       'user_preset_workouts.json',
@@ -490,9 +354,8 @@ class PresetProvider extends ChangeNotifier {
     );
   }
 
-  /// Used by TrashProvider for restore/lift/heal flows. Not part of the
-  /// public catalog API — prefer the existing upsert*/delete* methods.
-  Future<void> removeUserExerciseLocal(String id) async {
+  /// Used by TrashProvider for restore/lift/heal flows. See [removeSessionLocal].
+  Future<void> removeExerciseLocal(String id) async {
     _userExercises.removeWhere((e) => e.id == id);
     await PresetLogger.savePresetToFile(
       'user_preset_exercises.json',
@@ -615,9 +478,9 @@ class PresetProvider extends ChangeNotifier {
             }
             return w;
           }).toList();
-      // promoteAndUpdate so default sessions get promoted into _userSessions
-      // on first propagation; updatePresetSession would silently no-op for them.
-      await promoteAndUpdateSession(session.copyWith(workouts: newWorkouts));
+      // upsertSession promotes default sessions into _userSessions on first
+      // propagation; a no-op-on-missing-id update would silently skip them.
+      await upsertSession(session.copyWith(workouts: newWorkouts));
     }
   }
 
@@ -660,7 +523,7 @@ class PresetProvider extends ChangeNotifier {
                 }).toList();
             return w.copyWith(exercises: newExercises);
           }).toList();
-      await promoteAndUpdateSession(session.copyWith(workouts: newWorkouts));
+      await upsertSession(session.copyWith(workouts: newWorkouts));
     }
   }
 
@@ -697,132 +560,7 @@ class PresetProvider extends ChangeNotifier {
             }
             return e;
           }).toList();
-      await promoteAndUpdateWorkout(workout.copyWith(exercises: newExercises));
-    }
-  }
-
-  /// Single entry point edit screens call to commit a [PendingChangeBag].
-  /// Promotes happen in dependency order (exercises → workouts → session) and
-  /// the returned [CommitResult] describes other consumers affected, so the
-  /// caller can render the combined propagation prompt.
-  ///
-  /// Suppression rule: if a bagged exercise also lives inside a bagged
-  /// workout's exercises list, its `affectedWorkoutsByExerciseId` entry is
-  /// suppressed — the exercise change reaches its only relevant consumer (the
-  /// parent workout) via the workout's own propagation, so prompting again at
-  /// the exercise level would be misleading.
-  ///
-  /// Partial-failure semantics: if a promote mid-flight throws (e.g. disk or
-  /// network failure), some items may already be persisted while others
-  /// aren't. There is no automatic rollback; the caller must surface the error
-  /// to the user. (Each promoteAndUpdateX is itself best-effort with
-  /// Sentry-on-upload-failure; this note covers uncaught exceptions bubbling
-  /// up from the local-write step.)
-  Future<CommitResult> commitChanges(
-    PendingChangeBag bag, {
-    String? excludeSessionId,
-    String? excludeWorkoutId,
-  }) async {
-    // When the bag has a session, the bagged workouts and exercises are
-    // session-embedded: they live inside the session JSON and are persisted
-    // via the session's own promote below. Pushing them into the catalog
-    // (_userWorkouts/_userExercises) would create silent duplicates.
-    final isSessionScopedCommit = bag.session != null;
-
-    if (!isSessionScopedCommit) {
-      // Promote in dependency order: exercises first, workouts next.
-      for (final ec in bag.exercisesById.values) {
-        await promoteAndUpdateExercise(ec.exercise);
-      }
-      for (final wc in bag.workoutsById.values) {
-        await promoteAndUpdateWorkout(wc.workout);
-      }
-    }
-    if (bag.session != null) {
-      await promoteAndUpdateSession(bag.session!.session);
-    }
-
-    // Compute affected consumers AFTER promotion (so usagesOf reflects current state).
-    final sessionsByWorkout = <String, List<Session>>{};
-    final workoutsByExercise = <String, List<Workout>>{};
-    for (final wc in bag.workoutsById.values) {
-      final sessions =
-          usagesOfWorkout(
-            wc.workout.id,
-            alsoMatchTemplateId: wc.workout.templateId,
-          ).where((s) => s.id != excludeSessionId).toList();
-      if (sessions.isNotEmpty) sessionsByWorkout[wc.workout.id] = sessions;
-    }
-    // Suppress exercise-level propagation for exercises that live inside a
-    // workout that's also being committed. The user's edit was scoped to that
-    // workout context; the exercise change reaches its only relevant consumer
-    // (the parent workout) via the workout's own propagation.
-    final exerciseIdsInsideBaggedWorkouts = <String>{
-      for (final wc in bag.workoutsById.values)
-        for (final e in wc.workout.exercises) e.id,
-    };
-    for (final ec in bag.exercisesById.values) {
-      if (exerciseIdsInsideBaggedWorkouts.contains(ec.exercise.id)) continue;
-      // Dedupe by workout.id, not object identity — sessions loaded from JSON
-      // produce separate Workout instances for the same id, so .toSet() on the
-      // raw objects fails to collapse them.
-      final byId = <String, Workout>{};
-      for (final u in usagesOfExercise(
-        ec.exercise.id,
-        alsoMatchTemplateId: ec.exercise.templateId,
-      )) {
-        if (u.workout.id == excludeWorkoutId) continue;
-        byId[u.workout.id] = u.workout;
-      }
-      if (byId.isNotEmpty) {
-        workoutsByExercise[ec.exercise.id] = byId.values.toList();
-      }
-    }
-    return CommitResult(
-      affectedSessionsByWorkoutId: sessionsByWorkout,
-      affectedWorkoutsByExerciseId: workoutsByExercise,
-    );
-  }
-
-  /// Runs every propagation path implied by the bag. Called when the user
-  /// confirms the combined propagation prompt. Exercises propagate into both
-  /// session templates and user workouts; workouts propagate into session
-  /// templates. Session changes don't propagate (sessions are leaf consumers).
-  /// Pass [selection] to honour the per-consumer checkboxes; null means all.
-  Future<void> propagateBag(
-    PendingChangeBag bag, {
-    PropagationSelection? selection,
-  }) async {
-    // Mirror the suppression in commitChanges: exercises that live inside a
-    // bagged workout already reach session templates via the workout's own
-    // propagation. Calling propagateExerciseToSessionTemplates separately
-    // would ignore the selection filter (no 'exercise-in-sessions' key exists)
-    // and overwrite correctly-excluded sessions.
-    final exerciseIdsInsideBaggedWorkouts = <String>{
-      for (final wc in bag.workoutsById.values)
-        for (final e in wc.workout.exercises) e.id,
-    };
-
-    for (final ec in bag.exercisesById.values) {
-      if (!exerciseIdsInsideBaggedWorkouts.contains(ec.exercise.id)) {
-        await propagateExerciseToSessionTemplates(
-          ec.exercise,
-          onlyToSessionIds: selection?.sessionIdsFor(
-            'exercise',
-            ec.exercise.id,
-          ),
-        );
-      }
-      await propagateExerciseToWorkouts(
-        ec.exercise,
-        onlyToWorkoutIds: selection?.workoutIdsFor('exercise', ec.exercise.id),
-      );
-    }
-    for (final wc in bag.workoutsById.values) {
-      await propagateWorkoutToSessionTemplates(
-        wc.workout,
-        onlyToSessionIds: selection?.sessionIdsFor('workout', wc.workout.id),
-      );
+      await upsertWorkout(workout.copyWith(exercises: newExercises));
     }
   }
 
@@ -866,26 +604,4 @@ class PresetProvider extends ChangeNotifier {
     _userExercises = [];
     notifyListeners();
   }
-
-}
-
-/// Returned by [PresetProvider.commitChanges] so the edit screen can render a
-/// single combined "this also affects …" prompt covering every promoted item.
-/// Lists are already filtered by the optional excludes (the workout/session
-/// being edited is suppressed from its own consumer list).
-class CommitResult {
-  CommitResult({
-    required this.affectedSessionsByWorkoutId,
-    required this.affectedWorkoutsByExerciseId,
-  });
-
-  /// Workout id → sessions (other than the one being edited, if any) that use it.
-  final Map<String, List<Session>> affectedSessionsByWorkoutId;
-
-  /// Exercise id → workouts (other than the one being edited, if any) that use it.
-  final Map<String, List<Workout>> affectedWorkoutsByExerciseId;
-
-  bool get hasAny =>
-      affectedSessionsByWorkoutId.values.any((l) => l.isNotEmpty) ||
-      affectedWorkoutsByExerciseId.values.any((l) => l.isNotEmpty);
 }

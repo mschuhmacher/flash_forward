@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
@@ -14,7 +14,7 @@ class SessionSelectRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<PresetProvider, SessionStateProvider>(
+    return Consumer2<CatalogProvider, SessionStateProvider>(
       builder: (context, presetData, sessionStateData, child) {
         int index = 0;
         int itemLength = 0;
@@ -116,10 +116,7 @@ class MyRowCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            width: 0.25,
-            color: context.colorScheme.onSurface,
-          ),
+          border: Border.all(width: 0.25, color: context.colorScheme.onSurface),
           color: context.colorScheme.surfaceBright,
           boxShadow: context.shadowLarge,
         ),

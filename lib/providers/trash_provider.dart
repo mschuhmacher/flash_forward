@@ -2,7 +2,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/providers/preset_sync_merger.dart';
 import 'package:flash_forward/providers/sync_status_provider.dart';
 import 'package:flash_forward/services/preset_logger.dart';
@@ -12,12 +12,12 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 class TrashProvider extends ChangeNotifier {
   TrashProvider({
-    required PresetProvider catalog,
+    required CatalogProvider catalog,
     required SyncStatusProvider syncStatus,
   }) : _catalog = catalog,
        _syncStatus = syncStatus;
 
-  final PresetProvider _catalog;
+  final CatalogProvider _catalog;
   final SyncStatusProvider _syncStatus;
   final TrashService _trashService = TrashService();
 
@@ -104,18 +104,18 @@ class TrashProvider extends ChangeNotifier {
     }
     if (staleSessionIds.isNotEmpty) {
       for (final id in staleSessionIds) {
-        await _catalog.removeUserSessionLocal(id);
+        await _catalog.removeSessionLocal(id);
       }
     }
 
     if (staleWorkoutIds.isNotEmpty) {
       for (final id in staleWorkoutIds) {
-        await _catalog.removeUserWorkoutLocal(id);
+        await _catalog.removeWorkoutLocal(id);
       }
     }
     if (staleExerciseIds.isNotEmpty) {
       for (final id in staleExerciseIds) {
-        await _catalog.removeUserExerciseLocal(id);
+        await _catalog.removeExerciseLocal(id);
       }
     }
 
@@ -160,7 +160,7 @@ class TrashProvider extends ChangeNotifier {
           orElse:
               () => throw StateError('deleteToTrash: session $id not found'),
         );
-        await _catalog.removeUserSessionLocal(id);
+        await _catalog.removeSessionLocal(id);
         entry = TrashEntry.session(session: src, deletedAt: now);
       case TrashKind.workout:
         final src = _catalog.presetWorkouts.firstWhere(
@@ -168,7 +168,7 @@ class TrashProvider extends ChangeNotifier {
           orElse:
               () => throw StateError('deleteToTrash: workout $id not found'),
         );
-        await _catalog.removeUserWorkoutLocal(id);
+        await _catalog.removeWorkoutLocal(id);
         entry = TrashEntry.workout(workout: src, deletedAt: now);
       case TrashKind.exercise:
         final src = _catalog.presetExercises.firstWhere(
@@ -176,7 +176,7 @@ class TrashProvider extends ChangeNotifier {
           orElse:
               () => throw StateError('deleteToTrash: exercise $id not found'),
         );
-        await _catalog.removeUserExerciseLocal(id);
+        await _catalog.removeExerciseLocal(id);
         entry = TrashEntry.exercise(exercise: src, deletedAt: now);
     }
     _trashedItems.add(entry);
@@ -218,17 +218,17 @@ class TrashProvider extends ChangeNotifier {
       case TrashKind.session:
         var s = entry.payload as Session;
         if (overrideTitle != null) s = s.copyWith(title: overrideTitle);
-        await _catalog.upsertUserSession(s);
+        await _catalog.upsertSession(s);
         restoredSession = s;
       case TrashKind.workout:
         var w = entry.payload as Workout;
         if (overrideTitle != null) w = w.copyWith(title: overrideTitle);
-        await _catalog.upsertUserWorkout(w);
+        await _catalog.upsertWorkout(w);
         restoredWorkout = w;
       case TrashKind.exercise:
         var e = entry.payload as Exercise;
         if (overrideTitle != null) e = e.copyWith(title: overrideTitle);
-        await _catalog.upsertUserExercise(e);
+        await _catalog.upsertExercise(e);
         restoredExercise = e;
     }
     _trashedItems.removeWhere((e) => e.id == id);
@@ -271,17 +271,17 @@ class TrashProvider extends ChangeNotifier {
         var s = item as Session;
         if (overrideTitle != null) s = s.copyWith(title: overrideTitle);
         if (overrideId != null) s = s.copyWith(id: overrideId);
-        await _catalog.upsertUserSession(s);
+        await _catalog.upsertSession(s);
       case TrashKind.workout:
         var w = item as Workout;
         if (overrideTitle != null) w = w.copyWith(title: overrideTitle);
         if (overrideId != null) w = w.copyWith(id: overrideId);
-        await _catalog.upsertUserWorkout(w);
+        await _catalog.upsertWorkout(w);
       case TrashKind.exercise:
         var e = item as Exercise;
         if (overrideTitle != null) e = e.copyWith(title: overrideTitle);
         if (overrideId != null) e = e.copyWith(id: overrideId);
-        await _catalog.upsertUserExercise(e);
+        await _catalog.upsertExercise(e);
     }
     notifyListeners();
   }

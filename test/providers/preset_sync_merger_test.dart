@@ -3,7 +3,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/preset_sync_merger.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flash_forward/models/session.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/services/sync_queue_service.dart';
 
 Session _session(String id) =>

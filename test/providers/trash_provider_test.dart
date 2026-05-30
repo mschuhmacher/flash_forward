@@ -3,7 +3,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/providers/sync_status_provider.dart';
 import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,20 +19,16 @@ class _FakePathProvider extends PathProviderPlatform
   Future<String?> getApplicationDocumentsPath() async => _dir;
 }
 
-Exercise _exercise({required String id, String title = 'Ex'}) => Exercise(
-      id: id,
-      title: title,
-      description: 'd',
-      label: 'push',
-    );
+Exercise _exercise({required String id, String title = 'Ex'}) =>
+    Exercise(id: id, title: title, description: 'd', label: 'push');
 
 Workout _workout({required String id, String title = 'W'}) => Workout(
-      id: id,
-      title: title,
-      label: 'push',
-      exercises: [],
-      timeBetweenExercises: 60,
-    );
+  id: id,
+  title: title,
+  label: 'push',
+  exercises: [],
+  timeBetweenExercises: 60,
+);
 
 Session _session({required String id, String title = 'S'}) =>
     Session(id: id, title: title, label: 'push', workouts: []);
@@ -41,15 +37,14 @@ TrashEntry _trashedWorkout({
   required String id,
   String title = 'W',
   DateTime? deletedAt,
-}) =>
-    TrashEntry.workout(
-      workout: _workout(id: id, title: title),
-      deletedAt: deletedAt ?? DateTime(2025, 1, 1),
-    );
+}) => TrashEntry.workout(
+  workout: _workout(id: id, title: title),
+  deletedAt: deletedAt ?? DateTime(2025, 1, 1),
+);
 
 void main() {
   late Directory tmpDir;
-  late PresetProvider catalog;
+  late CatalogProvider catalog;
   late SyncStatusProvider syncStatus;
   late TrashProvider trash;
 
@@ -58,7 +53,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     tmpDir = await Directory.systemTemp.createTemp('trash_provider_');
     PathProviderPlatform.instance = _FakePathProvider(tmpDir.path);
-    catalog = PresetProvider();
+    catalog = CatalogProvider();
     syncStatus = SyncStatusProvider();
     trash = TrashProvider(catalog: catalog, syncStatus: syncStatus);
     // Attach so the catalog's merged-list getters see trash changes —
@@ -98,7 +93,7 @@ void main() {
 
   group('deleteToTrash', () {
     test('removes user workout and adds to trashedItems', () async {
-      await catalog.addPresetWorkout(_workout(id: 'w-1', title: 'My Workout'));
+      await catalog.upsertWorkout(_workout(id: 'w-1', title: 'My Workout'));
 
       await trash.deleteToTrash(id: 'w-1', kind: TrashKind.workout);
 
@@ -109,8 +104,9 @@ void main() {
     });
 
     test('removes user exercise and adds to trashedItems', () async {
-      await catalog
-          .addPresetExercise(_exercise(id: 'e-1', title: 'My Exercise'));
+      await catalog.upsertExercise(
+        _exercise(id: 'e-1', title: 'My Exercise'),
+      );
 
       await trash.deleteToTrash(id: 'e-1', kind: TrashKind.exercise);
 
@@ -121,7 +117,7 @@ void main() {
     });
 
     test('removes user session and adds to trashedItems', () async {
-      await catalog.addPresetSession(_session(id: 's-1', title: 'My Session'));
+      await catalog.upsertSession(_session(id: 's-1', title: 'My Session'));
 
       await trash.deleteToTrash(id: 's-1', kind: TrashKind.session);
 
@@ -132,7 +128,7 @@ void main() {
     });
 
     test('id never appears twice across userWorkouts and trash', () async {
-      await catalog.addPresetWorkout(_workout(id: 'w-1'));
+      await catalog.upsertWorkout(_workout(id: 'w-1'));
 
       await trash.deleteToTrash(id: 'w-1', kind: TrashKind.workout);
 
@@ -144,7 +140,7 @@ void main() {
 
   group('restoreFromTrash', () {
     test('removes from trashedItems and adds to user list', () async {
-      await catalog.addPresetWorkout(_workout(id: 'w-1', title: 'Workout'));
+      await catalog.upsertWorkout(_workout(id: 'w-1', title: 'Workout'));
       await trash.deleteToTrash(id: 'w-1', kind: TrashKind.workout);
       expect(trash.trashedItems, hasLength(1));
 
@@ -155,7 +151,7 @@ void main() {
     });
 
     test('restores with overrideTitle when provided', () async {
-      await catalog.addPresetWorkout(_workout(id: 'w-1', title: 'Original'));
+      await catalog.upsertWorkout(_workout(id: 'w-1', title: 'Original'));
       await trash.deleteToTrash(id: 'w-1', kind: TrashKind.workout);
 
       await trash.restoreFromTrash('w-1', overrideTitle: 'Renamed');
@@ -165,7 +161,7 @@ void main() {
     });
 
     test('restores exercise with overrideTitle', () async {
-      await catalog.addPresetExercise(_exercise(id: 'e-1', title: 'Original'));
+      await catalog.upsertExercise(_exercise(id: 'e-1', title: 'Original'));
       await trash.deleteToTrash(id: 'e-1', kind: TrashKind.exercise);
 
       await trash.restoreFromTrash('e-1', overrideTitle: 'Renamed');
@@ -175,7 +171,7 @@ void main() {
     });
 
     test('restores session with overrideTitle', () async {
-      await catalog.addPresetSession(_session(id: 's-1', title: 'Original'));
+      await catalog.upsertSession(_session(id: 's-1', title: 'Original'));
       await trash.deleteToTrash(id: 's-1', kind: TrashKind.session);
 
       await trash.restoreFromTrash('s-1', overrideTitle: 'Renamed');
@@ -190,16 +186,18 @@ void main() {
       expect(catalog.presetUserWorkoutsIDs, isEmpty);
     });
 
-    test('id never appears twice across userWorkouts and trash after restore',
-        () async {
-      await catalog.addPresetWorkout(_workout(id: 'w-1'));
-      await trash.deleteToTrash(id: 'w-1', kind: TrashKind.workout);
-      await trash.restoreFromTrash('w-1');
+    test(
+      'id never appears twice across userWorkouts and trash after restore',
+      () async {
+        await catalog.upsertWorkout(_workout(id: 'w-1'));
+        await trash.deleteToTrash(id: 'w-1', kind: TrashKind.workout);
+        await trash.restoreFromTrash('w-1');
 
-      final userIds = catalog.presetUserWorkoutsIDs;
-      final trashIds = trash.trashedItems.map((e) => e.id).toSet();
-      expect(userIds.intersection(trashIds), isEmpty);
-    });
+        final userIds = catalog.presetUserWorkoutsIDs;
+        final trashIds = trash.trashedItems.map((e) => e.id).toSet();
+        expect(userIds.intersection(trashIds), isEmpty);
+      },
+    );
   });
 
   group('liftToCatalog', () {

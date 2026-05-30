@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_bottom_bar.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
@@ -64,7 +64,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<PresetProvider, SessionStateProvider>(
+    return Consumer2<CatalogProvider, SessionStateProvider>(
       builder: (context, presetData, sessionStateData, child) {
         // Initialize the timer & keep screen awake once when the screen first builds.
         // Passes the session to start(), which deep-copies it internally.
@@ -133,7 +133,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         }
 
         if (activeSession.workouts.any((w) => w.exercises.isEmpty)) {
-         return Scaffold(
+          return Scaffold(
             body: Center(
               child: Text(
                 'This session has workouts without exercises. Add exercises to your workouts before starting a session.',

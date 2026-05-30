@@ -12,7 +12,8 @@ import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.da
 import 'package:flash_forward/presentation/widgets/unsaved_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/workout_card.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/edit_commit_controller.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
@@ -48,19 +49,23 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   // Captured once at build time so dirty-check has a stable baseline.
   // New sessions have no widget.session, so the snapshot is empty — any
   // input will immediately read as dirty.
-  late final Map<String, dynamic> _initialSnapshot = widget.session?.toJson() ?? {};
+  late final Map<String, dynamic> _initialSnapshot =
+      widget.session?.toJson() ?? {};
 
   bool get _isDirty {
-    if (_titleController.text.trim() != (widget.session?.title ?? '')) return true;
+    if (_titleController.text.trim() != (widget.session?.title ?? ''))
+      return true;
     if (_itemLabelController.text != (widget.session?.label ?? '')) return true;
-    if (_descriptionController.text.trim() != (widget.session?.description ?? '')) return true;
+    if (_descriptionController.text.trim() !=
+        (widget.session?.description ?? ''))
+      return true;
     final initialWorkouts = _initialSnapshot['workouts'];
     final currentWorkouts = _session.toJson()['workouts'];
     return initialWorkouts.toString() != currentWorkouts.toString();
   }
 
   /// Accumulates workout and exercise edits from nested drilldowns.
-  /// Flushed to the provider on Save via PresetProvider.commitChanges.
+  /// Flushed to the provider on Save via CatalogProvider.commitChanges.
   final PendingChangeBag _pending = PendingChangeBag();
 
   late final _titleController = TextEditingController(
@@ -120,11 +125,15 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         return;
       }
 
-      final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+      final catalogProvider = Provider.of<CatalogProvider>(
+        context,
+        listen: false,
+      );
 
       if (_isNew) {
-        await presetProvider.addPresetSession(session);
+        await catalogProvider.upsertSession(session);
       } else {
+        final editCommit = context.read<EditCommitController>();
         final bag = PendingChangeBag()..setSession(session);
         for (final wc in _pending.workoutsById.values) {
           bag.addWorkout(wc.workout);
@@ -132,7 +141,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         for (final ec in _pending.exercisesById.values) {
           bag.addExercise(ec.exercise);
         }
-        final result = await presetProvider.commitChanges(
+        final result = await editCommit.commitChanges(
           bag,
           excludeSessionId: session.id,
         );
@@ -167,7 +176,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
           );
           if (selection == null) return; // user cancelled — stay on screen
           if (!selection.isEmpty) {
-            await presetProvider.propagateBag(bag, selection: selection);
+            await editCommit.propagateBag(bag, selection: selection);
           }
         }
       }
@@ -184,7 +193,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       );
       return;
     }
-    final pp = Provider.of<PresetProvider>(context, listen: false);
+    final pp = Provider.of<CatalogProvider>(context, listen: false);
     final titles = pp.presetWorkouts.map((w) => w.title).toList();
     String? finalTitle = workout.title;
     if (titles.contains(workout.title)) {
@@ -196,13 +205,16 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       if (finalTitle == null) return;
     }
     await pp.liftToCatalog(
-      item: finalTitle == workout.title ? workout : workout.copyWith(title: finalTitle),
+      item:
+          finalTitle == workout.title
+              ? workout
+              : workout.copyWith(title: finalTitle),
       kind: TrashKind.workout,
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Saved to catalog')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Saved to catalog')));
   }
 
   // Slidable Copy means divergence. Fresh UUID so this card evolves
@@ -251,200 +263,215 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         }
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SizedBox.shrink(),
-            Text(_isNew ? 'New session' : 'Edit session'),
-            ElevatedButton(
-              onPressed: _save,
-              style: ButtonStyle().copyWith(
-                padding: WidgetStatePropertyAll(
-                  EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                ),
-              ),
-              child: Text(widget.startAfterSave ? 'Save & Start' : 'Save'),
-            ),
-          ],
-        ),
-      ),
-      body: Form(
-        key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Column(
+        appBar: AppBar(
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SizedBox(height: 16),
-              GroupFormCard(
-                children: [
-                  GroupFormRow(
-                    label: 'Title',
-                    trailing: GroupFormCounter(
-                      current: _titleController.text.length,
-                      max: FieldLimits.sessionTitleMaxLength,
-                    ),
-                    child: TextFormField(
-                      controller: _titleController,
-                      maxLength: FieldLimits.sessionTitleMaxLength,
-                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        counterText: '',
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      validator: (v) {
-                        final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-                        return FieldValidators.sessionTitle(
-                          v,
-                          existingTitles: presetProvider.presetSessions.map((s) => s.title).toList(),
-                          ownTitle: widget.session?.title,
-                        );
-                      },
-                    ),
+              SizedBox.shrink(),
+              Text(_isNew ? 'New session' : 'Edit session'),
+              ElevatedButton(
+                onPressed: _save,
+                style: ButtonStyle().copyWith(
+                  padding: WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                   ),
-                  GroupFormRow(
-                    label: 'Label',
-                    child: MyLabelDropdownButton(
-                      value:
-                          _itemLabelController.text.isNotEmpty
-                              ? _itemLabelController.text
-                              : null,
-                      onChanged: (value) {
-                        setState(() {
-                          _itemLabelController.text = value ?? '';
-                        });
-                      },
-                      validator: FieldValidators.label,
-                      flat: true,
-                    ),
-                  ),
-                  GroupFormRow(
-                    label: 'Info',
-                    trailing: GroupFormCounter(
-                      current: _descriptionController.text.length,
-                      max: FieldLimits.sessionDescriptionMaxLength,
-                    ),
-                    child: TextFormField(
-                      controller: _descriptionController,
-                      maxLength: FieldLimits.sessionDescriptionMaxLength,
-                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                      maxLines: null,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        counterText: '',
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      validator: FieldValidators.sessionDescription,
-                    ),
-                  ),
-                ],
+                ),
+                child: Text(widget.startAfterSave ? 'Save & Start' : 'Save'),
               ),
-              SizedBox(height: 8),
-              session.workouts.isEmpty
-                  ? Expanded(
-                    child: Center(
-                      child: Text(
-                        'No workouts yet',
-                        style: context.bodyMedium.copyWith(
-                          color: context.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  )
-                  : Expanded(
-                    child: ReorderableListView.builder(
-                      padding: EdgeInsets.only(top: 4, bottom: 16),
-                      itemCount: session.workouts.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        final workout = session.workouts[index];
-                        final pp = Provider.of<PresetProvider>(context, listen: false);
-                        final notInCatalog = pp.presetWorkouts.every((w) => w.id != workout.id);
-                        final notInTrash = pp.trashedItems.every((e) => e.id != workout.id);
-                        return _WorkoutCard(
-                          workout: workout,
-                          key: ValueKey(
-                            '$index-${workout.id}',
-                          ), // prefix index to workout.id to allow multiple instances of same workout in the reorderable list
-                          onCopy: () => _copyWorkout(workout),
-                          onDelete: () => _deleteWorkout(workout),
-                          onSaveToCatalog: (notInCatalog && notInTrash)
-                              ? () => _saveWorkoutToCatalog(workout)
-                              : null,
-                          onTap: () async {
-                            final result = await Navigator.push<
-                                ({Workout workout, PendingChangeBag pending})>(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) =>
-                                        NewWorkoutScreen(workout: workout),
-                              ),
-                            );
-                            if (result != null) {
-                              setState(() {
-                                _session.workouts[index] = result.workout;
-                              });
-                              _pending.addWorkout(result.workout);
-                              // Merge the inner bag so nested exercise edits
-                              // also flow up to the session save.
-                              _pending.merge(result.pending);
-                            }
-                          },
-                        );
-                      },
-                      onReorder: (int oldIndex, int newIndex) {
-                        setState(() {
-                          if (oldIndex < newIndex) {
-                            newIndex -=
-                                1; // Since the widget if removed from its old index
-                          }
-                          final Workout workout = session.workouts.removeAt(
-                            oldIndex,
-                          );
-                          session.workouts.insert(newIndex, workout);
-                        });
-                      },
-                    ),
-                  ),
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          List<Workout>? addedWorkouts = await Navigator.push(
-            context,
-            MaterialPageRoute<List<Workout>>(
-              builder:
-                  (context) => AddItemScreen(
-                    itemType: ItemType.workouts,
-                    existingItemIds: existingWorkoutIds,
-                  ),
+        body: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Column(
+              children: [
+                SizedBox(height: 16),
+                GroupFormCard(
+                  children: [
+                    GroupFormRow(
+                      label: 'Title',
+                      trailing: GroupFormCounter(
+                        current: _titleController.text.length,
+                        max: FieldLimits.sessionTitleMaxLength,
+                      ),
+                      child: TextFormField(
+                        controller: _titleController,
+                        maxLength: FieldLimits.sessionTitleMaxLength,
+                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          counterText: '',
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        validator: (v) {
+                          final catalogProvider = Provider.of<CatalogProvider>(
+                            context,
+                            listen: false,
+                          );
+                          return FieldValidators.sessionTitle(
+                            v,
+                            existingTitles:
+                                catalogProvider.presetSessions
+                                    .map((s) => s.title)
+                                    .toList(),
+                            ownTitle: widget.session?.title,
+                          );
+                        },
+                      ),
+                    ),
+                    GroupFormRow(
+                      label: 'Label',
+                      child: MyLabelDropdownButton(
+                        value:
+                            _itemLabelController.text.isNotEmpty
+                                ? _itemLabelController.text
+                                : null,
+                        onChanged: (value) {
+                          setState(() {
+                            _itemLabelController.text = value ?? '';
+                          });
+                        },
+                        validator: FieldValidators.label,
+                        flat: true,
+                      ),
+                    ),
+                    GroupFormRow(
+                      label: 'Info',
+                      trailing: GroupFormCounter(
+                        current: _descriptionController.text.length,
+                        max: FieldLimits.sessionDescriptionMaxLength,
+                      ),
+                      child: TextFormField(
+                        controller: _descriptionController,
+                        maxLength: FieldLimits.sessionDescriptionMaxLength,
+                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                        maxLines: null,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          counterText: '',
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        validator: FieldValidators.sessionDescription,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                session.workouts.isEmpty
+                    ? Expanded(
+                      child: Center(
+                        child: Text(
+                          'No workouts yet',
+                          style: context.bodyMedium.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    )
+                    : Expanded(
+                      child: ReorderableListView.builder(
+                        padding: EdgeInsets.only(top: 4, bottom: 16),
+                        itemCount: session.workouts.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final workout = session.workouts[index];
+                          final pp = Provider.of<CatalogProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final notInCatalog = pp.presetWorkouts.every(
+                            (w) => w.id != workout.id,
+                          );
+                          final notInTrash = pp.trashedItems.every(
+                            (e) => e.id != workout.id,
+                          );
+                          return _WorkoutCard(
+                            workout: workout,
+                            key: ValueKey(
+                              '$index-${workout.id}',
+                            ), // prefix index to workout.id to allow multiple instances of same workout in the reorderable list
+                            onCopy: () => _copyWorkout(workout),
+                            onDelete: () => _deleteWorkout(workout),
+                            onSaveToCatalog:
+                                (notInCatalog && notInTrash)
+                                    ? () => _saveWorkoutToCatalog(workout)
+                                    : null,
+                            onTap: () async {
+                              final result = await Navigator.push<
+                                ({Workout workout, PendingChangeBag pending})
+                              >(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          NewWorkoutScreen(workout: workout),
+                                ),
+                              );
+                              if (result != null) {
+                                setState(() {
+                                  _session.workouts[index] = result.workout;
+                                });
+                                _pending.addWorkout(result.workout);
+                                // Merge the inner bag so nested exercise edits
+                                // also flow up to the session save.
+                                _pending.merge(result.pending);
+                              }
+                            },
+                          );
+                        },
+                        onReorder: (int oldIndex, int newIndex) {
+                          setState(() {
+                            if (oldIndex < newIndex) {
+                              newIndex -=
+                                  1; // Since the widget if removed from its old index
+                            }
+                            final Workout workout = session.workouts.removeAt(
+                              oldIndex,
+                            );
+                            session.workouts.insert(newIndex, workout);
+                          });
+                        },
+                      ),
+                    ),
+              ],
             ),
-          );
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            List<Workout>? addedWorkouts = await Navigator.push(
+              context,
+              MaterialPageRoute<List<Workout>>(
+                builder:
+                    (context) => AddItemScreen(
+                      itemType: ItemType.workouts,
+                      existingItemIds: existingWorkoutIds,
+                    ),
+              ),
+            );
 
-          if (addedWorkouts != null && addedWorkouts.isNotEmpty) {
-            setState(() {
-              _session = _session.copyWith(
-                workouts: [..._session.workouts, ...addedWorkouts],
-              );
-            });
-          }
-        },
-        child: Icon(Icons.add),
+            if (addedWorkouts != null && addedWorkouts.isNotEmpty) {
+              setState(() {
+                _session = _session.copyWith(
+                  workouts: [..._session.workouts, ...addedWorkouts],
+                );
+              });
+            }
+          },
+          child: Icon(Icons.add),
+        ),
       ),
-    ),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -33,11 +33,11 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
     return diff.inDays.clamp(0, 90);
   }
 
-  bool _titleClashes(PresetProvider pp, TrashEntry entry) {
+  bool _titleClashes(CatalogProvider pp, TrashEntry entry) {
     return _existingTitlesForKind(pp, entry.kind).contains(entry.title);
   }
 
-  List<String> _existingTitlesForKind(PresetProvider pp, TrashKind kind) {
+  List<String> _existingTitlesForKind(CatalogProvider pp, TrashKind kind) {
     return switch (kind) {
       TrashKind.session => pp.presetSessions.map((s) => s.title).toList(),
       TrashKind.workout => pp.presetWorkouts.map((w) => w.title).toList(),
@@ -47,7 +47,7 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
 
   // ── Restore action ────────────────────────────────────────────────────────
 
-  Future<void> _restoreSelected(PresetProvider pp) async {
+  Future<void> _restoreSelected(CatalogProvider pp) async {
     final ids = Set<String>.from(_selected);
     int restoredCount = 0;
 
@@ -99,21 +99,23 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
           final days = _daysRemaining(entry.deletedAt);
           final isUrgent = days <= 7;
           final subtitleStyle = TextStyle(
-            color: isUrgent
-                ? Theme.of(context).colorScheme.error
-                : Theme.of(context).colorScheme.onSurfaceVariant,
+            color:
+                isUrgent
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 13,
           );
 
           return CheckboxListTile(
             value: _selected.contains(entry.id),
-            onChanged: (checked) => setState(() {
-              if (checked == true) {
-                _selected.add(entry.id);
-              } else {
-                _selected.remove(entry.id);
-              }
-            }),
+            onChanged:
+                (checked) => setState(() {
+                  if (checked == true) {
+                    _selected.add(entry.id);
+                  } else {
+                    _selected.remove(entry.id);
+                  }
+                }),
             title: Text(entry.title, style: context.bodyLarge),
             subtitle: Text(
               days == 0
@@ -134,19 +136,23 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Restore items')),
-      body: Consumer<PresetProvider>(
+      body: Consumer<CatalogProvider>(
         builder: (context, pp, _) {
-          final sessions = pp.trashedItems
-              .where((e) => e.kind == TrashKind.session)
-              .toList();
-          final workouts = pp.trashedItems
-              .where((e) => e.kind == TrashKind.workout)
-              .toList();
-          final exercises = pp.trashedItems
-              .where((e) => e.kind == TrashKind.exercise)
-              .toList();
+          final sessions =
+              pp.trashedItems
+                  .where((e) => e.kind == TrashKind.session)
+                  .toList();
+          final workouts =
+              pp.trashedItems
+                  .where((e) => e.kind == TrashKind.workout)
+                  .toList();
+          final exercises =
+              pp.trashedItems
+                  .where((e) => e.kind == TrashKind.exercise)
+                  .toList();
 
-          final isEmpty = sessions.isEmpty && workouts.isEmpty && exercises.isEmpty;
+          final isEmpty =
+              sessions.isEmpty && workouts.isEmpty && exercises.isEmpty;
 
           if (isEmpty) {
             return const Center(child: Text('Trash is empty'));
@@ -170,9 +176,8 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _selected.isEmpty
-                          ? null
-                          : () => _restoreSelected(pp),
+                      onPressed:
+                          _selected.isEmpty ? null : () => _restoreSelected(pp),
                       child: const Text('Restore selected'),
                     ),
                   ),

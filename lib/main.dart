@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/providers/edit_commit_controller.dart';
 import 'package:flash_forward/providers/sync_status_provider.dart';
 import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,7 @@ import 'package:flash_forward/presentation/screens/auth_flow/loading_screen.dart
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/reset_password_screen.dart';
 import 'package:flash_forward/services/supabase_config.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
@@ -72,21 +73,24 @@ void main() async {
                 ChangeNotifierProvider(
                   create: (context) => SyncStatusProvider(),
                 ),
-                ChangeNotifierProvider(create: (context) => PresetProvider()),
+                ChangeNotifierProvider(create: (context) => CatalogProvider()),
                 ChangeNotifierProxyProvider2<
-                  PresetProvider,
+                  CatalogProvider,
                   SyncStatusProvider,
                   TrashProvider
                 >(
                   create:
                       (context) => TrashProvider(
-                        catalog: context.read<PresetProvider>(),
+                        catalog: context.read<CatalogProvider>(),
                         syncStatus: context.read<SyncStatusProvider>(),
                       ),
                   update:
                       (context, value, value2, previous) =>
                           previous ??
                           TrashProvider(catalog: value, syncStatus: value2),
+                ),
+                ProxyProvider<CatalogProvider, EditCommitController>(
+                  update: (_, catalog, __) => EditCommitController(catalog),
                 ),
                 ChangeNotifierProvider(create: (_) => sessionStateProvider),
                 ChangeNotifierProvider(create: (context) => SettingsProvider()),

@@ -1,7 +1,7 @@
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -48,7 +48,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PresetProvider>(
+    return Consumer<CatalogProvider>(
       builder: (BuildContext context, presetData, Widget? child) {
         List<dynamic> listItems = [];
 
@@ -162,16 +162,18 @@ class _AddItemScreenState extends State<AddItemScreen> {
                               // pushing route's MaterialPageRoute<List<T>>.
                               switch (widget.itemType) {
                                 case ItemType.workouts:
-                                  final independent = selectedPresetItems
-                                      .cast<Workout>()
-                                      .map((w) => w.deepCopy(keepId: true))
-                                      .toList();
+                                  final independent =
+                                      selectedPresetItems
+                                          .cast<Workout>()
+                                          .map((w) => w.deepCopy(keepId: true))
+                                          .toList();
                                   Navigator.pop(context, independent);
                                 case ItemType.exercises:
-                                  final independent = selectedPresetItems
-                                      .cast<Exercise>()
-                                      .map((e) => e.deepCopy(keepId: true))
-                                      .toList();
+                                  final independent =
+                                      selectedPresetItems
+                                          .cast<Exercise>()
+                                          .map((e) => e.deepCopy(keepId: true))
+                                          .toList();
                                   Navigator.pop(context, independent);
                               }
                             },

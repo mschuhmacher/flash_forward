@@ -5,7 +5,7 @@ import 'package:flash_forward/services/supabase_sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
@@ -88,7 +88,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
         context,
         listen: false,
       );
-      final presetProvider = Provider.of<PresetProvider>(
+      final catalogProvider = Provider.of<CatalogProvider>(
         context,
         listen: false,
       );
@@ -100,10 +100,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
       if (userId != null) {
         syncStatus.attach(SupabaseSyncService(userId: userId));
       }
-      presetProvider.attachSyncStatus(syncStatus);
-      presetProvider.attachTrashProvider(trashProvider);
+      catalogProvider.attachSyncStatus(syncStatus);
+      catalogProvider.attachTrashProvider(trashProvider);
       await sessionLogProvider.init(userId: userId);
-      await presetProvider.init(trash: trashProvider);
+      await catalogProvider.init(trash: trashProvider);
 
       // Process any pending sync operations from previous offline sessions
       await sessionLogProvider.processPendingSync();

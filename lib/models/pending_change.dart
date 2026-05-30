@@ -23,7 +23,7 @@ class SessionChanged extends PendingChange {
 
 /// Accumulates edits made during a single edit-screen session.
 /// Nothing is written to the provider until the outermost Save fires and
-/// hands this bag to [PresetProvider.commitChanges]. Cancelling at any level
+/// hands this bag to [CatalogProvider.commitChanges]. Cancelling at any level
 /// discards the bag and leaves the provider untouched.
 /// Same-id replays overwrite (last edit wins per item).
 class PendingChangeBag {
