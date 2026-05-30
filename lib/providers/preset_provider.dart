@@ -1,4 +1,5 @@
 import 'package:flash_forward/providers/preset_loader.dart';
+import 'package:flash_forward/providers/sync_status_provider.dart';
 import 'package:flash_forward/providers/synced_item_ops.dart';
 import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -43,7 +44,10 @@ class PresetProvider extends ChangeNotifier {
     trash.addListener(notifyListeners);
   }
 
-  SupabaseSyncService? _syncService;
+  SyncStatusProvider? _syncStatus;
+  void attachSyncStatus(SyncStatusProvider syncStatus) {
+    _syncStatus = syncStatus;
+  }
 
   // Catalog list rule: a user item with the same id as a default SHADOWS that
   // default. Trashed items are hidden from both lists regardless of source.
@@ -97,7 +101,7 @@ class PresetProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
 
-  Future<void> init({String? userId, TrashProvider? trash}) async {
+  Future<void> init({TrashProvider? trash}) async {
     if (_isInitialized) return;
     _isInitialized = true;
     _isLoading = true;
@@ -108,17 +112,22 @@ class PresetProvider extends ChangeNotifier {
     _defaultWorkouts = List.from(kDefaultWorkouts);
     _defaultExercises = List.from(kDefaultExercises);
 
-    
-
     // If user is logged in, load their cloud data
-    if (userId != null) {
-      _syncService = SupabaseSyncService(userId: userId);
-      await _syncService!.syncQueue
-          .loadQueue(); // ensure queue loaded before merge
-      final loaded = await PresetLoader.loadFromCloud(_syncService!);
-      _userSessions = loaded.sessions;
-      _userWorkouts = loaded.workouts;
-      _userExercises = loaded.exercises;
+    final service = _syncStatus?.service;
+    if (service != null) {
+      await service.syncQueue.loadQueue();
+      try {
+        final loaded = await PresetLoader.loadFromCloud(service);
+        _userSessions = loaded.sessions;
+        _userWorkouts = loaded.workouts;
+        _userExercises = loaded.exercises;
+      } catch (e) {
+        // Load from local storage (fallback for offline/unauthenticated)
+        final local = await PresetLoader.loadFromLocal();
+        _userSessions = local.sessions;
+        _userWorkouts = local.workouts;
+        _userExercises = local.exercises;
+      }
     } else {
       // Load from local storage (fallback for offline/unauthenticated)
       final local = await PresetLoader.loadFromLocal();
@@ -140,6 +149,21 @@ class PresetProvider extends ChangeNotifier {
   void dispose() {
     _trash?.removeListener(notifyListeners);
     super.dispose();
+  }
+
+  Future<void> refreshAfterSignIn() async {
+    final service = _syncStatus?.service;
+    if (service == null) return;
+    try {
+      await service.syncQueue.loadQueue();
+      final result = await PresetLoader.loadFromCloud(service);
+      _userSessions = result.sessions;
+      _userWorkouts = result.workouts;
+      _userExercises = result.exercises;
+      return;
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+    }
   }
 
   /// Seed in-memory default lists directly. Tests use this to set up shadow /
@@ -193,7 +217,9 @@ class PresetProvider extends ChangeNotifier {
             _userSessions,
           ),
       cloudOp:
-          _syncService == null ? null : (s) => _syncService!.uploadSession(s),
+          _syncStatus?.service == null
+              ? null
+              : (s) => _syncStatus!.service!.uploadSession(s),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -212,7 +238,9 @@ class PresetProvider extends ChangeNotifier {
             _userSessions,
           ),
       cloudOp:
-          _syncService == null ? null : (s) => _syncService!.uploadSession(s),
+          _syncStatus?.service == null
+              ? null
+              : (s) => _syncStatus!.service!.uploadSession(s),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -231,7 +259,9 @@ class PresetProvider extends ChangeNotifier {
             _userSessions,
           ),
       cloudOp:
-          _syncService == null ? null : () => _syncService!.deleteSession(id),
+          _syncStatus?.service == null
+              ? null
+              : () => _syncStatus!.service!.deleteSession(id),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -250,7 +280,9 @@ class PresetProvider extends ChangeNotifier {
             _userWorkouts,
           ),
       cloudOp:
-          _syncService == null ? null : () => _syncService!.deleteWorkout(id),
+          _syncStatus?.service == null
+              ? null
+              : () => _syncStatus!.service!.deleteWorkout(id),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -269,7 +301,9 @@ class PresetProvider extends ChangeNotifier {
             _userExercises,
           ),
       cloudOp:
-          _syncService == null ? null : () => _syncService!.deleteExercise(id),
+          _syncStatus?.service == null
+              ? null
+              : () => _syncStatus!.service!.deleteExercise(id),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -287,7 +321,9 @@ class PresetProvider extends ChangeNotifier {
             _userWorkouts,
           ),
       cloudOp:
-          _syncService == null ? null : (w) => _syncService!.uploadWorkout(w),
+          _syncStatus?.service == null
+              ? null
+              : (w) => _syncStatus!.service!.uploadWorkout(w),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -305,7 +341,9 @@ class PresetProvider extends ChangeNotifier {
             _userWorkouts,
           ),
       cloudOp:
-          _syncService == null ? null : (w) => _syncService!.uploadWorkout(w),
+          _syncStatus?.service == null
+              ? null
+              : (w) => _syncStatus!.service!.uploadWorkout(w),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -323,7 +361,9 @@ class PresetProvider extends ChangeNotifier {
             _userExercises,
           ),
       cloudOp:
-          _syncService == null ? null : (e) => _syncService!.uploadExercise(e),
+          _syncStatus?.service == null
+              ? null
+              : (e) => _syncStatus!.service!.uploadExercise(e),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -341,7 +381,9 @@ class PresetProvider extends ChangeNotifier {
             _userExercises,
           ),
       cloudOp:
-          _syncService == null ? null : (e) => _syncService!.uploadExercise(e),
+          _syncStatus?.service == null
+              ? null
+              : (e) => _syncStatus!.service!.uploadExercise(e),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -363,7 +405,9 @@ class PresetProvider extends ChangeNotifier {
             _userWorkouts,
           ),
       cloudOp:
-          _syncService == null ? null : (w) => _syncService!.uploadWorkout(w),
+          _syncStatus?.service == null
+              ? null
+              : (w) => _syncStatus!.service!.uploadWorkout(w),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -381,7 +425,9 @@ class PresetProvider extends ChangeNotifier {
             _userExercises,
           ),
       cloudOp:
-          _syncService == null ? null : (e) => _syncService!.uploadExercise(e),
+          _syncStatus?.service == null
+              ? null
+              : (e) => _syncStatus!.service!.uploadExercise(e),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -399,7 +445,9 @@ class PresetProvider extends ChangeNotifier {
             _userSessions,
           ),
       cloudOp:
-          _syncService == null ? null : (s) => _syncService!.uploadSession(s),
+          _syncStatus?.service == null
+              ? null
+              : (s) => _syncStatus!.service!.uploadSession(s),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
@@ -799,18 +847,17 @@ class PresetProvider extends ChangeNotifier {
     String? overrideTitle,
     String? overrideId,
   }) => _trash!.liftToCatalog(
-        item: item,
-        kind: kind,
-        overrideTitle: overrideTitle,
-        overrideId: overrideId,
-      );
+    item: item,
+    kind: kind,
+    overrideTitle: overrideTitle,
+    overrideId: overrideId,
+  );
 
   /// Reset provider state on logout
   /// This allows re-initialization with a different user
   void reset() {
     _isInitialized = false;
     _isLoading = false;
-    _syncService = null;
     _defaultSessions = [];
     _defaultWorkouts = [];
     _defaultExercises = [];
@@ -820,18 +867,6 @@ class PresetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Check if there are pending sync operations
-  bool get hasPendingSync => _syncService?.hasPendingSync ?? false;
-
-  /// Get count of pending sync operations
-  int get pendingSyncCount => _syncService?.pendingSyncCount ?? 0;
-
-  /// Process any pending sync operations
-  /// Call this when connectivity is restored
-  Future<int> processPendingSync() async {
-    if (_syncService == null) return 0;
-    return await _syncService!.processPendingSync();
-  }
 }
 
 /// Returned by [PresetProvider.commitChanges] so the edit screen can render a

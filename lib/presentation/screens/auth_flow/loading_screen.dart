@@ -1,5 +1,7 @@
 import 'package:flash_forward/presentation/screens/root_screen.dart';
+import 'package:flash_forward/providers/sync_status_provider.dart';
 import 'package:flash_forward/providers/trash_provider.dart';
+import 'package:flash_forward/services/supabase_sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
@@ -82,7 +84,6 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
       final userId = authProvider.userId;
 
-      // Pass userId to both providers
       final sessionLogProvider = Provider.of<SessionLogProvider>(
         context,
         listen: false,
@@ -91,15 +92,22 @@ class _LoadingScreenState extends State<LoadingScreen> {
         context,
         listen: false,
       );
+      final syncStatus = context.read<SyncStatusProvider>();
+      final trashProvider = context.read<TrashProvider>();
 
-      TrashProvider trashProvider = context.read<TrashProvider>();
+      // Four-step wiring: attach the cloud service, then plug the catalog
+      // into both sync-status and trash, then init.
+      if (userId != null) {
+        syncStatus.attach(SupabaseSyncService(userId: userId));
+      }
+      presetProvider.attachSyncStatus(syncStatus);
       presetProvider.attachTrashProvider(trashProvider);
       await sessionLogProvider.init(userId: userId);
-      await presetProvider.init(userId: userId, trash: trashProvider);
+      await presetProvider.init(trash: trashProvider);
 
       // Process any pending sync operations from previous offline sessions
       await sessionLogProvider.processPendingSync();
-      await presetProvider.processPendingSync();
+      await syncStatus.processPendingSync();
     }
   }
 

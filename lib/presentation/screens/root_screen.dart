@@ -11,6 +11,8 @@ import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/preset_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/providers/sync_status_provider.dart';
+import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -405,9 +407,13 @@ class SettingsDrawer extends StatelessWidget {
         context,
         listen: false,
       );
+      final syncStatus = context.read<SyncStatusProvider>();
+      final trashProvider = context.read<TrashProvider>();
 
       await sessionLogProvider.reset();
       presetProvider.reset();
+      trashProvider.reset();
+      syncStatus.detach();
       await authProvider.signOut();
 
       if (!context.mounted) return;
@@ -472,9 +478,13 @@ class SettingsDrawer extends StatelessWidget {
         context,
         listen: false,
       );
+      final syncStatus = context.read<SyncStatusProvider>();
+      final trashProvider = context.read<TrashProvider>();
 
       await sessionLogProvider.reset();
       presetProvider.reset();
+      trashProvider.reset();
+      syncStatus.detach();
       await authProvider.deleteUser();
 
       if (!context.mounted) return;
