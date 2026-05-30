@@ -10,7 +10,6 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/services/preset_logger.dart';
-import 'package:flash_forward/services/supabase_sync_service.dart';
 import '../models/session.dart';
 import '../data/default_session_data.dart';
 
@@ -563,33 +562,6 @@ class CatalogProvider extends ChangeNotifier {
       await upsertWorkout(workout.copyWith(exercises: newExercises));
     }
   }
-
-  // ── Trash ─────────────────────────────────────────────────────────────────
-
-  /// Moves the item with [id] of the given [kind] to the trash.
-  /// Delegates to the attached [TrashProvider]; an attached provider is
-  /// required because trash state lives there.
-  Future<void> deleteToTrash({required String id, required TrashKind kind}) =>
-      _trash!.deleteToTrash(id: id, kind: kind);
-
-  /// Restores the trashed item with [id] to the appropriate user list.
-  /// Delegates to the attached [TrashProvider].
-  Future<void> restoreFromTrash(String id, {String? overrideTitle}) =>
-      _trash!.restoreFromTrash(id, overrideTitle: overrideTitle);
-
-  /// Lifts a session-embedded (or otherwise catalog-absent) item into the user
-  /// catalog. Delegates to the attached [TrashProvider].
-  Future<void> liftToCatalog({
-    required Object item,
-    required TrashKind kind,
-    String? overrideTitle,
-    String? overrideId,
-  }) => _trash!.liftToCatalog(
-    item: item,
-    kind: kind,
-    overrideTitle: overrideTitle,
-    overrideId: overrideId,
-  );
 
   /// Reset provider state on logout
   /// This allows re-initialization with a different user

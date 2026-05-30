@@ -1,6 +1,7 @@
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
 import 'package:flash_forward/providers/catalog_provider.dart';
+import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -33,41 +34,48 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
     return diff.inDays.clamp(0, 90);
   }
 
-  bool _titleClashes(CatalogProvider pp, TrashEntry entry) {
-    return _existingTitlesForKind(pp, entry.kind).contains(entry.title);
+  bool _titleClashes(CatalogProvider catalog, TrashEntry entry) {
+    return _existingTitlesForKind(catalog, entry.kind).contains(entry.title);
   }
 
-  List<String> _existingTitlesForKind(CatalogProvider pp, TrashKind kind) {
+  List<String> _existingTitlesForKind(
+    CatalogProvider catalog,
+    TrashKind kind,
+  ) {
     return switch (kind) {
-      TrashKind.session => pp.presetSessions.map((s) => s.title).toList(),
-      TrashKind.workout => pp.presetWorkouts.map((w) => w.title).toList(),
-      TrashKind.exercise => pp.presetExercises.map((e) => e.title).toList(),
+      TrashKind.session => catalog.presetSessions.map((s) => s.title).toList(),
+      TrashKind.workout => catalog.presetWorkouts.map((w) => w.title).toList(),
+      TrashKind.exercise =>
+        catalog.presetExercises.map((e) => e.title).toList(),
     };
   }
 
   // ── Restore action ────────────────────────────────────────────────────────
 
-  Future<void> _restoreSelected(CatalogProvider pp) async {
+  Future<void> _restoreSelected(
+    CatalogProvider catalog,
+    TrashProvider trash,
+  ) async {
     final ids = Set<String>.from(_selected);
     int restoredCount = 0;
 
     for (final id in ids) {
-      final matchIndex = pp.trashedItems.indexWhere((e) => e.id == id);
+      final matchIndex = trash.trashedItems.indexWhere((e) => e.id == id);
       if (matchIndex == -1) continue;
-      final entry = pp.trashedItems[matchIndex];
+      final entry = trash.trashedItems[matchIndex];
 
       String? overrideTitle;
-      if (_titleClashes(pp, entry)) {
+      if (_titleClashes(catalog, entry)) {
         if (!mounted) return;
         overrideTitle = await showRenameOnCollisionDialog(
           context: context,
           currentTitle: entry.title,
-          existingTitles: _existingTitlesForKind(pp, entry.kind),
+          existingTitles: _existingTitlesForKind(catalog, entry.kind),
         );
         if (overrideTitle == null) continue; // user cancelled this one; skip
       }
 
-      await pp.restoreFromTrash(id, overrideTitle: overrideTitle);
+      await trash.restoreFromTrash(id, overrideTitle: overrideTitle);
       restoredCount++;
     }
 
@@ -136,18 +144,18 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Restore items')),
-      body: Consumer<CatalogProvider>(
-        builder: (context, pp, _) {
+      body: Consumer2<CatalogProvider, TrashProvider>(
+        builder: (context, catalog, trash, _) {
           final sessions =
-              pp.trashedItems
+              trash.trashedItems
                   .where((e) => e.kind == TrashKind.session)
                   .toList();
           final workouts =
-              pp.trashedItems
+              trash.trashedItems
                   .where((e) => e.kind == TrashKind.workout)
                   .toList();
           final exercises =
-              pp.trashedItems
+              trash.trashedItems
                   .where((e) => e.kind == TrashKind.exercise)
                   .toList();
 
@@ -177,7 +185,9 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed:
-                          _selected.isEmpty ? null : () => _restoreSelected(pp),
+                          _selected.isEmpty
+                              ? null
+                              : () => _restoreSelected(catalog, trash),
                       child: const Text('Restore selected'),
                     ),
                   ),

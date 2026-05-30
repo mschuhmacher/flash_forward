@@ -18,6 +18,7 @@ import 'package:flash_forward/presentation/widgets/unsaved_changes_dialog.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/edit_commit_controller.dart';
 import 'package:flash_forward/providers/catalog_provider.dart';
+import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -207,8 +208,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   }
 
   Future<void> _saveExerciseToCatalog(Exercise exercise) async {
-    final pp = Provider.of<CatalogProvider>(context, listen: false);
-    final titles = pp.presetExercises.map((e) => e.title).toList();
+    final catalog = Provider.of<CatalogProvider>(context, listen: false);
+    final trash = context.read<TrashProvider>();
+    final titles = catalog.presetExercises.map((e) => e.title).toList();
     String? finalTitle = exercise.title;
     if (titles.contains(exercise.title)) {
       finalTitle = await showRenameOnCollisionDialog(
@@ -218,13 +220,12 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       );
       if (finalTitle == null) return;
     }
-    await pp.liftToCatalog(
-      item:
-          finalTitle == exercise.title
-              ? exercise
-              : exercise.copyWith(title: finalTitle),
-      kind: TrashKind.exercise,
-    );
+    final toSave =
+        finalTitle == exercise.title
+            ? exercise
+            : exercise.copyWith(title: finalTitle);
+    await catalog.upsertExercise(toSave);
+    
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -721,9 +722,10 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                             context,
                             listen: false,
                           );
+                          final trash = context.read<TrashProvider>();
                           final notInCatalog = catalogProvider.presetExercises
                               .every((e) => e.id != exercise.id);
-                          final notInTrash = catalogProvider.trashedItems.every(
+                          final notInTrash = trash.trashedItems.every(
                             (e) => e.id != exercise.id,
                           );
                           final paletteIndex = _supersetIndexForExercise(

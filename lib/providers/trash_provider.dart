@@ -5,7 +5,6 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/providers/preset_sync_merger.dart';
 import 'package:flash_forward/providers/sync_status_provider.dart';
-import 'package:flash_forward/services/preset_logger.dart';
 import 'package:flash_forward/services/trash_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -255,37 +254,8 @@ class TrashProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Lifts a session-embedded (or otherwise catalog-absent) item into the user
-  /// catalog. Purely additive — does not affect any embedded copies in sessions.
-  /// If [overrideTitle] is provided, the item is saved under that title.
-  /// If [overrideId] is provided, the item is saved under that id (use when the
-  /// original id already exists in the catalog).
-  Future<void> liftToCatalog({
-    required Object item,
-    required TrashKind kind,
-    String? overrideTitle,
-    String? overrideId,
-  }) async {
-    switch (kind) {
-      case TrashKind.session:
-        var s = item as Session;
-        if (overrideTitle != null) s = s.copyWith(title: overrideTitle);
-        if (overrideId != null) s = s.copyWith(id: overrideId);
-        await _catalog.upsertSession(s);
-      case TrashKind.workout:
-        var w = item as Workout;
-        if (overrideTitle != null) w = w.copyWith(title: overrideTitle);
-        if (overrideId != null) w = w.copyWith(id: overrideId);
-        await _catalog.upsertWorkout(w);
-      case TrashKind.exercise:
-        var e = item as Exercise;
-        if (overrideTitle != null) e = e.copyWith(title: overrideTitle);
-        if (overrideId != null) e = e.copyWith(id: overrideId);
-        await _catalog.upsertExercise(e);
-    }
-    notifyListeners();
-  }
-
+  
+// TODO: add in explanatory comment here
   Future<void> refreshAfterSignIn() async {
     if (_syncStatus.service != null) {
       try {

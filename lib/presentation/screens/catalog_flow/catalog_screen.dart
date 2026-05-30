@@ -8,6 +8,7 @@ import 'package:flash_forward/presentation/screens/catalog_flow/new_session_scre
 import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/providers/catalog_provider.dart';
+import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -89,6 +90,7 @@ class _ProgramListviewState extends State<ProgramListview> {
 
   Future<void> _moveToTrash(dynamic item) async {
     final catalogProvider = Provider.of<CatalogProvider>(context, listen: false);
+    final trashProvider = context.read<TrashProvider>();
     final kind = switch (widget.itemType) {
       ItemType.sessions => TrashKind.session,
       ItemType.workouts => TrashKind.workout,
@@ -113,7 +115,7 @@ class _ProgramListviewState extends State<ProgramListview> {
       kind,
     );
     if (confirm != true) return;
-    await catalogProvider.deleteToTrash(id: item.id, kind: kind);
+    await trashProvider.deleteToTrash(id: item.id, kind: kind);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -123,7 +125,7 @@ class _ProgramListviewState extends State<ProgramListview> {
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () async {
-            await catalogProvider.restoreFromTrash(item.id);
+            await trashProvider.restoreFromTrash(item.id);
           },
         ),
       ),

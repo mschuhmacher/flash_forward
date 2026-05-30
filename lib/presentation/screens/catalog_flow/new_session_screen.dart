@@ -14,6 +14,7 @@ import 'package:flash_forward/presentation/widgets/workout_card.dart';
 import 'package:flash_forward/providers/auth_provider.dart';
 import 'package:flash_forward/providers/edit_commit_controller.dart';
 import 'package:flash_forward/providers/catalog_provider.dart';
+import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
@@ -193,8 +194,9 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       );
       return;
     }
-    final pp = Provider.of<CatalogProvider>(context, listen: false);
-    final titles = pp.presetWorkouts.map((w) => w.title).toList();
+    final catalog = Provider.of<CatalogProvider>(context, listen: false);
+    final trash = context.read<TrashProvider>();
+    final titles = catalog.presetWorkouts.map((w) => w.title).toList();
     String? finalTitle = workout.title;
     if (titles.contains(workout.title)) {
       finalTitle = await showRenameOnCollisionDialog(
@@ -204,13 +206,11 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       );
       if (finalTitle == null) return;
     }
-    await pp.liftToCatalog(
-      item:
-          finalTitle == workout.title
-              ? workout
-              : workout.copyWith(title: finalTitle),
-      kind: TrashKind.workout,
-    );
+    final toSave =
+        finalTitle == workout.title
+            ? workout
+            : workout.copyWith(title: finalTitle);
+    await catalog.upsertWorkout(toSave);
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -390,10 +390,11 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                             context,
                             listen: false,
                           );
+                          final trash = context.read<TrashProvider>();
                           final notInCatalog = pp.presetWorkouts.every(
                             (w) => w.id != workout.id,
                           );
-                          final notInTrash = pp.trashedItems.every(
+                          final notInTrash = trash.trashedItems.every(
                             (e) => e.id != workout.id,
                           );
                           return _WorkoutCard(
