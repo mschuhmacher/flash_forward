@@ -13,8 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 
-import 'package:meta/meta.dart';
-
 /// Describes which part of the timer is active. Kept minimal so UI can branch
 /// on a single enum instead of separate booleans.
 enum TimerPhase {
@@ -122,8 +120,9 @@ class SessionStateProvider extends ChangeNotifier {
   // _remaining or _overtimeElapsed. Listeners of this notifier rebuild
   // independently of the provider's notifyListeners() — the rest of the
   // screen does not rebuild when this fires.
-  final ValueNotifier<Duration> timerDisplayNotifier =
-      ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> timerDisplayNotifier = ValueNotifier(
+    Duration.zero,
+  );
 
   //
   Duration _overtimeElapsed = Duration.zero;
@@ -278,7 +277,11 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.getReady,
       );
-      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
+      _onPhaseTransition(
+        TimerPhase.workoutComplete,
+        _progress.phase,
+        _progress,
+      );
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       _syncTimerDisplay();
@@ -295,7 +298,11 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.getReady,
       );
-      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
+      _onPhaseTransition(
+        TimerPhase.workoutComplete,
+        _progress.phase,
+        _progress,
+      );
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       _syncTimerDisplay();
@@ -314,7 +321,11 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.getReady,
       );
-      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
+      _onPhaseTransition(
+        TimerPhase.workoutComplete,
+        _progress.phase,
+        _progress,
+      );
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       _syncTimerDisplay();
@@ -546,7 +557,11 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.rep,
       );
-      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
+      _onPhaseTransition(
+        TimerPhase.workoutComplete,
+        _progress.phase,
+        _progress,
+      );
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       _syncTimerDisplay();
@@ -559,7 +574,11 @@ class SessionStateProvider extends ChangeNotifier {
         currentRep: 1,
         phase: TimerPhase.rep,
       );
-      _onPhaseTransition(TimerPhase.workoutComplete, _progress.phase, _progress);
+      _onPhaseTransition(
+        TimerPhase.workoutComplete,
+        _progress.phase,
+        _progress,
+      );
       _remaining = _getDurationForPhase(_progress);
       _rescheduleSound();
       _syncTimerDisplay();
@@ -568,6 +587,10 @@ class SessionStateProvider extends ChangeNotifier {
       return;
     }
   }
+
+  /// Update the current active session to 
+  ///
+  void updateActiveSession() {}
 
   /// Update a single exercise in the active session copy (e.g. mid-session load/sets edit).
   /// Uses copyWith so all fields remain immutable — the preset is never touched.
@@ -620,24 +643,26 @@ class SessionStateProvider extends ChangeNotifier {
   }) {
     if (_activeSession == null) return;
     final workout = _activeSession!.workouts[workoutIndex];
-    final ssIndex = workout.supersets.indexWhere(
-      (ss) => ss.exerciseIds.contains(exerciseId),
+    final supersetIndex = workout.supersets.indexWhere(
+      (superset) => superset.exerciseIds.contains(exerciseId),
     );
-    if (ssIndex == -1) return;
-    final updated =
-        workout.supersets[ssIndex].copyWith(supersetSets: newSupersetSets);
+    if (supersetIndex == -1) return;
+    final updated = workout.supersets[supersetIndex].copyWith(
+      supersetSets: newSupersetSets,
+    );
     final newSupersets = List<SupersetConfig>.from(workout.supersets);
-    newSupersets[ssIndex] = updated;
+    newSupersets[supersetIndex] = updated;
     final updatedWorkout = workout.copyWith(supersets: newSupersets);
     final updatedWorkouts = List<Workout>.from(_activeSession!.workouts);
     updatedWorkouts[workoutIndex] = updatedWorkout;
     _activeSession = _activeSession!.copyWith(workouts: updatedWorkouts);
 
     if (_progress.workoutIndex == workoutIndex) {
-      final activeExercise =
-          updatedWorkout.exercises[_progress.exerciseIndex];
-      final effectiveSets =
-          setsForExerciseInWorkout(updatedWorkout, activeExercise);
+      final activeExercise = updatedWorkout.exercises[_progress.exerciseIndex];
+      final effectiveSets = setsForExerciseInWorkout(
+        updatedWorkout,
+        activeExercise,
+      );
       final clamped = _progress.currentSet.clamp(1, effectiveSets);
       if (clamped != _progress.currentSet) {
         _progress = _progress.copyWith(currentSet: clamped);
@@ -755,7 +780,8 @@ class SessionStateProvider extends ChangeNotifier {
       }
     }
 
-    final totalTime = activeTime +
+    final totalTime =
+        activeTime +
         interRepRestTime +
         setRestTime +
         supersetRestTime +
@@ -811,7 +837,6 @@ class SessionStateProvider extends ChangeNotifier {
     _syncTimerDisplay();
     notifyListeners();
   }
-
 
   /// Called when the app returns to foreground. Catches any time gap the
   /// ticker missed while the isolate was suspended, then reschedules beeps
@@ -906,9 +931,8 @@ class SessionStateProvider extends ChangeNotifier {
   /// IMPORTANT: must be called AFTER `_progress` is updated, since it
   /// reads `_progress.phase` to decide which value to publish.
   void _syncTimerDisplay() {
-    timerDisplayNotifier.value = _progress.phase == TimerPhase.overtime
-        ? _overtimeElapsed
-        : _remaining;
+    timerDisplayNotifier.value =
+        _progress.phase == TimerPhase.overtime ? _overtimeElapsed : _remaining;
   }
 
   void _startTicker() {
@@ -947,7 +971,8 @@ class SessionStateProvider extends ChangeNotifier {
           (_soundMode == SoundMode.soundsOnly || _soundMode == SoundMode.both);
 
       if (playInApp) {
-        final countdownThreshold = const Duration(seconds: 3) + _countdownLeadTime;
+        final countdownThreshold =
+            const Duration(seconds: 3) + _countdownLeadTime;
         // Countdown: fire when remaining crosses the threshold during getReady,
         // setRest, or supersetRest. Shifted earlier by _countdownLeadTime so the
         // "3" beep in the cadence lands at exactly 3 s remaining, with a 3.2 s
@@ -1115,7 +1140,9 @@ class SessionStateProvider extends ChangeNotifier {
         // Countdown at 3 s + _countdownLeadTime before phase end so the "3"
         // beep aligns with 3 s remaining. Go beep _audioLeadTime before end.
         // repRest intentionally excluded — no countdown for inter-rep rests.
-        final countdownAt = phaseEndAt.subtract(const Duration(seconds: 3) + _countdownLeadTime);
+        final countdownAt = phaseEndAt.subtract(
+          const Duration(seconds: 3) + _countdownLeadTime,
+        );
         if (countdownAt.isAfter(now)) {
           beeps.add(ScheduledBeep(at: countdownAt, type: BeepType.countdown));
         }
@@ -1251,8 +1278,7 @@ class SessionStateProvider extends ChangeNotifier {
         // currentSet == 1 + exerciseIndex == 0 means a cross-workout
         // transition → getReady.
         // Otherwise (within-workout exercise transition): rep.
-        final isCrossWorkout =
-            p.currentSet == 1 && p.exerciseIndex == 0;
+        final isCrossWorkout = p.currentSet == 1 && p.exerciseIndex == 0;
         return p.copyWith(
           phase: isCrossWorkout ? TimerPhase.getReady : TimerPhase.rep,
         );
@@ -1529,7 +1555,11 @@ class SessionStateProvider extends ChangeNotifier {
       _progress.copyWith(phase: _overtimeSourcePhase),
     );
     if (_nextState == null) {
-      _onPhaseTransition(TimerPhase.overtime, TimerPhase.workoutComplete, _progress);
+      _onPhaseTransition(
+        TimerPhase.overtime,
+        TimerPhase.workoutComplete,
+        _progress,
+      );
       _progress = _progress.copyWith(phase: TimerPhase.workoutComplete);
       _remaining = Duration.zero;
       _beepScheduler?.cancelAll();
@@ -1649,8 +1679,8 @@ class SessionStateProvider extends ChangeNotifier {
 }
 
 class _OpenSetDraft {
-  final int workoutIndex;
-  final int exerciseIndex;
+  int workoutIndex;
+  int exerciseIndex;
   final int setIndex;
   final DateTime startAt;
 
@@ -1664,8 +1694,8 @@ class _OpenSetDraft {
 
 class _OpenRestDraft {
   final RestType restType;
-  final int workoutIndex;
-  final int exerciseIndex;
+  int workoutIndex;
+  int exerciseIndex;
   final int? setIndex;
   final DateTime startAt;
   final Duration plannedDuration;
