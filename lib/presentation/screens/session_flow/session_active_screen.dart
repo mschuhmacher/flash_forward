@@ -17,6 +17,7 @@ import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'dart:io' show Platform;
 
@@ -654,7 +655,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
     // path below routes back via updateActiveSupersetSets.
     final activeWorkout =
         sessionStateData.activeSession?.workouts[workoutIndex];
-    final ssMembership =
+    final supersetMembership =
         activeWorkout != null
             ? supersetForExercise(activeWorkout, activeExercise.id)
             : null;
@@ -699,8 +700,8 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
               // preserved unchanged so removing the exercise from the
               // superset later restores its original set count.
               final exerciseEditedSets =
-                  ssMembership != null ? activeExercise.sets : localSets;
-              if (ssMembership != null && localSets != initialSets) {
+                  supersetMembership != null ? activeExercise.sets : localSets;
+              if (supersetMembership != null && localSets != initialSets) {
                 sessionStateData.updateActiveSupersetSets(
                   workoutIndex: workoutIndex,
                   exerciseId: activeExercise.id,
@@ -779,7 +780,39 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                           horizontal: 16,
                           vertical: 16,
                         ),
+
                         children: [
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context); // close modal, discard in-modal edits
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => NewSessionScreen(
+                                    mode: NewSessionScreenMode.editActive,
+                                    session: sessionStateData.activeSession!,
+                                  ),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor:
+                                  context.colorScheme.surfaceBright,
+                              side: BorderSide(
+                                color: context.colorScheme.primary,
+                                width: 0.5,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Edit this session's workouts and exercises.",
+                                style: context.titleMedium.copyWith(
+                                  color: context.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           // ── Exercise info (read-only) ──────────────
                           _SessionEditSectionHeader(title: 'Exercise'),
                           const SizedBox(height: 8),
