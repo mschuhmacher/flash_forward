@@ -588,9 +588,100 @@ class SessionStateProvider extends ChangeNotifier {
     }
   }
 
-  /// Update the current active session to 
-  ///
-  void updateActiveSession() {}
+  /// Replaces the active session structure with [edited] and re-anchors
+  /// progress to the user's current exercise by id. If the current exercise
+  /// was deleted, advances to the next available stop. No-op if no session
+  /// is active.
+  void replaceActiveSession(Session edited) {
+    if (_activeSession == null) return;
+
+    // Capture anchor ids before replacing.
+    final anchorWorkoutId =
+        _activeSession!.workouts[_progress.workoutIndex].id;
+    final anchorExerciseId = _activeSession!
+        .workouts[_progress.workoutIndex].exercises[_progress.exerciseIndex].id;
+
+    _activeSession = edited;
+
+    // Locate anchor in edited session.
+    final newWorkoutIndex =
+        edited.workouts.indexWhere((w) => w.id == anchorWorkoutId);
+    final newExerciseIndex = newWorkoutIndex >= 0
+        ? edited.workouts[newWorkoutIndex].exercises
+            .indexWhere((e) => e.id == anchorExerciseId)
+        : -1;
+
+    if (newWorkoutIndex >= 0 && newExerciseIndex >= 0) {
+      // Anchor survived — re-anchor and clamp.
+      _workoutIndex = newWorkoutIndex;
+      _exerciseIndex = newExerciseIndex;
+      final workout = edited.workouts[newWorkoutIndex];
+      final exercise = workout.exercises[newExerciseIndex];
+      final effectiveSets = setsForExerciseInWorkout(workout, exercise);
+      final clampedSet = _progress.currentSet.clamp(1, effectiveSets);
+      final clampedRep = exercise.reps != null
+          ? _progress.currentRep.clamp(1, exercise.reps!)
+          : _progress.currentRep;
+      _progress = SessionProgress(
+        workoutIndex: newWorkoutIndex,
+        exerciseIndex: newExerciseIndex,
+        currentSet: clampedSet,
+        currentRep: clampedRep,
+        phase: TimerPhase.paused,
+      );
+      // Rewrite open draft indices to match new position.
+      if (_activeSetDraft != null) {
+        _activeSetDraft!.workoutIndex = newWorkoutIndex;
+        _activeSetDraft!.exerciseIndex = newExerciseIndex;
+      }
+      if (_activeRestDraft != null) {
+        _activeRestDraft!.workoutIndex = newWorkoutIndex;
+        _activeRestDraft!.exerciseIndex = newExerciseIndex;
+      }
+    } else {
+      _handleAnchorDeleted();
+    }
+
+    _remaining = _getDurationForPhase(_progress);
+    _rescheduleSound();
+    _syncTimerDisplay();
+    notifyListeners();
+  }
+
+  void _handleAnchorDeleted() {
+    _discardDrafts();
+
+    // Clamp old indices so _firstStopAtOrAfter doesn't go out of bounds.
+    final clampedWorkoutIndex =
+        _progress.workoutIndex.clamp(0, _activeSession!.workouts.length - 1);
+    final clampedExerciseIndex = _progress.exerciseIndex.clamp(
+      0,
+      _activeSession!.workouts[clampedWorkoutIndex].exercises.length,
+    );
+
+    final nextStop = _firstStopAtOrAfter(clampedWorkoutIndex, clampedExerciseIndex);
+
+    if (nextStop != null) {
+      _workoutIndex = nextStop.workoutIndex;
+      _exerciseIndex = nextStop.exerciseIndex;
+      _progress = SessionProgress(
+        workoutIndex: nextStop.workoutIndex,
+        exerciseIndex: nextStop.exerciseIndex,
+        currentSet: 1,
+        currentRep: 1,
+        phase: TimerPhase.paused,
+      );
+      _rememberCurrentPhaseForPausing = TimerPhase.getReady;
+    } else {
+      // Nothing left after current position — user removed the rest of the
+      // session. Treat as session complete.
+      _onPhaseTransition(_progress.phase, TimerPhase.workoutComplete, _progress);
+      _progress = _progress.copyWith(phase: TimerPhase.workoutComplete);
+      _remaining = Duration.zero;
+      _beepScheduler?.cancelAll();
+      _lastTickAt = null;
+    }
+  }
 
   /// Update a single exercise in the active session copy (e.g. mid-session load/sets edit).
   /// Uses copyWith so all fields remain immutable — the preset is never touched.
