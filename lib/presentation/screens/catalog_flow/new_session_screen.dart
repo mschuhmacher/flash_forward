@@ -75,6 +75,10 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   /// Flushed to the provider on Save via CatalogProvider.commitChanges.
   final PendingChangeBag _pending = PendingChangeBag();
 
+  // Only used in editActive mode. Cached in initState so dispose() can use it.
+  SessionStateProvider? _sessionProvider;
+  bool _wasAlreadyPausedOnEntry = false;
+
   late final _titleController = TextEditingController(
     text: widget.session?.title,
   );
@@ -86,7 +90,23 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.mode == NewSessionScreenMode.editActive) {
+      _sessionProvider = context.read<SessionStateProvider>();
+      _wasAlreadyPausedOnEntry = _sessionProvider!.isPaused;
+      if (!_wasAlreadyPausedOnEntry) _sessionProvider!.pause();
+    }
+  }
+
+  @override
   void dispose() {
+    if (widget.mode == NewSessionScreenMode.editActive &&
+        !_wasAlreadyPausedOnEntry) {
+      // resume() is a no-op if already unpaused (e.g. workoutComplete),
+      // so no phase check needed here.
+      _sessionProvider!.resume();
+    }
     _titleController.dispose();
     _descriptionController.dispose();
     _itemLabelController.dispose();
