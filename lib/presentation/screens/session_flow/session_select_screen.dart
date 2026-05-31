@@ -292,8 +292,15 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                       MaterialPageRoute(
                         builder:
                             (context) => NewSessionScreen(
+                              mode: NewSessionScreenMode.editBeforeStart,
                               session: session,
-                              startAfterSave: true,
+                              onSaveAndStart: (s) => Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ActiveSessionScreen(session: s),
+                                ),
+                                (route) => route.isFirst,
+                              ),
                             ),
                       ),
                     );

@@ -84,7 +84,7 @@ class _RootScreenState extends State<RootScreen>
                     case 0:
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => NewSessionScreen()),
+                        MaterialPageRoute(builder: (_) => NewSessionScreen(mode: NewSessionScreenMode.create)),
                       );
                     case 1:
                       Navigator.push(

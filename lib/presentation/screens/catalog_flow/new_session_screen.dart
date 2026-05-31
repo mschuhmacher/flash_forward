@@ -17,21 +17,27 @@ import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/providers/trash_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
-import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
+import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/utils/nullable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
+enum NewSessionScreenMode { create, editCatalog, editBeforeStart, editActive }
+
 class NewSessionScreen extends StatefulWidget {
   final Session? session;
-  final bool startAfterSave;
+  final NewSessionScreenMode mode;
+  // Required when mode == editBeforeStart. Called with the built session
+  // so the callsite can push ActiveSessionScreen (avoids circular import).
+  final void Function(Session)? onSaveAndStart;
 
   const NewSessionScreen({
     super.key,
     this.session,
-    this.startAfterSave = false,
+    this.mode = NewSessionScreenMode.create,
+    this.onSaveAndStart,
   });
 
   @override
@@ -41,7 +47,7 @@ class NewSessionScreen extends StatefulWidget {
 class _NewSessionScreenState extends State<NewSessionScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  bool get _isNew => widget.session == null;
+  bool get _isNew => widget.mode == NewSessionScreenMode.create;
 
   late Session _session =
       widget.session?.deepCopy(keepId: true) ??
@@ -99,90 +105,98 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       );
       return;
     }
-    if (_formKey.currentState!.validate()) {
-      final session = _session.copyWith(
-        title: _titleController.text.trim(),
-        label: _itemLabelController.text,
-        description: Nullable(
-          _descriptionController.text.trim().isEmpty
-              ? null
-              : _descriptionController.text.trim(),
-        ),
-        userId:
-            _session.userId ??
-            Provider.of<AuthProvider>(context, listen: false).userId,
-      );
+    if (!_formKey.currentState!.validate()) return;
 
-      if (widget.startAfterSave) {
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ActiveSessionScreen(session: session),
-            ),
-            (route) => route.isFirst,
-          );
-        }
-        return;
-      }
+    final session = _session.copyWith(
+      title: _titleController.text.trim(),
+      label: _itemLabelController.text,
+      description: Nullable(
+        _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+      ),
+      userId:
+          _session.userId ??
+          Provider.of<AuthProvider>(context, listen: false).userId,
+    );
 
-      final catalogProvider = Provider.of<CatalogProvider>(
-        context,
-        listen: false,
-      );
-
-      if (_isNew) {
-        await catalogProvider.upsertSession(session);
-      } else {
-        final editCommit = context.read<EditCommitController>();
-        final bag = PendingChangeBag()..setSession(session);
-        for (final wc in _pending.workoutsById.values) {
-          bag.addWorkout(wc.workout);
-        }
-        for (final ec in _pending.exercisesById.values) {
-          bag.addExercise(ec.exercise);
-        }
-        final result = await editCommit.commitChanges(
-          bag,
-          excludeSessionId: session.id,
-        );
-        if (result.hasAny && mounted) {
-          final sections = <PropagationSection>[
-            for (final entry in result.affectedSessionsByWorkoutId.entries)
-              PropagationSection(
-                itemKind: 'workout',
-                itemId: entry.key,
-                itemTitle: bag.workoutsById[entry.key]!.workout.title,
-                consumerKind: 'sessions',
-                consumers: [
-                  for (final s in entry.value)
-                    PropagationConsumer(id: s.id, label: s.title),
-                ],
-              ),
-            for (final entry in result.affectedWorkoutsByExerciseId.entries)
-              PropagationSection(
-                itemKind: 'exercise',
-                itemId: entry.key,
-                itemTitle: bag.exercisesById[entry.key]!.exercise.title,
-                consumerKind: 'workouts',
-                consumers: [
-                  for (final w in entry.value)
-                    PropagationConsumer(id: w.id, label: w.title),
-                ],
-              ),
-          ];
-          final selection = await showPropagateChangesDialog(
-            context: context,
-            sections: sections,
-          );
-          if (selection == null) return; // user cancelled — stay on screen
-          if (!selection.isEmpty) {
-            await editCommit.propagateBag(bag, selection: selection);
-          }
-        }
-      }
-      if (mounted) Navigator.pop(context);
+    switch (widget.mode) {
+      case NewSessionScreenMode.editActive:
+        return _saveActiveEdit(session);
+      case NewSessionScreenMode.editBeforeStart:
+        return _saveAndStart(session);
+      case NewSessionScreenMode.create:
+      case NewSessionScreenMode.editCatalog:
+        return _saveToCatalog(session);
     }
+  }
+
+  Future<void> _saveActiveEdit(Session session) async {
+    context.read<SessionStateProvider>().replaceActiveSession(session);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _saveAndStart(Session session) async {
+    if (mounted) widget.onSaveAndStart?.call(session);
+  }
+
+  Future<void> _saveToCatalog(Session session) async {
+    final catalogProvider = Provider.of<CatalogProvider>(
+      context,
+      listen: false,
+    );
+
+    if (_isNew) {
+      await catalogProvider.upsertSession(session);
+    } else {
+      final editCommit = context.read<EditCommitController>();
+      final bag = PendingChangeBag()..setSession(session);
+      for (final wc in _pending.workoutsById.values) {
+        bag.addWorkout(wc.workout);
+      }
+      for (final ec in _pending.exercisesById.values) {
+        bag.addExercise(ec.exercise);
+      }
+      final result = await editCommit.commitChanges(
+        bag,
+        excludeSessionId: session.id,
+      );
+      if (result.hasAny && mounted) {
+        final sections = <PropagationSection>[
+          for (final entry in result.affectedSessionsByWorkoutId.entries)
+            PropagationSection(
+              itemKind: 'workout',
+              itemId: entry.key,
+              itemTitle: bag.workoutsById[entry.key]!.workout.title,
+              consumerKind: 'sessions',
+              consumers: [
+                for (final s in entry.value)
+                  PropagationConsumer(id: s.id, label: s.title),
+              ],
+            ),
+          for (final entry in result.affectedWorkoutsByExerciseId.entries)
+            PropagationSection(
+              itemKind: 'exercise',
+              itemId: entry.key,
+              itemTitle: bag.exercisesById[entry.key]!.exercise.title,
+              consumerKind: 'workouts',
+              consumers: [
+                for (final w in entry.value)
+                  PropagationConsumer(id: w.id, label: w.title),
+              ],
+            ),
+        ];
+        final selection = await showPropagateChangesDialog(
+          context: context,
+          sections: sections,
+        );
+        if (selection == null) return; // user cancelled — stay on screen
+        if (!selection.isEmpty) {
+          await editCommit.propagateBag(bag, selection: selection);
+        }
+      }
+    }
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _saveWorkoutToCatalog(Workout workout) async {
@@ -276,7 +290,7 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                     EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                   ),
                 ),
-                child: Text(widget.startAfterSave ? 'Save & Start' : 'Save'),
+                child: Text(widget.mode == NewSessionScreenMode.editBeforeStart ? 'Save & Start' : 'Save'),
               ),
             ],
           ),

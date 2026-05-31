@@ -281,7 +281,7 @@ class CatalogListviewCard extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) => NewSessionScreen(session: filteredListItem),
+                      (context) => NewSessionScreen(mode: NewSessionScreenMode.editCatalog, session: filteredListItem),
                 ),
               );
 
