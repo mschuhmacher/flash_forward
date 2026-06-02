@@ -41,6 +41,15 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
     with WidgetsBindingObserver {
   bool _timerInitialized = false;
 
+  // Context of the open edit-exercise modal, captured when it opens and
+  // cleared when it closes. Lets us pop it from outside (e.g. when the
+  // anchored exercise is deleted mid-session).
+  BuildContext? _editModalContext;
+
+  // Provider reference + listener for the anchor-deleted signal. Attached
+  // once in didChangeDependencies, detached in dispose.
+  SessionStateProvider? _sessionProvider;
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +57,36 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<SessionStateProvider>();
+    if (provider != _sessionProvider) {
+      _sessionProvider?.anchorDeletedSignal.removeListener(_onAnchorDeleted);
+      _sessionProvider = provider;
+      _sessionProvider!.anchorDeletedSignal.addListener(_onAnchorDeleted);
+    }
+  }
+
+  /// Closes the open edit-exercise modal when the anchored exercise was
+  /// deleted mid-session and re-anchoring jumped elsewhere. The modal's
+  /// target no longer exists, so editing it makes no sense.
+  ///
+  /// Deferred to the next frame: the signal fires from replaceActiveSession
+  /// while NewSessionScreen (the editor) is still on top of the modal and
+  /// about to pop itself. Popping now would target the wrong route, so we
+  /// wait until the editor has been removed.
+  void _onAnchorDeleted() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final modalContext = _editModalContext;
+      if (modalContext != null && modalContext.mounted) {
+        Navigator.of(modalContext).pop();
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _sessionProvider?.anchorDeletedSignal.removeListener(_onAnchorDeleted);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -689,7 +727,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (BuildContext context) {
+      builder: (BuildContext modalContext) {
+        // Captured so the anchor-deleted listener can pop this modal from
+        // outside when its target exercise is removed mid-session.
+        _editModalContext = modalContext;
         // Resume is handled via .then() below — covers save, dismiss, and drag-close.
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -703,16 +744,18 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                   supersetMembership != null ? activeExercise.sets : localSets;
               if (supersetMembership != null && localSets != initialSets) {
                 sessionStateData.updateActiveSupersetSets(
-                  workoutIndex: workoutIndex,
+                  workoutId: activeWorkout!.id,
                   exerciseId: activeExercise.id,
                   newSupersetSets: localSets,
                 );
               }
               // Apply all local edits to the live session copy via the provider.
               // Uses copyWith (not deepCopy) — keeps the same IDs, only replaces fields.
+              // Target by ID, not index: a mid-session structural edit may have
+              // shifted positions while the modal was open. No-op if deleted.
               sessionStateData.updateActiveExercise(
-                workoutIndex,
-                exerciseIndex,
+                activeWorkout!.id,
+                activeExercise.id,
                 activeExercise.copyWith(
                   sets: exerciseEditedSets,
                   reps: Nullable(localRepsEnabled ? localReps : null),
@@ -784,7 +827,6 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                         children: [
                           OutlinedButton(
                             onPressed: () {
-                              Navigator.pop(context); // close modal, discard in-modal edits
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -1226,6 +1268,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         );
       },
     ).then((_) {
+      _editModalContext = null;
       if (!wasAlreadyPaused) sessionStateData.resume();
     });
   }

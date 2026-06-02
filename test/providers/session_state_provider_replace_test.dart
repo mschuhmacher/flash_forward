@@ -222,9 +222,12 @@ void main() {
       // Should land on e2 (now index 0), paused, rememberPhase = getReady.
       expect(p.progress.exerciseIndex, 0);
       expect(p.progress.phase, TimerPhase.paused);
-      // On resume the user should enter getReady, not mid-rep.
+      // On resume the user should enter getReady, not mid-rep, with the
+      // countdown primed to the full getReady duration (10s) rather than a
+      // stale value left over from the deleted exercise's phase.
       p.resume();
       expect(p.phase, TimerPhase.getReady);
+      expect(p.remaining, const Duration(seconds: 10));
     });
 
     test('transitions to workoutComplete when all exercises from current onward deleted', () {

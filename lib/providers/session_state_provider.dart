@@ -124,6 +124,13 @@ class SessionStateProvider extends ChangeNotifier {
     Duration.zero,
   );
 
+  // ─── Anchor-deleted signal ───────────────────────────────────────
+  // Bumped whenever a mid-session edit deletes the anchored exercise and
+  // re-anchoring jumps elsewhere. The active screen listens to this to close
+  // the open edit-exercise modal, whose target no longer exists. Only ever
+  // fires while that modal is open (replaceActiveSession's sole caller).
+  final ValueNotifier<int> anchorDeletedSignal = ValueNotifier(0);
+
   //
   Duration _overtimeElapsed = Duration.zero;
   bool _overtimeWasAutomatic = false;
@@ -642,7 +649,9 @@ class SessionStateProvider extends ChangeNotifier {
       _handleAnchorDeleted();
     }
 
-    _remaining = _getDurationForPhase(_progress);
+    if (!_isPaused) {
+      _remaining = _getDurationForPhase(_progress);
+    }
     _rescheduleSound();
     _syncTimerDisplay();
     notifyListeners();
@@ -672,6 +681,12 @@ class SessionStateProvider extends ChangeNotifier {
         phase: TimerPhase.paused,
       );
       _rememberCurrentPhaseForPausing = TimerPhase.getReady;
+      // Prime the countdown for the phase we'll resume into. The paused-guard
+      // on the _remaining recompute in replaceActiveSession would otherwise
+      // leave a stale duration, so set it explicitly here.
+      _remaining = _getDurationForPhase(
+        _progress.copyWith(phase: TimerPhase.getReady),
+      );
     } else {
       // Nothing left after current position — user removed the rest of the
       // session. Treat as session complete.
@@ -681,17 +696,32 @@ class SessionStateProvider extends ChangeNotifier {
       _beepScheduler?.cancelAll();
       _lastTickAt = null;
     }
+
+    // The modal was editing the now-deleted anchor exercise; tell the active
+    // screen to close it. Fires in both branches — the target is gone either way.
+    anchorDeletedSignal.value++;
   }
 
   /// Update a single exercise in the active session copy (e.g. mid-session load/sets edit).
   /// Uses copyWith so all fields remain immutable — the preset is never touched.
+  ///
+  /// Targets the workout and exercise by ID rather than index: a mid-session
+  /// structural edit (add/reorder) may have shifted positions between the
+  /// modal opening and Save. No-op if either ID is no longer present (e.g. the
+  /// exercise was deleted in the editor) — the in-modal edits are discarded.
   void updateActiveExercise(
-    int workoutIndex,
-    int exerciseIndex,
+    String workoutId,
+    String exerciseId,
     Exercise updated,
   ) {
     if (_activeSession == null) return;
+    final workoutIndex =
+        _activeSession!.workouts.indexWhere((w) => w.id == workoutId);
+    if (workoutIndex == -1) return;
     final workout = _activeSession!.workouts[workoutIndex];
+    final exerciseIndex =
+        workout.exercises.indexWhere((e) => e.id == exerciseId);
+    if (exerciseIndex == -1) return;
     final updatedExercises = List<Exercise>.from(workout.exercises);
     updatedExercises[exerciseIndex] = updated;
     final updatedWorkout = workout.copyWith(exercises: updatedExercises);
@@ -719,20 +749,26 @@ class SessionStateProvider extends ChangeNotifier {
   }
 
   /// Updates `supersetSets` on the superset that contains [exerciseId] in
-  /// the active session's workout at [workoutIndex]. No-op if the exercise
-  /// is not a superset member. Clamps `currentSet` to the new value when
-  /// applicable.
+  /// the active session's workout identified by [workoutId]. No-op if the
+  /// workout is gone or the exercise is not a superset member. Clamps
+  /// `currentSet` to the new value when applicable.
+  ///
+  /// Targets the workout by ID (not index) so a mid-session structural edit
+  /// that shifted positions doesn't write to the wrong workout.
   ///
   /// Mid-session sets edits on a superset member route here instead of
   /// `updateActiveExercise` for the sets field — all members of the same
   /// superset share `supersetSets`, so a single edit propagates to all of
   /// them via the existing read path (`setsForExerciseInWorkout`).
   void updateActiveSupersetSets({
-    required int workoutIndex,
+    required String workoutId,
     required String exerciseId,
     required int newSupersetSets,
   }) {
     if (_activeSession == null) return;
+    final workoutIndex =
+        _activeSession!.workouts.indexWhere((w) => w.id == workoutId);
+    if (workoutIndex == -1) return;
     final workout = _activeSession!.workouts[workoutIndex];
     final supersetIndex = workout.supersets.indexWhere(
       (superset) => superset.exerciseIds.contains(exerciseId),
@@ -1765,6 +1801,7 @@ class SessionStateProvider extends ChangeNotifier {
   void dispose() {
     _ticker?.cancel();
     timerDisplayNotifier.dispose();
+    anchorDeletedSignal.dispose();
     super.dispose();
   }
 }
