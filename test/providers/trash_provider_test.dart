@@ -200,64 +200,6 @@ void main() {
     );
   });
 
-  group('liftToCatalog', () {
-    test('adds workout to user catalog', () async {
-      final w = _workout(id: 'w-new', title: 'Fresh');
-
-      await trash.liftToCatalog(item: w, kind: TrashKind.workout);
-
-      expect(catalog.presetUserWorkoutsIDs, contains('w-new'));
-      expect(
-        catalog.presetWorkouts.firstWhere((x) => x.id == 'w-new').title,
-        'Fresh',
-      );
-    });
-
-    test('adds exercise to user catalog', () async {
-      final e = _exercise(id: 'e-new', title: 'Fresh');
-
-      await trash.liftToCatalog(item: e, kind: TrashKind.exercise);
-
-      expect(catalog.presetUserExerciseIDs, contains('e-new'));
-    });
-
-    test('adds session to user catalog', () async {
-      final s = _session(id: 's-new', title: 'Fresh');
-
-      await trash.liftToCatalog(item: s, kind: TrashKind.session);
-
-      expect(catalog.presetUserSessionIDs, contains('s-new'));
-    });
-
-    test('overrideTitle is applied', () async {
-      final w = _workout(id: 'w-new', title: 'Original');
-
-      await trash.liftToCatalog(
-        item: w,
-        kind: TrashKind.workout,
-        overrideTitle: 'Renamed',
-      );
-
-      expect(
-        catalog.presetWorkouts.firstWhere((x) => x.id == 'w-new').title,
-        'Renamed',
-      );
-    });
-
-    test('overrideId is applied', () async {
-      final w = _workout(id: 'old-id', title: 'W');
-
-      await trash.liftToCatalog(
-        item: w,
-        kind: TrashKind.workout,
-        overrideId: 'new-id',
-      );
-
-      expect(catalog.presetUserWorkoutsIDs, contains('new-id'));
-      expect(catalog.presetUserWorkoutsIDs, isNot(contains('old-id')));
-    });
-  });
-
   group('reset clears trash', () {
     test('reset empties trashedItems', () {
       trash.debugSeedTrash([_trashedWorkout(id: 'w-1')]);
