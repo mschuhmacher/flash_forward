@@ -58,19 +58,17 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                   children: [
                     previousStop == null
                         ? SizedBox.shrink()
-                        : GestureDetector(
+                        : MyIconButton(
                           onTap: sessionStateData.phase == TimerPhase.overtime
-                              ? null
-                              : () {
-                                  sessionStateData.jumpToPrevious();
-                                },
-                          child: MyIconButton(
-                            icon: Icons.arrow_back,
-                            size: 40,
-                            foregroundColor: sessionStateData.phase == TimerPhase.overtime
-                                ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                                : context.colorScheme.primary,
-                          ),
+                            ? null
+                            : () {
+                                sessionStateData.jumpToPrevious();
+                              },
+                          icon: Icons.arrow_back,
+                          size: 44,
+                          foregroundColor: sessionStateData.phase == TimerPhase.overtime
+                              ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                              : context.colorScheme.primary,
                         ),
                     Expanded(
                       child: Center(
@@ -85,33 +83,28 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                     ),
 
                     nextStop != null
-                        ? GestureDetector(
+                        ? MyIconButton(
                           onTap: sessionStateData.phase == TimerPhase.overtime
-                              ? null
-                              : () {
-                                  sessionStateData.jumpToNext();
-                                },
-                          child: MyIconButton(
-                            icon: Icons.arrow_forward,
-                            size: 40,
-                            foregroundColor: sessionStateData.phase == TimerPhase.overtime
-                                ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                                : context.colorScheme.primary,
-                          ),
+                            ? null
+                            : () {
+                                sessionStateData.jumpToNext();},
+                          icon: Icons.arrow_forward,
+                          size: 44,
+                          foregroundColor: sessionStateData.phase == TimerPhase.overtime
+                              ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                              : context.colorScheme.primary,
                         )
-                        : GestureDetector(
+                        : MyIconButton(
                           onTap: () {
-                            _showFinishSessionDialog(
-                              context,
-                              activeSession,
-                              sessionLogData,
-                            );
-                          },
-                          child: MyIconButton(
-                            icon: Icons.check,
-                            size: 40,
-                            foregroundColor: context.colorScheme.primary,
-                          ),
+                          _showFinishSessionDialog(
+                            context,
+                            activeSession,
+                            sessionLogData,
+                          );
+                        },
+                          icon: Icons.check,
+                          size: 44,
+                          foregroundColor: context.colorScheme.primary,
                         ),
                   ],
                 ),
