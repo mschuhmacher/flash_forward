@@ -208,7 +208,6 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       return;
     }
     final catalog = Provider.of<CatalogProvider>(context, listen: false);
-    final trash = context.read<TrashProvider>();
     final titles = catalog.presetWorkouts.map((w) => w.title).toList();
     String? finalTitle = workout.title;
     if (titles.contains(workout.title)) {

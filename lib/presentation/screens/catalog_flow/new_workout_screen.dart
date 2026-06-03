@@ -5,7 +5,6 @@ import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/superset_config.dart';
-import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
@@ -209,7 +208,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
   Future<void> _saveExerciseToCatalog(Exercise exercise) async {
     final catalog = Provider.of<CatalogProvider>(context, listen: false);
-    final trash = context.read<TrashProvider>();
     final titles = catalog.presetExercises.map((e) => e.title).toList();
     String? finalTitle = exercise.title;
     if (titles.contains(exercise.title)) {
