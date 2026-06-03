@@ -827,9 +827,11 @@ git commit -m "feat: wire up mid-session editor button in exercise edit modal"
 
 ## Task 7: Manual UI verification
 
-No automated tests cover the full navigation flow. Verify these paths manually in the app:
+No automated tests cover the full navigation flow. Verify these paths manually in the app.
 
-- [ ] Open an active session → tap an exercise → tap "Edit this session's workouts and exercises" → confirm timer is paused and editor opens showing the current session's workouts.
+### Original plan items
+
+- [ ] Open an active session → tap an exercise → tap "Edit this session's workouts and exercises" → confirm editor opens (on top of the modal) showing the current session's workouts.
 
 - [ ] In the editor: add a new exercise after the current one → save → confirm you land back on the same exercise (still paused), set/rep preserved. Resume works.
 
@@ -837,7 +839,7 @@ No automated tests cover the full navigation flow. Verify these paths manually i
 
 - [ ] In the editor: delete the current exercise → save → confirm you land on the next exercise in `getReady` phase (paused). Resume starts getReady countdown.
 
-- [ ] In the editor: delete all exercises after and including current → save → confirm session-complete screen appears immediately (no "resume" needed).
+- [ ] In the editor: delete all exercises after and including current → save → confirm session transitions to `workoutComplete` (no "resume" needed).
 
 - [ ] In the editor: tap back without saving → confirm you return to the paused active session at the original position. Resume works.
 
@@ -845,4 +847,32 @@ No automated tests cover the full navigation flow. Verify these paths manually i
 
 - [ ] Verify the `workoutComplete` path on `ActiveSessionScreen` still fires correctly through natural session completion (not via editor), to confirm the dispose guard didn't break normal flow.
 
-- [ ] **Critical:** Verify what `ActiveSessionScreen` shows when it receives `workoutComplete` state on return from the editor (triggered by deleting everything from current onward). The screen normally only reaches `workoutComplete` through natural progression — arriving there via a Navigator.pop from the editor is a new path. Confirm the session-complete UI appears and is not blank/broken. If the screen does not already listen for `workoutComplete` on rebuild, a `Consumer` or `Selector` on `phase == TimerPhase.workoutComplete` may need to be added.
+- [ ] **Critical:** Verify what `ActiveSessionScreen` shows when it receives `workoutComplete` state on return from the editor (delete-everything path). The screen does not have a dedicated complete-screen guard — it renders the timer UI with phaseText "workout complete", same as natural completion. Confirm it is not blank/broken and does not crash (see RangeError fix below).
+
+### Bugs found & fixed during verification
+
+- [ ] **No `setState during build` warning:** confirm no `setState()/markNeedsBuild() during build` or `widget tree was locked` warnings in the terminal (editor is pushed on top of the modal; no `initState` pause/resume lifecycle).
+
+- [ ] **Frozen countdown preserved:** mid-phase (e.g. rest-between-sets), edit + save → timer keeps the **same phase and frozen countdown**, not reset to 00:00, no jump to a different phase.
+
+- [ ] **No phase jump on save:** saving the editor doesn't transition the phase incorrectly (rest→active, active→rest, etc.).
+
+- [ ] **Re-anchor after reorder, no overwrite/duplicate:** on exercise 3, add an exercise before the superset, reorder it before current, save editor → save modal → active screen shows the **correct** current exercise; reopen editor → **no duplicate** of the current exercise.
+
+- [ ] **Modal Save targets correct exercise:** after a reorder, the modal's "Save" writes edits to the **correct** exercise by ID, not the stale index.
+
+- [ ] **Reduce sets/reps below current:** edit current exercise to fewer sets than `currentSet` → progress clamps to the new max, no crash.
+
+- [ ] **getReady starts at 10s after delete:** delete the current exercise → jumps to next exercise → on resume, getReady countdown starts at **10s** (not a stale value).
+
+- [ ] **Modal auto-closes on anchor delete:** delete the current (anchored) exercise → after save, the edit-exercise **modal closes automatically**; active screen shows the next exercise.
+
+- [ ] **Modal auto-closes on delete-everything:** delete current + all following → session goes to `workoutComplete` and the modal auto-closes.
+
+- [ ] **No RangeError on delete-everything:** delete current + all remaining exercises → no `RangeError` / `Invalid value: Not in inclusive range` crash in `ActiveSessionScreen.build`. Indices are clamped to a valid slot in the workoutComplete branch.
+
+### Constraint checks
+
+- [ ] **Empty workout blocked:** save with a workout that has no exercises → "Every workout must have at least one exercise" snackbar.
+
+- [ ] **Superset contiguity:** reorder an exercise into the middle of a superset → "Cannot drop inside a superset" snackbar.

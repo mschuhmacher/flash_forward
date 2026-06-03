@@ -184,9 +184,18 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
         final progress = sessionStateData.progress;
 
+        // workoutComplete is a live, navigable phase: the exercise-level UI is
+        // replaced by a "Workout complete" state, but the user can still jump
+        // back into the workout (bottom bar) or add exercises (edit button).
+        final bool isComplete =
+            sessionStateData.phase == TimerPhase.workoutComplete;
+
         Workout activeWorkout = activeSession.workouts[progress.workoutIndex];
-        Exercise activeExercise =
-            activeWorkout.exercises[progress.exerciseIndex];
+        // Clamp so this read never throws. In complete state the value is
+        // arbitrary-but-valid and isn't displayed; in every other phase
+        // exerciseIndex is already in range.
+        Exercise activeExercise = activeWorkout.exercises[progress.exerciseIndex
+            .clamp(0, activeWorkout.exercises.length - 1)];
 
         List<Widget> workoutNames =
             activeSession.workouts
@@ -340,68 +349,118 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                         ),
                         child: null,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          60.0,
-                          60.0,
-                          20.0,
-                          12.0,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (() {
-                              final ss = supersetForExercise(
-                                activeWorkout,
-                                activeExercise.id,
-                              );
-                              return ss != null;
-                            }())
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Container(
-                                  width: 32,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: () {
-                                      final ss =
-                                          supersetForExercise(
-                                            activeWorkout,
-                                            activeExercise.id,
-                                          )!;
-                                      final idx = activeWorkout.supersets
-                                          .indexWhere((s) => s.id == ss.id);
-                                      return idx >= 0
-                                          ? supersetColorForIndex(idx)
-                                          : supersetColor(ss.id);
-                                    }(),
-                                    borderRadius: BorderRadius.circular(2),
+                      if (isComplete)
+                        Center(
+                          child: Text(
+                            'Workout complete',
+                            style: context.h1.copyWith(
+                              color: context.colorScheme.onPrimary,
+                            ),
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            60.0,
+                            60.0,
+                            20.0,
+                            12.0,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (() {
+                                final ss = supersetForExercise(
+                                  activeWorkout,
+                                  activeExercise.id,
+                                );
+                                return ss != null;
+                              }())
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Container(
+                                    width: 32,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: () {
+                                        final ss =
+                                            supersetForExercise(
+                                              activeWorkout,
+                                              activeExercise.id,
+                                            )!;
+                                        final idx = activeWorkout.supersets
+                                            .indexWhere((s) => s.id == ss.id);
+                                        return idx >= 0
+                                            ? supersetColorForIndex(idx)
+                                            : supersetColor(ss.id);
+                                      }(),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
                                   ),
                                 ),
+                              Text(
+                                activeExercise.title,
+                                style: context.h1.copyWith(
+                                  color: context.colorScheme.onPrimary,
+                                ),
                               ),
-                            Text(
-                              activeExercise.title,
-                              style: context.h1.copyWith(
-                                color: context.colorScheme.onPrimary,
+                              SizedBox(height: 8),
+                              Text(
+                                activeExercise.description,
+                                style: context.bodyLarge.copyWith(
+                                  color: context.colorScheme.onPrimary,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              activeExercise.description,
-                              style: context.bodyLarge.copyWith(
-                                color: context.colorScheme.onPrimary,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
                 Container(
                   color: context.colorScheme.primary,
-                  child: Column(
+                  child: isComplete
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0,
+                            vertical: 12.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              // Edit stays available so the user can add
+                              // exercises. There is no current exercise, so go
+                              // straight to the session editor (no per-exercise
+                              // modal).
+                              _RoundedBox(
+                                width: 50,
+                                borderColor: context.colorScheme.onPrimary,
+                                child: IconButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => NewSessionScreen(
+                                          mode: NewSessionScreenMode.editActive,
+                                          session:
+                                              sessionStateData.activeSession!,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: Icon(
+                                    Icons.edit,
+                                    color: context.colorScheme.onPrimary,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 24),
+                            ],
+                          ),
+                        )
+                      : Column(
                     children: [
                       Center(child: Text(phaseText, style: phaseTextStyle)),
                       // ── Timer or manual-advance button ──────────

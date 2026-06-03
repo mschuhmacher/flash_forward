@@ -243,6 +243,52 @@ void main() {
       p.replaceActiveSession(edited);
 
       expect(p.phase, TimerPhase.workoutComplete);
+      // Indices must be clamped to a still-valid slot: the active screen
+      // indexes workouts[workoutIndex].exercises[exerciseIndex] on every
+      // rebuild before checking for workoutComplete, so a stale (deleted)
+      // index throws a RangeError during build.
+      expect(p.progress.workoutIndex, lessThan(p.activeSession!.workouts.length));
+      expect(
+        p.progress.exerciseIndex,
+        lessThan(
+          p.activeSession!.workouts[p.progress.workoutIndex].exercises.length,
+        ),
+      );
+    });
+
+    test('stays workoutComplete after resume when last exercise deleted', () {
+      final original = _withSecondExercise(_fixture());
+      final p = SessionStateProvider()..start(original);
+      p.jumpToExercise(1); // on e2 (last exercise)
+      p.pause(); // modal opens → pause (not pre-paused by the user)
+      final activeW = p.activeSession!.workouts[0];
+      final edited = p.activeSession!.copyWith(
+        workouts: [activeW.copyWith(exercises: [activeW.exercises[0]])],
+      );
+
+      p.replaceActiveSession(edited);
+      expect(p.phase, TimerPhase.workoutComplete);
+
+      // Closing the modal resumes (when not pre-paused). resume() must not flip
+      // the phase off workoutComplete back onto the last surviving exercise.
+      p.resume();
+      expect(p.phase, TimerPhase.workoutComplete);
+    });
+
+    test('previousStop from workoutComplete lands on the last exercise', () {
+      final original = _withSecondExercise(_fixture());
+      final p = SessionStateProvider()..start(original);
+      p.jumpToExercise(1); // on e2 (last exercise, index 1)
+      final activeW = p.activeSession!.workouts[0];
+      final edited = p.activeSession!.copyWith(
+        workouts: [activeW.copyWith(exercises: [activeW.exercises[0]])],
+      );
+      p.replaceActiveSession(edited); // now workoutComplete; e1 is last (index 0)
+
+      final prev = p.previousStop;
+      expect(prev, isNotNull);
+      // Should re-enter the last real exercise (index 0 here), not one before.
+      expect(prev!.exerciseIndex, 0);
     });
 
     test('discards open drafts when anchor deleted', () {

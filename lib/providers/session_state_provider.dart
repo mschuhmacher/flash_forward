@@ -459,6 +459,16 @@ class SessionStateProvider extends ChangeNotifier {
 
   SessionProgress? _calculatePreviousStop(SessionProgress p) {
     if (_activeSession == null) return null;
+
+    // From workoutComplete the user is conceptually past the final exercise,
+    // so "previous" re-enters the last real stop (the last exercise), not the
+    // one before it. _lastStopBefore(w, len) resolves to that last exercise.
+    if (p.phase == TimerPhase.workoutComplete) {
+      final lastWorkoutIndex = _activeSession!.workouts.length - 1;
+      final lastWorkout = _activeSession!.workouts[lastWorkoutIndex];
+      return _lastStopBefore(lastWorkoutIndex, lastWorkout.exercises.length);
+    }
+
     final workout = _activeSession!.workouts[p.workoutIndex];
     final exercise = workout.exercises[p.exerciseIndex];
     final ss = supersetForExercise(workout, exercise.id);
@@ -690,8 +700,31 @@ class SessionStateProvider extends ChangeNotifier {
     } else {
       // Nothing left after current position — user removed the rest of the
       // session. Treat as session complete.
+      //
+      // Clamp the indices to a still-valid slot: the old position points at a
+      // now-deleted exercise (or workout). The active screen renders a
+      // "Workout complete" state instead of the exercise card, but it still
+      // reads workouts[workoutIndex] for the workout-name strip, so the
+      // workout index in particular must stay in range.
+      final safeWorkoutIndex =
+          clampedWorkoutIndex.clamp(0, _activeSession!.workouts.length - 1);
+      final safeExerciseIndex = _progress.exerciseIndex.clamp(
+        0,
+        _activeSession!.workouts[safeWorkoutIndex].exercises.length - 1,
+      );
+      _workoutIndex = safeWorkoutIndex;
+      _exerciseIndex = safeExerciseIndex;
       _onPhaseTransition(_progress.phase, TimerPhase.workoutComplete, _progress);
-      _progress = _progress.copyWith(phase: TimerPhase.workoutComplete);
+      _progress = _progress.copyWith(
+        workoutIndex: safeWorkoutIndex,
+        exerciseIndex: safeExerciseIndex,
+        phase: TimerPhase.workoutComplete,
+      );
+      // The modal closing triggers resume() (when not pre-paused), which
+      // restores _rememberCurrentPhaseForPausing onto _progress. Without this
+      // it would hold the deleted exercise's old phase (e.g. rep) and flip us
+      // off workoutComplete back onto the last surviving exercise.
+      _rememberCurrentPhaseForPausing = TimerPhase.workoutComplete;
       _remaining = Duration.zero;
       _beepScheduler?.cancelAll();
       _lastTickAt = null;
