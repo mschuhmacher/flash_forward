@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_bottom_bar.dart';
+import 'package:flash_forward/providers/session_progress.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';

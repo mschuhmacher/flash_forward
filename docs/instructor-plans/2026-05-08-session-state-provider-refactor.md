@@ -22,10 +22,10 @@ The source plan was last reassessed 2026-05-26. Since then:
 
 - [x] **Task 1 of 6** — Establish the green baseline and capture invariants (baseline: 18 `_syncTimerDisplay()` call sites / grep count 19)
 - [x] **Task 2 of 6** — Extract `SessionStateMachine` (pure functions) *(source plan Task 1)* — flat layout (lib/providers/, test/providers/); + architecture doc with 2 mermaid diagrams
-- [ ] **Task 3 of 6** — Extract `SessionTelemetryRecorder` (scoped state) *(source plan Task 2)*
-- [ ] **Task 4 of 6** — Extract `SoundDispatcher` (beep timing) *(source plan Task 3)*
-- [ ] **Task 5 of 6** — Sweep: verify provider shape and invariants *(source plan Task 4)*
-- [ ] **Task 6 of 6** — *(Optional)* Lift `SessionProgress`/`TimerPhase` into a shared file *(source plan Task 5)*
+- [x] **Task 3 of 6** — Extract `SessionTelemetryRecorder` (scoped state) *(source plan Task 2)* — executed by Claude (full-answer); `_currentPhaseEnteredAt` moved into the recorder for full slice-attribution ownership
+- [x] **Task 4 of 6** — Extract `SoundDispatcher` (beep timing) *(source plan Task 3)* — executed by Claude; `classifyTickEdge` returns `List<BeepType>`; thin `_rescheduleSound()` wrapper kept to adapt provider state
+- [x] **Task 5 of 6** — Sweep: verify provider shape and invariants *(source plan Task 4)* — zero leftover refs, sync count 19 (18 sites+def) unchanged, analyze clean, full suite 327 green. Manual device smoke NOT run (no device in this session)
+- [x] **Task 6 of 6** — Lift `SessionProgress`/`TimerPhase` into `session_progress.dart` *(source plan Task 5)* — done first to avoid double-editing helper imports; all helpers + provider + screens + 7 test files updated
 
 The middle three tasks (2, 3, 4) all follow the **same TDD rhythm**: write a failing helper test → implement the helper as a near-verbatim port → migrate the provider to delegate → confirm the full suite stays green. You learn that rhythm by hand in Task 2; Tasks 3 and 4 reuse it with different subject matter. None of these are auto-handed-off — each helper is different enough in substance to be worth building yourself.
 

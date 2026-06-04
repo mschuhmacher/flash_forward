@@ -6,6 +6,7 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/providers/session_progress.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/services/progress_extractor.dart';
 import 'package:flash_forward/themes/app_colors.dart';

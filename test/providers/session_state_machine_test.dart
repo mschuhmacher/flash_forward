@@ -3,8 +3,8 @@ import 'package:flash_forward/models/rest_event.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/superset_config.dart';
 import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/providers/session_progress.dart';
 import 'package:flash_forward/providers/session_state_machine.dart';
-import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ── Fixture builders ─────────────────────────────────────────────────

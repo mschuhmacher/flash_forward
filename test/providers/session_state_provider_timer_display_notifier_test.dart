@@ -1,6 +1,7 @@
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/providers/session_progress.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
