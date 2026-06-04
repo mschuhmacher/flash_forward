@@ -154,6 +154,7 @@ class SoundDispatcher {
       case TimerPhase.getReady:
       case TimerPhase.setRest:
       case TimerPhase.supersetRest:
+      case TimerPhase.exerciseRest:
         // Countdown at 3 s + countdownLeadTime before phase end so the "3"
         // beep aligns with 3 s remaining. Go beep audioLeadTime before end.
         // repRest intentionally excluded — no countdown for inter-rep rests.
@@ -174,7 +175,7 @@ class SoundDispatcher {
           beeps.add(ScheduledBeep(at: goAt, type: BeepType.go));
         }
       default:
-        break; // exerciseRest, workoutComplete, paused, overtime: no beeps
+        break; // workoutComplete, paused, overtime: no beeps
     }
   }
 
@@ -200,10 +201,12 @@ class SoundDispatcher {
     final beeps = <BeepType>[];
     final countdownThreshold = const Duration(seconds: 3) + countdownLeadTime;
 
-    // Countdown: crossing the threshold during getReady/setRest/supersetRest.
+    // Countdown: crossing the threshold during
+    // getReady/setRest/supersetRest/exerciseRest.
     if ((prevPhase == TimerPhase.getReady ||
             prevPhase == TimerPhase.setRest ||
-            prevPhase == TimerPhase.supersetRest) &&
+            prevPhase == TimerPhase.supersetRest ||
+            prevPhase == TimerPhase.exerciseRest) &&
         prevRemaining > countdownThreshold &&
         newRemaining <= countdownThreshold &&
         newRemaining > Duration.zero) {
@@ -214,7 +217,8 @@ class SoundDispatcher {
     if ((prevPhase == TimerPhase.getReady ||
             prevPhase == TimerPhase.setRest ||
             prevPhase == TimerPhase.repRest ||
-            prevPhase == TimerPhase.supersetRest) &&
+            prevPhase == TimerPhase.supersetRest ||
+            prevPhase == TimerPhase.exerciseRest) &&
         prevRemaining > audioLeadTime &&
         newRemaining <= audioLeadTime) {
       beeps.add(BeepType.go);

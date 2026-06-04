@@ -148,6 +148,7 @@ void main() {
       TimerPhase.getReady,
       TimerPhase.setRest,
       TimerPhase.supersetRest,
+      TimerPhase.exerciseRest,
     ]) {
       test('fires when crossing the threshold from $source', () {
         final beeps = _classify(
@@ -184,6 +185,7 @@ void main() {
       TimerPhase.setRest,
       TimerPhase.repRest,
       TimerPhase.supersetRest,
+      TimerPhase.exerciseRest,
     ]) {
       test('fires when leaving $source within the audio lead window', () {
         final beeps = _classify(
