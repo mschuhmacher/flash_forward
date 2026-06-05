@@ -152,7 +152,7 @@ No behavior changes are intended, so the existing suite is the safety net:
 
 - `flutter analyze` — zero new errors (catches missed/broken imports).
 - `scripts/run_tests.sh` — full suite green (project's required test runner; avoids oversized output).
-- Spot-check that no `import .../providers/`, `.../services/`, or `.../utils/` references remain anywhere in `lib/` or `test/`.
+- Spot-check that no `import .../providers/`, `.../services/`, or `.../utils/` references remain anywhere in `lib/` or `test/`. Anchor the search on the path segment (`/providers/`, `/services/`, `/utils/`) — not the bare word — so filenames like `date_utils.dart` and `superset_utils.dart` are not false positives.
 - Confirm the three old folders are empty and removed.
 
 ## Risks
