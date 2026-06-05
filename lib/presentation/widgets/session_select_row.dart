@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/providers/catalog_provider.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
-import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/features/session_active/session_state_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';

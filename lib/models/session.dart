@@ -3,7 +3,7 @@ import 'package:flash_forward/models/rest_event.dart';
 import 'package:flash_forward/models/session_summary.dart';
 import 'package:flash_forward/models/set_event.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/utils/nullable.dart';
+import 'package:flash_forward/core/nullable.dart';
 import 'package:uuid/uuid.dart';
 
 class Session {

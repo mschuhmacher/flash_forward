@@ -1,6 +1,6 @@
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/superset_config.dart';
-import 'package:flash_forward/utils/nullable.dart';
+import 'package:flash_forward/core/nullable.dart';
 import 'package:uuid/uuid.dart';
 
 class Workout {

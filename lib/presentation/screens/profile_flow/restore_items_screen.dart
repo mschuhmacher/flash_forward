@@ -1,7 +1,7 @@
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
-import 'package:flash_forward/providers/catalog_provider.dart';
-import 'package:flash_forward/providers/trash_provider.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
+import 'package:flash_forward/features/catalog/trash_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

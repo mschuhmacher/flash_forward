@@ -1,10 +1,10 @@
 import 'package:flash_forward/presentation/screens/auth_flow/loading_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
-import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/services/auth_service.dart';
+import 'package:flash_forward/features/auth/auth_provider.dart';
+import 'package:flash_forward/features/auth/auth_service.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
-import 'package:flash_forward/utils/timer_utils.dart';
+import 'package:flash_forward/core/timer_utils.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';

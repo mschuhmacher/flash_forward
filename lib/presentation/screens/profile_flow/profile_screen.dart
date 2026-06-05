@@ -1,12 +1,12 @@
 import 'package:flash_forward/presentation/screens/profile_flow/progress_chart.dart';
-import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/providers/session_log_provider.dart';
-import 'package:flash_forward/services/progress_extractor.dart';
+import 'package:flash_forward/features/auth/auth_provider.dart';
+import 'package:flash_forward/features/session_log/session_log_provider.dart';
+import 'package:flash_forward/features/session_log/progress_extractor.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/providers/settings_provider.dart';
+import 'package:flash_forward/core/settings_provider.dart';
 import 'package:flash_forward/data/grade_scales.dart';
 import 'package:flash_forward/models/grade_entry.dart';
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flash_forward/models/session.dart';
-import 'package:flash_forward/providers/session_log_provider.dart';
+import 'package:flash_forward/features/session_log/session_log_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:intl/intl.dart';

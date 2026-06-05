@@ -7,14 +7,14 @@ import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_scr
 import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
-import 'package:flash_forward/providers/catalog_provider.dart';
-import 'package:flash_forward/providers/trash_provider.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
+import 'package:flash_forward/features/catalog/trash_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:flash_forward/services/supabase_config.dart';
+import 'package:flash_forward/core/sync/supabase_config.dart';
 import 'package:provider/provider.dart';
 
 enum ItemType { sessions, workouts, exercises }

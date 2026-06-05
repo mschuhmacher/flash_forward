@@ -1,7 +1,7 @@
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
-import 'package:flash_forward/providers/catalog_provider.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
