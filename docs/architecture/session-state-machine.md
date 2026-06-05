@@ -62,8 +62,7 @@ stateDiagram-v2
 
     supersetRest --> rep: next member, same set
 
-    exerciseRest --> rep: within workout
-    exerciseRest --> getReady: cross-workout (set 1, exercise 0)
+    exerciseRest --> rep: always (within- and cross-workout)
 
     exerciseRest --> [*]: no more exercises (null)
     setRest --> [*]: no more exercises (null)
@@ -93,9 +92,17 @@ stateDiagram-v2
 
 ### Phases reached outside the cycle
 
-`overtime` and `paused` are **not** produced by `calculateNextState` — they're
-entered by explicit provider actions and exit back into the cycle:
+`getReady`, `overtime`, and `paused` are **not** produced by `calculateNextState`
+— they're entered by explicit provider actions and exit back into the cycle:
 
+- **`getReady`** — only an *entry-point* phase: the initial state of a session
+  (`[*]`), and where `start()`, the `jumpTo*` methods, and `exitOvertime()` land
+  a standalone lead-in. The automatic cycle never transitions *into* it; an
+  `exerciseRest` (including across a workout boundary) always advances to `rep`.
+  The "get ready" the user sees during the tail of an ordinary rest is **not**
+  this phase — it's the final `getReadyLeadIn` seconds of a `setRest` /
+  `supersetRest` / `exerciseRest`, surfaced by `isGetReadyMoment` for display
+  and beeps without changing the phase. See "The get-ready window" below.
 - **`paused`** — `pause()` remembers the current phase and parks here;
   `resume()` restores it. `calculateNextState(paused)` returns null.
 - **`overtime`** — `requestManualOvertime()` (or automatic rest-overtime on
@@ -103,6 +110,18 @@ entered by explicit provider actions and exit back into the cycle:
   `exerciseRest`, `getReady` — see `isOvertimeEligible`). `exitOvertime()`
   resumes by running `calculateNextState` against the *remembered source phase*,
   so the session continues as if the rest had ended normally.
+
+### The get-ready window (`isGetReadyMoment`)
+
+A "get ready" moment is a *view* over a rest, not a distinct phase.
+`isGetReadyMoment(phase, remaining)` returns true when `phase == getReady`
+(always), or when `phase` is one of `setRest` / `supersetRest` / `exerciseRest`
+and `0 < remaining <= getReadyLeadIn` (10s). `repRest` is deliberately excluded
+(it is a between-*reps* rest, and the beep system already skips its countdown).
+
+This is why the get-ready countdown is continuous: the rest runs its full
+duration as one uninterrupted countdown, and its last 10s simply *read* as "get
+ready" — the timer never resets. Total rest time is unchanged.
 
 ### Durations at a glance (`getDurationForPhase`)
 
@@ -116,7 +135,7 @@ entered by explicit provider actions and exit back into the cycle:
 | `supersetRest` | `SupersetConfig.restSeconds` (fallback 15s) |
 | `exerciseRest`, between exercises | `workout.timeBetweenExercises` |
 | `exerciseRest`, between superset rounds | `SupersetConfig.supersetSetRest` ?? `workout.timeBetweenExercises` |
-| `getReady` | 10s |
+| `getReady` | `getReadyLeadIn` (10s) |
 | `overtime`, `paused`, `workoutComplete` | `Duration.zero` |
 | any phase, null session | `Duration.zero` |
 

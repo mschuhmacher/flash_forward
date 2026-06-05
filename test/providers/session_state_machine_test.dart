@@ -219,8 +219,12 @@ void main() {
       expect(next!.phase, TimerPhase.rep);
     });
 
-    test('exerciseRest → getReady on a cross-workout boundary', () {
-      // currentSet == 1 && exerciseIndex == 0 is the cross-workout signal.
+    test('exerciseRest → rep on a cross-workout boundary (no separate '
+        'getReady phase)', () {
+      // The former cross-workout signal (currentSet == 1 && exerciseIndex == 0)
+      // no longer produces a getReady phase — the cycle always advances to rep.
+      // The "get ready" the user sees is the rest's final getReadyLeadIn
+      // seconds, surfaced by isGetReadyMoment, not a phase the cycle emits.
       final s = _twoWorkouts();
       final next = SessionStateMachine.calculateNextState(
         _p(
@@ -231,7 +235,7 @@ void main() {
         ),
         s,
       );
-      expect(next!.phase, TimerPhase.getReady);
+      expect(next!.phase, TimerPhase.rep);
     });
 
     test('end of session returns null', () {
@@ -411,6 +415,97 @@ void main() {
           SessionStateMachine.isOvertimeEligible(phase),
           isFalse,
           reason: '$phase should be ineligible',
+        );
+      }
+    });
+  });
+
+  group('isGetReadyMoment', () {
+    test('standalone getReady is always a get-ready moment', () {
+      // A standalone getReady has no preceding rest — it reads "get ready" for
+      // its whole duration, regardless of how much remains.
+      expect(
+        SessionStateMachine.isGetReadyMoment(
+          TimerPhase.getReady,
+          const Duration(seconds: 10),
+        ),
+        isTrue,
+      );
+      expect(
+        SessionStateMachine.isGetReadyMoment(
+          TimerPhase.getReady,
+          const Duration(seconds: 5),
+        ),
+        isTrue,
+      );
+    });
+
+    test('carved rests are get-ready only in the final lead-in window', () {
+      for (final phase in [
+        TimerPhase.setRest,
+        TimerPhase.supersetRest,
+        TimerPhase.exerciseRest,
+      ]) {
+        // Above the 10s lead-in: still a normal rest.
+        expect(
+          SessionStateMachine.isGetReadyMoment(
+            phase,
+            const Duration(seconds: 11),
+          ),
+          isFalse,
+          reason: '$phase at 11s should not be get-ready',
+        );
+        // Exactly at the lead-in boundary: get-ready (inclusive).
+        expect(
+          SessionStateMachine.isGetReadyMoment(
+            phase,
+            SessionStateMachine.getReadyLeadIn,
+          ),
+          isTrue,
+          reason: '$phase at exactly 10s should be get-ready',
+        );
+        // Inside the window: get-ready.
+        expect(
+          SessionStateMachine.isGetReadyMoment(
+            phase,
+            const Duration(seconds: 1),
+          ),
+          isTrue,
+          reason: '$phase at 1s should be get-ready',
+        );
+        // At zero the phase has ended (transitions to rep): not get-ready.
+        expect(
+          SessionStateMachine.isGetReadyMoment(phase, Duration.zero),
+          isFalse,
+          reason: '$phase at 0s should not be get-ready',
+        );
+      }
+    });
+
+    test('repRest is excluded even inside the lead-in window', () {
+      expect(
+        SessionStateMachine.isGetReadyMoment(
+          TimerPhase.repRest,
+          const Duration(seconds: 5),
+        ),
+        isFalse,
+      );
+    });
+
+    test('non-rest phases are never get-ready', () {
+      for (final phase in [
+        TimerPhase.rep,
+        TimerPhase.overtime,
+        TimerPhase.paused,
+        TimerPhase.workoutComplete,
+      ]) {
+        expect(
+          SessionStateMachine.isGetReadyMoment(
+            phase,
+            const Duration(seconds: 5),
+          ),
+          isFalse,
+          reason: '$phase should never be get-ready',
         );
       }
     });

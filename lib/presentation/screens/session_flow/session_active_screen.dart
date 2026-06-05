@@ -15,6 +15,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/providers/catalog_provider.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_bottom_bar.dart';
 import 'package:flash_forward/providers/session_progress.dart';
+import 'package:flash_forward/providers/session_state_machine.dart';
 import 'package:flash_forward/providers/session_state_provider.dart';
 import 'package:flash_forward/providers/settings_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -255,6 +256,12 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         TextStyle phaseTextStyle = context.h2.copyWith(
           color: context.colorScheme.onPrimary,
         );
+        // Shared style for "get ready" — used by the standalone getReady phase
+        // and by the get-ready tail of an ordinary rest (see the label's
+        // ValueListenableBuilder below).
+        final getReadyTextStyle = context.h2.copyWith(
+          color: context.colorScheme.secondary,
+        );
         final effectiveSets = setsForExerciseInWorkout(
           activeWorkout,
           activeExercise,
@@ -283,9 +290,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
             );
           case TimerPhase.getReady:
             phaseText = 'get ready';
-            phaseTextStyle = context.h2.copyWith(
-              color: context.colorScheme.secondary,
-            );
+            phaseTextStyle = getReadyTextStyle;
           case TimerPhase.overtime:
             phaseText = 'overtime';
             phaseTextStyle = context.h2.copyWith(
@@ -304,6 +309,26 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
           repsText = '${activeExercise.reps}   reps';
         } else {
           repsText = '${progress.currentRep} / ${activeExercise.reps}   reps';
+        }
+
+        Color timerColor(Duration displayValue) {
+          if (sessionStateData.isPaused) {
+            return context.colorScheme.tertiary;
+          } else if (sessionStateData.phase == TimerPhase.getReady) {
+            return context.colorScheme.secondary;
+          } else if (sessionStateData.phase == TimerPhase.rep) {
+            return context.colorScheme.onPrimary;
+          } else if (sessionStateData.phase == TimerPhase.overtime) {
+            return context.colorScheme.secondary;
+          } else if ((sessionStateData.phase == TimerPhase.repRest ||
+                  sessionStateData.phase == TimerPhase.setRest ||
+                  sessionStateData.phase == TimerPhase.supersetRest ||
+                  sessionStateData.phase == TimerPhase.exerciseRest) &&
+              displayValue < Duration(seconds: 10)) {
+            return context.colorScheme.secondary;
+          } else {
+            return context.colorScheme.onPrimary;
+          }
         }
 
         return Scaffold(
@@ -475,7 +500,35 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                           : Column(
                             children: [
                               Center(
-                                child: Text(phaseText, style: phaseTextStyle),
+                                // The label reacts to the per-tick countdown so
+                                // it can flip to "get ready" mid-phase, in the
+                                // final getReadyLeadIn seconds of a rest. Those
+                                // updates flow through timerDisplayNotifier (not
+                                // notifyListeners), so the label rebuilds here
+                                // just like the timer number below.
+                                child: ValueListenableBuilder<Duration>(
+                                  valueListenable:
+                                      sessionStateData.timerDisplayNotifier,
+                                  builder: (context, displayValue, _) {
+                                    // getReady already reads "get ready" via the
+                                    // switch; only the carved rests need the
+                                    // tail override.
+                                    final inGetReadyTail =
+                                        sessionStateData.phase !=
+                                            TimerPhase.getReady &&
+                                        SessionStateMachine.isGetReadyMoment(
+                                          sessionStateData.phase,
+                                          displayValue,
+                                        );
+                                    return Text(
+                                      inGetReadyTail ? 'get ready' : phaseText,
+                                      style:
+                                          inGetReadyTail
+                                              ? getReadyTextStyle
+                                              : phaseTextStyle,
+                                    );
+                                  },
+                                ),
                               ),
                               // ── Timer or manual-advance button ──────────
                               if (isManualRep)
@@ -502,56 +555,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                                 ? formatDuration(displayValue)
                                                 : formatCountdown(displayValue),
                                             style: context.h1.copyWith(
-                                              color: () {
-                                                if (sessionStateData.isPaused) {
-                                                  return context
-                                                      .colorScheme
-                                                      .tertiary;
-                                                } else if (sessionStateData
-                                                        .phase ==
-                                                    TimerPhase.getReady) {
-                                                  return context
-                                                      .colorScheme
-                                                      .secondary;
-                                                } else if (sessionStateData
-                                                        .phase ==
-                                                    TimerPhase.rep) {
-                                                  return context
-                                                      .colorScheme
-                                                      .onPrimary;
-                                                } else if (sessionStateData
-                                                        .phase ==
-                                                    TimerPhase.overtime) {
-                                                  return context
-                                                      .colorScheme
-                                                      .secondary;
-                                                } else if ((sessionStateData
-                                                                .phase ==
-                                                            TimerPhase
-                                                                .repRest ||
-                                                        sessionStateData
-                                                                .phase ==
-                                                            TimerPhase
-                                                                .setRest ||
-                                                        sessionStateData
-                                                                .phase ==
-                                                            TimerPhase
-                                                                .supersetRest ||
-                                                        sessionStateData
-                                                                .phase ==
-                                                            TimerPhase
-                                                                .exerciseRest) &&
-                                                    displayValue <
-                                                        Duration(seconds: 10)) {
-                                                  return context
-                                                      .colorScheme
-                                                      .secondary;
-                                                } else {
-                                                  return context
-                                                      .colorScheme
-                                                      .onPrimary;
-                                                }
-                                              }(),
+                                              color: timerColor(displayValue),
                                             ),
                                             textScaler: TextScaler.linear(2.5),
                                           );

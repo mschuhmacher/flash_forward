@@ -18,6 +18,21 @@ import 'package:flash_forward/utils/superset_utils.dart';
 class SessionStateMachine {
   SessionStateMachine._();
 
+  static const Duration getReadyLeadIn = Duration(seconds: 10);
+  static bool isGetReadyMoment(TimerPhase phase, Duration remaining) {
+    if (phase == TimerPhase.getReady) {
+      return true;
+    } else if ((phase == TimerPhase.setRest ||
+            phase == TimerPhase.supersetRest ||
+            phase == TimerPhase.exerciseRest) &&
+        remaining > Duration.zero &&
+        remaining <= getReadyLeadIn) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   static SessionProgress? calculateNextStop(
     SessionProgress p,
     Session activeSession,
@@ -318,17 +333,11 @@ class SessionStateMachine {
         return p.copyWith(phase: TimerPhase.rep);
 
       case TimerPhase.exerciseRest:
-        // exerciseIndex already points to the next exercise (set on entry).
-        // currentSet > 1 means we're between rounds of the same superset
-        // (the state was pre-advanced back to the group's first member);
-        // continue at rep, not getReady.
-        // currentSet == 1 + exerciseIndex == 0 means a cross-workout
-        // transition → getReady.
-        // Otherwise (within-workout exercise transition): rep.
-        final isCrossWorkout = p.currentSet == 1 && p.exerciseIndex == 0;
-        return p.copyWith(
-          phase: isCrossWorkout ? TimerPhase.getReady : TimerPhase.rep,
-        );
+        // Always → rep: exerciseIndex already points at the upcoming exercise
+        // (set on entry), within-workout and cross-workout alike. The cycle no
+        // longer produces getReady — the rest's final getReadyLeadIn seconds
+        // are surfaced as "get ready" by isGetReadyMoment, not a separate phase.
+        return p.copyWith(phase: TimerPhase.rep);
       case TimerPhase.getReady:
         // Transition from GET READY to first rep of current exercise
         return p.copyWith(phase: TimerPhase.rep);
@@ -442,7 +451,10 @@ class SessionStateMachine {
 
   /// Returns the duration for the current phase, derived from the active
   /// exercise/workout. Values are stored as seconds in the models.
-  static Duration getDurationForPhase(SessionProgress p, Session? activeSession) {
+  static Duration getDurationForPhase(
+    SessionProgress p,
+    Session? activeSession,
+  ) {
     if (activeSession == null || p.phase == TimerPhase.workoutComplete) {
       return Duration.zero;
     }
@@ -482,7 +494,7 @@ class SessionStateMachine {
       case TimerPhase.paused:
         return Duration.zero;
       case TimerPhase.getReady:
-        return const Duration(seconds: 10);
+        return getReadyLeadIn;
     }
   }
 }
