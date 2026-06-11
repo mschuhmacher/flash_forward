@@ -30,18 +30,35 @@ class SyncOperation {
   final Map<String, dynamic> data;
   final DateTime createdAt;
 
+  /// How many times this operation has been retried and failed transiently.
+  /// Used by [SyncQueueService.processQueue] to cap retries so a permanently
+  /// failing op cannot replay forever. Persisted; carried over when an op with
+  /// the same `(id, type)` is re-enqueued.
+  final int attempts;
+
   SyncOperation({
     required this.id,
     required this.type,
     required this.data,
     required this.createdAt,
+    this.attempts = 0,
   });
+
+  SyncOperation copyWith({Map<String, dynamic>? data, int? attempts}) =>
+      SyncOperation(
+        id: id,
+        type: type,
+        data: data ?? this.data,
+        createdAt: createdAt,
+        attempts: attempts ?? this.attempts,
+      );
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'type': type,
     'data': data,
     'createdAt': createdAt.toIso8601String(),
+    'attempts': attempts,
   };
 
   factory SyncOperation.fromJson(Map<String, dynamic> json) => SyncOperation(
@@ -49,6 +66,7 @@ class SyncOperation {
     type: json['type'],
     data: json['data'],
     createdAt: DateTime.parse(json['createdAt']),
+    attempts: json['attempts'] as int? ?? 0,
   );
 }
 
@@ -133,9 +151,16 @@ class SyncQueueService {
     // Replace any existing entry for this (id, type) pair to avoid duplicates.
     // We match on both fields so that an upload and a delete for the same
     // entity can coexist in the queue as separate entries.
+    final existingIndex = _queue.indexWhere(
+        (op) => op.id == operation.id && op.type == operation.type);
+    // Refresh the payload but preserve the accumulated attempt count — a fresh
+    // failure re-enqueuing the same op must not reset its retry budget.
+    final toAdd = existingIndex == -1
+        ? operation
+        : operation.copyWith(attempts: _queue[existingIndex].attempts);
     _queue.removeWhere(
         (op) => op.id == operation.id && op.type == operation.type);
-    _queue.add(operation);
+    _queue.add(toAdd);
     await _saveQueue();
   }
 

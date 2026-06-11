@@ -59,4 +59,28 @@ void main() {
       expect(queue.pendingOperations.length, 1);
     });
   });
+
+  group('SyncOperation.attempts', () {
+    test('enqueue replacing an op carries the attempts counter over', () async {
+      await queue.enqueue(SyncOperation(
+        id: 'a', type: 'uploadSession', data: {'x': 1},
+        createdAt: DateTime(2026), attempts: 3,
+      ));
+      // Re-enqueue same (id,type) with attempts 0 — must NOT reset to 0.
+      await queue.enqueue(SyncOperation(
+        id: 'a', type: 'uploadSession', data: {'x': 2},
+        createdAt: DateTime(2026), attempts: 0,
+      ));
+      expect(queue.pendingOperations.single.attempts, 3);
+      expect(queue.pendingOperations.single.data['x'], 2); // payload refreshed
+    });
+
+    test('fromJson defaults attempts to 0 when absent', () {
+      final op = SyncOperation.fromJson(<String, dynamic>{
+        'id': 'a', 'type': 't', 'data': <String, dynamic>{},
+        'createdAt': DateTime(2026).toIso8601String(),
+      });
+      expect(op.attempts, 0);
+    });
+  });
 }
