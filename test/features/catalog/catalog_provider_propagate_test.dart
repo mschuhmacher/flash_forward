@@ -317,7 +317,7 @@ void main() {
         // the user opened a different session and edited the workout there.
         final postPropagated =
             provider.presetSessions
-                .firstWhere((s) => s.id == 's-b')
+                .firstWhere((s) => (s.templateId ?? s.id) == 's-b')
                 .workouts
                 .single;
         final siblings = provider.usagesOfWorkout(
@@ -325,7 +325,7 @@ void main() {
           alsoMatchTemplateId: postPropagated.templateId,
         );
 
-        expect(siblings.map((s) => s.id).toSet(), {'s-a', 's-b', 's-c'});
+        expect(siblings.map((s) => s.templateId ?? s.id).toSet(), {'s-a', 's-b', 's-c'});
       },
     );
   });
@@ -434,7 +434,7 @@ void main() {
 
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-a')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-a')
             .workouts
             .single
             .title,
@@ -442,7 +442,7 @@ void main() {
       );
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-b')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-b')
             .workouts
             .single
             .title,
@@ -450,7 +450,7 @@ void main() {
       );
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-c')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-c')
             .workouts
             .single
             .title,
@@ -471,7 +471,7 @@ void main() {
 
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-a')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-a')
             .workouts
             .single
             .title,
@@ -479,7 +479,7 @@ void main() {
       );
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-b')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-b')
             .workouts
             .single
             .title,
@@ -503,7 +503,7 @@ void main() {
 
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-a')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-a')
             .workouts
             .single
             .exercises
@@ -532,7 +532,7 @@ void main() {
 
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-a')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-a')
             .workouts
             .single
             .title,
@@ -540,7 +540,7 @@ void main() {
       );
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-b')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-b')
             .workouts
             .single
             .title,
@@ -548,7 +548,7 @@ void main() {
       );
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-c')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-c')
             .workouts
             .single
             .title,
@@ -569,7 +569,7 @@ void main() {
 
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-a')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-a')
             .workouts
             .single
             .title,
@@ -577,7 +577,7 @@ void main() {
       );
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-b')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-b')
             .workouts
             .single
             .title,
@@ -622,7 +622,7 @@ void main() {
 
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-a')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-a')
             .workouts
             .single
             .exercises
@@ -632,7 +632,7 @@ void main() {
       );
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-b')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-b')
             .workouts
             .single
             .exercises
@@ -643,7 +643,7 @@ void main() {
       );
       expect(
         provider.presetSessions
-            .firstWhere((s) => s.id == 's-c')
+            .firstWhere((s) => (s.templateId ?? s.id) == 's-c')
             .workouts
             .single
             .exercises

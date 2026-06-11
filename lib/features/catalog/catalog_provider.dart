@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 import 'package:flash_forward/features/catalog/preset_loader.dart';
 import 'package:flash_forward/core/sync/sync_status_provider.dart';
 import 'package:flash_forward/core/sync/synced_item_ops.dart';
@@ -48,40 +49,45 @@ class CatalogProvider extends ChangeNotifier {
     _syncStatus = syncStatus;
   }
 
-  // Catalog list rule: a user item with the same id as a default SHADOWS that
-  // default. Trashed items are hidden from both lists regardless of source.
+  // Catalog list rule: a user item SHADOWS the default it was forked from,
+  // matched by `templateId` (a promoted default keeps templateId = its slug;
+  // its own id is a fresh UUID). Deleted defaults stay shadowed by their
+  // trashed entry's shadowId. Trashed items are hidden from both lists.
   List<Session> get presetSessions {
-    final userIds = _userSessions.map((s) => s.id).toSet();
     final trashedIds =
         _trash?.trashedIdsOf(TrashKind.session) ?? const <String>{};
+    final shadowedDefaultIds = <String>{
+      ..._userSessions.map((s) => s.templateId ?? s.id),
+      ...?_trash?.shadowedDefaultIdsOf(TrashKind.session),
+    };
     return [
-      ..._defaultSessions.where(
-        (s) => !userIds.contains(s.id) && !trashedIds.contains(s.id),
-      ),
+      ..._defaultSessions.where((s) => !shadowedDefaultIds.contains(s.id)),
       ..._userSessions.where((s) => !trashedIds.contains(s.id)),
     ];
   }
 
   List<Workout> get presetWorkouts {
-    final userIds = _userWorkouts.map((w) => w.id).toSet();
     final trashedIds =
         _trash?.trashedIdsOf(TrashKind.workout) ?? const <String>{};
+    final shadowedDefaultIds = <String>{
+      ..._userWorkouts.map((w) => w.templateId ?? w.id),
+      ...?_trash?.shadowedDefaultIdsOf(TrashKind.workout),
+    };
     return [
-      ..._defaultWorkouts.where(
-        (w) => !userIds.contains(w.id) && !trashedIds.contains(w.id),
-      ),
+      ..._defaultWorkouts.where((w) => !shadowedDefaultIds.contains(w.id)),
       ..._userWorkouts.where((w) => !trashedIds.contains(w.id)),
     ];
   }
 
   List<Exercise> get presetExercises {
-    final userIds = _userExercises.map((e) => e.id).toSet();
     final trashedIds =
         _trash?.trashedIdsOf(TrashKind.exercise) ?? const <String>{};
+    final shadowedDefaultIds = <String>{
+      ..._userExercises.map((e) => e.templateId ?? e.id),
+      ...?_trash?.shadowedDefaultIdsOf(TrashKind.exercise),
+    };
     return [
-      ..._defaultExercises.where(
-        (e) => !userIds.contains(e.id) && !trashedIds.contains(e.id),
-      ),
+      ..._defaultExercises.where((e) => !shadowedDefaultIds.contains(e.id)),
       ..._userExercises.where((e) => !trashedIds.contains(e.id)),
     ];
   }
@@ -235,10 +241,38 @@ class CatalogProvider extends ChangeNotifier {
   //   TrashProvider's restore/lift/heal flows. Skip the cloud delete because
   //   the trash entry's upload is what the cloud sees.
 
+  // Fork a stock default into a UUID-bearing user item on first promotion so
+  // its slug id never reaches a uuid column. Only the TOP-LEVEL id is replaced
+  // — embedded workout/exercise ids live in jsonb (no uuid column) and are
+  // stable keys that propagation/trash/templates match on, so they are kept.
+  // Idempotent: a re-promote of the same default reuses the existing fork
+  // (matched by templateId). Non-default items (already UUIDs) pass through.
+  Session _promoteSessionIfDefault(Session s) {
+    if (!isDefaultSessionId(s.id)) return s;
+    final existing = _userSessions.where((u) => u.templateId == s.id).toList();
+    final newId = existing.isEmpty ? const Uuid().v4() : existing.first.id;
+    return s.deepCopy(keepId: true).copyWith(id: newId, templateId: s.id);
+  }
+
+  Workout _promoteWorkoutIfDefault(Workout w) {
+    if (!isDefaultWorkoutId(w.id)) return w;
+    final existing = _userWorkouts.where((u) => u.templateId == w.id).toList();
+    final newId = existing.isEmpty ? const Uuid().v4() : existing.first.id;
+    return w.deepCopy(keepId: true).copyWith(id: newId, templateId: w.id);
+  }
+
+  Exercise _promoteExerciseIfDefault(Exercise e) {
+    if (!isDefaultExerciseId(e.id)) return e;
+    final existing = _userExercises.where((u) => u.templateId == e.id).toList();
+    final newId = existing.isEmpty ? const Uuid().v4() : existing.first.id;
+    return e.deepCopy(keepId: true).copyWith(id: newId, templateId: e.id);
+  }
+
   Future<void> upsertSession(Session session) async {
+    final item = _promoteSessionIfDefault(session);
     await SyncedItemOps.upsert<Session>(
       list: _userSessions,
-      item: session,
+      item: item,
       getId: (s) => s.id,
       saveLocal:
           () => PresetLogger.savePresetToFile(
@@ -256,9 +290,10 @@ class CatalogProvider extends ChangeNotifier {
   }
 
   Future<void> upsertWorkout(Workout workout) async {
+    final item = _promoteWorkoutIfDefault(workout);
     await SyncedItemOps.upsert<Workout>(
       list: _userWorkouts,
-      item: workout,
+      item: item,
       getId: (w) => w.id,
       saveLocal:
           () => PresetLogger.savePresetToFile(
@@ -276,9 +311,10 @@ class CatalogProvider extends ChangeNotifier {
   }
 
   Future<void> upsertExercise(Exercise exercise) async {
+    final item = _promoteExerciseIfDefault(exercise);
     await SyncedItemOps.upsert<Exercise>(
       list: _userExercises,
-      item: exercise,
+      item: item,
       getId: (e) => e.id,
       saveLocal:
           () => PresetLogger.savePresetToFile(

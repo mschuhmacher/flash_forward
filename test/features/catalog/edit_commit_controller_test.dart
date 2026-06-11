@@ -263,17 +263,17 @@ void main() {
 
         await controller.commitChanges(bag);
 
-        // Both were promoted (defaults shadowed).
-        expect(provider.presetUserExerciseIDs, contains('cat-e'));
-        expect(provider.presetUserWorkoutsIDs, contains('cat-w'));
+        // Both were promoted (defaults shadowed, forked to UUIDs w/ templateId).
+        expect(provider.presetExercises.any((e) => e.templateId == 'cat-e'), isTrue);
+        expect(provider.presetWorkouts.any((w) => w.templateId == 'cat-w'), isTrue);
 
         // And the user-list values reflect the bag's edits.
         expect(
-          provider.presetExercises.firstWhere((e) => e.id == 'cat-e').title,
+          provider.presetExercises.firstWhere((e) => e.templateId == 'cat-e').title,
           'My ex',
         );
         expect(
-          provider.presetWorkouts.firstWhere((w) => w.id == 'cat-w').title,
+          provider.presetWorkouts.firstWhere((w) => w.templateId == 'cat-w').title,
           'My w',
         );
       },
@@ -299,13 +299,13 @@ void main() {
 
         // Session was promoted; defaults for exercises and workouts are NOT
         // shadowed — they remain in the default list only.
-        expect(provider.presetUserExerciseIDs, isNot(contains('cat-e')));
-        expect(provider.presetUserWorkoutsIDs, isNot(contains('cat-w')));
-        expect(provider.presetUserSessionIDs, contains('cat-s'));
+        expect(provider.presetExercises.any((e) => e.templateId == 'cat-e'), isFalse);
+        expect(provider.presetWorkouts.any((w) => w.templateId == 'cat-w'), isFalse);
+        expect(provider.presetSessions.any((s) => s.templateId == 'cat-s'), isTrue);
 
         // The session in the catalog reflects the bag's edit.
         expect(
-          provider.presetSessions.firstWhere((s) => s.id == 'cat-s').title,
+          provider.presetSessions.firstWhere((s) => s.templateId == 'cat-s').title,
           'My s',
         );
       },
@@ -366,7 +366,7 @@ void main() {
             PendingChangeBag()
               ..addWorkout(w.copyWith(timeBetweenExercises: 999));
         await controller.commitChanges(bag);
-        expect(provider.presetUserWorkoutsIDs, contains('cat-w'));
+        expect(provider.presetWorkouts.any((w) => w.templateId == 'cat-w'), isTrue);
       },
     );
 
@@ -448,7 +448,7 @@ void main() {
         // chain even though no other session shares 'uuid-a' as id.
         expect(
           result.affectedSessionsByWorkoutId['uuid-a']!
-              .map((s) => s.id)
+              .map((s) => s.templateId ?? s.id)
               .toSet(),
           {'s-b', 's-c'},
         );

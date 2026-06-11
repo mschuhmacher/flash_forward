@@ -7,6 +7,7 @@ import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/features/catalog/catalog_provider.dart';
+import 'package:flash_forward/core/uuid.dart';
 
 class _FakePathProvider extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -57,6 +58,34 @@ void main() {
       expect(provider.isDefaultSessionId('11111111-1111-4111-8111-111111111111'),
           isFalse);
       expect(provider.isDefaultWorkoutId('cat-s'), isFalse);
+    });
+  });
+
+  group('fork on promote', () {
+    test('promoting a stock default forks to a UUID with templateId = slug', () async {
+      provider.debugSeedDefaults(sessions: [_session(id: 'cat-s', title: 'Default')]);
+      await provider.upsertSession(_session(id: 'cat-s', title: 'Mine'));
+
+      final saved = provider.presetSessions.firstWhere((s) => s.title == 'Mine');
+      expect(saved.id, isNot('cat-s')); // forked
+      expect(isUuid(saved.id), isTrue);
+      expect(saved.templateId, 'cat-s'); // breadcrumb
+      // stock default is hidden (shadowed by templateId)
+      expect(provider.presetSessions.any((s) => s.id == 'cat-s'), isFalse);
+    });
+
+    test('upserting an already-forked item does not re-fork', () async {
+      provider.debugSeedDefaults(sessions: [_session(id: 'cat-s', title: 'Default')]);
+      await provider.upsertSession(_session(id: 'cat-s', title: 'First'));
+      final fork = provider.presetSessions.firstWhere((s) => s.templateId == 'cat-s');
+      // Re-upsert the forked (uuid) item.
+      await provider.upsertSession(fork.copyWith(title: 'Edited'));
+
+      expect(
+        provider.presetSessions.where((s) => s.templateId == 'cat-s').length, 1);
+      final after = provider.presetSessions.firstWhere((s) => s.templateId == 'cat-s');
+      expect(after.id, fork.id); // same uuid, updated in place
+      expect(after.title, 'Edited');
     });
   });
 
@@ -127,7 +156,10 @@ void main() {
           _workout(id: 'cat-w', title: 'Mine'),
         );
 
-        expect(provider.presetUserWorkoutsIDs, {'cat-w'});
+        final promoted =
+            provider.presetWorkouts.where((w) => w.templateId == 'cat-w').single;
+        expect(isUuid(promoted.id), isTrue); // forked to a UUID
+        expect(provider.presetUserWorkoutsIDs.length, 1);
         final titles = provider.presetWorkouts.map((w) => w.title).toList();
         expect(titles, ['Mine']);
       },
@@ -147,7 +179,7 @@ void main() {
 
       final userTitles =
           provider.presetWorkouts
-              .where((w) => w.id == 'cat-w')
+              .where((w) => w.templateId == 'cat-w')
               .map((w) => w.title)
               .toList();
       expect(userTitles, ['Second']);
@@ -165,7 +197,7 @@ void main() {
 
       expect(provider.presetUserWorkoutsIDs.length, 1);
       expect(
-        provider.presetWorkouts.where((w) => w.id == 'cat-w').single.title,
+        provider.presetWorkouts.where((w) => w.templateId == 'cat-w').single.title,
         'Mine',
       );
     });
@@ -181,7 +213,10 @@ void main() {
           _exercise(id: 'cat-e', title: 'Mine'),
         );
 
-        expect(provider.presetUserExerciseIDs, {'cat-e'});
+        final promoted =
+            provider.presetExercises.where((e) => e.templateId == 'cat-e').single;
+        expect(isUuid(promoted.id), isTrue); // forked to a UUID
+        expect(provider.presetUserExerciseIDs.length, 1);
         final titles = provider.presetExercises.map((e) => e.title).toList();
         expect(titles, ['Mine']);
       },
@@ -203,7 +238,7 @@ void main() {
 
         final userTitles =
             provider.presetExercises
-                .where((e) => e.id == 'cat-e')
+                .where((e) => e.templateId == 'cat-e')
                 .map((e) => e.title)
                 .toList();
         expect(userTitles, ['Second']);
@@ -222,7 +257,7 @@ void main() {
 
       expect(provider.presetUserExerciseIDs.length, 1);
       expect(
-        provider.presetExercises.where((e) => e.id == 'cat-e').single.title,
+        provider.presetExercises.where((e) => e.templateId == 'cat-e').single.title,
         'Mine',
       );
     });
@@ -238,7 +273,10 @@ void main() {
           _session(id: 'cat-s', title: 'Mine'),
         );
 
-        expect(provider.presetUserSessionIDs, {'cat-s'});
+        final promoted =
+            provider.presetSessions.where((s) => s.templateId == 'cat-s').single;
+        expect(isUuid(promoted.id), isTrue); // forked to a UUID
+        expect(provider.presetUserSessionIDs.length, 1);
         final titles = provider.presetSessions.map((s) => s.title).toList();
         expect(titles, ['Mine']);
       },
@@ -258,7 +296,7 @@ void main() {
 
       final userTitles =
           provider.presetSessions
-              .where((s) => s.id == 'cat-s')
+              .where((s) => s.templateId == 'cat-s')
               .map((s) => s.title)
               .toList();
       expect(userTitles, ['Second']);
@@ -276,7 +314,7 @@ void main() {
 
       expect(provider.presetUserSessionIDs.length, 1);
       expect(
-        provider.presetSessions.where((s) => s.id == 'cat-s').single.title,
+        provider.presetSessions.where((s) => s.templateId == 'cat-s').single.title,
         'Mine',
       );
     });

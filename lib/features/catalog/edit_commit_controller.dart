@@ -68,7 +68,12 @@ class EditCommitController {
                 wc.workout.id,
                 alsoMatchTemplateId: wc.workout.templateId,
               )
-              .where((s) => s.id != excludeSessionId)
+              // Exclude the edited session by id OR templateId: if it was a
+              // stock default it gets forked to a fresh UUID during promotion,
+              // so the caller's slug only matches via templateId afterwards.
+              .where((s) =>
+                  excludeSessionId == null ||
+                  (s.id != excludeSessionId && s.templateId != excludeSessionId))
               .toList();
       if (sessions.isNotEmpty) sessionsByWorkout[wc.workout.id] = sessions;
     }
@@ -90,7 +95,11 @@ class EditCommitController {
         ec.exercise.id,
         alsoMatchTemplateId: ec.exercise.templateId,
       )) {
-        if (u.workout.id == excludeWorkoutId) continue;
+        if (excludeWorkoutId != null &&
+            (u.workout.id == excludeWorkoutId ||
+                u.workout.templateId == excludeWorkoutId)) {
+          continue;
+        }
         byId[u.workout.id] = u.workout;
       }
       if (byId.isNotEmpty) {

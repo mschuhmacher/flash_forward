@@ -29,6 +29,16 @@ class TrashProvider extends ChangeNotifier {
     return _trashedItems.where((e) => e.kind == kind).map((e) => e.id).toSet();
   }
 
+  /// The set of default ids suppressed by trashed entries of [kind] — i.e. each
+  /// entry's [TrashEntry.shadowId]. A deleted (forked) default keeps the stock
+  /// default hidden via this set, which never expires while the entry exists.
+  Set<String> shadowedDefaultIdsOf(TrashKind kind) {
+    return _trashedItems
+        .where((e) => e.kind == kind)
+        .map((e) => e.shadowId)
+        .toSet();
+  }
+
   @visibleForTesting
   void debugSeedTrash(List<TrashEntry> entries) {
     _trashedItems = List.from(entries);
