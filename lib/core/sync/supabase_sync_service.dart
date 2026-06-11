@@ -1,5 +1,4 @@
 import 'package:flash_forward/models/exercise.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/core/sync/supabase_config.dart';
 import 'package:flash_forward/core/sync/sync_queue_service.dart';
 import 'package:flash_forward/models/session.dart';
@@ -409,57 +408,55 @@ class SupabaseSyncService {
   /// Call this when connectivity is restored
   Future<int> processPendingSync() async {
     return await _syncQueue.processQueue((operation) async {
-      try {
-        switch (operation.type) {
-          case 'uploadSession':
-            final session = Session.fromJson(operation.data);
-            await uploadSession(session, isRetry: true);
-            break;
-          case 'deleteSession':
-            await deleteSession(operation.data['sessionId'] as String, isRetry: true);
-            break;
-          case 'logSession':
-            final session = Session.fromJson(operation.data['session']);
-            // Use the original completedAt time
-            await supabase.from('session_logs').insert({
-              'user_id': userId,
-              'session_id': session.id,
-              'completed_at': operation.data['completedAt'],
-              'session_data': session.toJson(),
-            });
-            break;
-          case 'uploadWorkout':
-            final workout = Workout.fromJson(operation.data);
-            await uploadWorkout(workout, isRetry: true);
-            break;
-          case 'uploadExercise':
-            final exercise = Exercise.fromJson(operation.data);
-            await uploadExercise(exercise, isRetry: true);
-            break;
-          case 'deleteWorkout':
-            await deleteWorkout(
-                operation.data['workoutId'] as String, isRetry: true);
-            break;
-          case 'deleteExercise':
-            await deleteExercise(
-                operation.data['exerciseId'] as String, isRetry: true);
-            break;
-          case 'uploadTrashEntry':
-            final entry = TrashEntry.fromJson(operation.data);
-            await uploadTrashEntry(entry, isRetry: true);
-            break;
-          case 'deleteTrashEntry':
-            await deleteTrashEntry(
-                operation.data['trashEntryId'] as String, isRetry: true);
-            break;
-          default:
-            Sentry.captureMessage('Unknown sync operation type: ${operation.type}');
-            return false;
-        }
-        return true;
-      } catch (e, stackTrace) {
-        Sentry.captureException(e, stackTrace: stackTrace);
-        return false;
+      // NOTE: this handler deliberately does NOT catch. Failures must propagate
+      // to SyncQueueService.processQueue, which classifies them (permanent vs
+      // transient), caps retries, and reports to Sentry exactly once. Returning
+      // `false` signals an un-handleable op (discarded there, not retried).
+      switch (operation.type) {
+        case 'uploadSession':
+          final session = Session.fromJson(operation.data);
+          await uploadSession(session, isRetry: true);
+          return true;
+        case 'deleteSession':
+          await deleteSession(operation.data['sessionId'] as String, isRetry: true);
+          return true;
+        case 'logSession':
+          final session = Session.fromJson(operation.data['session']);
+          // Use the original completedAt time
+          await supabase.from('session_logs').insert({
+            'user_id': userId,
+            'session_id': session.id,
+            'completed_at': operation.data['completedAt'],
+            'session_data': session.toJson(),
+          });
+          return true;
+        case 'uploadWorkout':
+          final workout = Workout.fromJson(operation.data);
+          await uploadWorkout(workout, isRetry: true);
+          return true;
+        case 'uploadExercise':
+          final exercise = Exercise.fromJson(operation.data);
+          await uploadExercise(exercise, isRetry: true);
+          return true;
+        case 'deleteWorkout':
+          await deleteWorkout(
+              operation.data['workoutId'] as String, isRetry: true);
+          return true;
+        case 'deleteExercise':
+          await deleteExercise(
+              operation.data['exerciseId'] as String, isRetry: true);
+          return true;
+        case 'uploadTrashEntry':
+          final entry = TrashEntry.fromJson(operation.data);
+          await uploadTrashEntry(entry, isRetry: true);
+          return true;
+        case 'deleteTrashEntry':
+          await deleteTrashEntry(
+              operation.data['trashEntryId'] as String, isRetry: true);
+          return true;
+        default:
+          // Unknown op type — un-handleable; processQueue discards + reports.
+          return false;
       }
     });
   }

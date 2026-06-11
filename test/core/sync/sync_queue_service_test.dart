@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flash_forward/core/sync/sync_queue_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakePathProvider extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -81,6 +82,51 @@ void main() {
         'createdAt': DateTime(2026).toIso8601String(),
       });
       expect(op.attempts, 0);
+    });
+  });
+
+  group('processQueue disposition', () {
+    test('permanent failure is discarded on first attempt', () async {
+      final svc = SyncQueueService(connectivityOverride: () async => true);
+      await svc.enqueue(_op('a', 'uploadSession'));
+      var calls = 0;
+      await svc.processQueue((_) async {
+        calls++;
+        throw const PostgrestException(message: 'bad uuid', code: '22P02');
+      });
+      expect(svc.pendingCount, 0); // discarded
+      expect(calls, 1);
+    });
+
+    test('transient failure retries up to maxAttempts then discards', () async {
+      final svc = SyncQueueService(
+          maxAttempts: 3, connectivityOverride: () async => true);
+      await svc.enqueue(_op('a', 'uploadSession'));
+      Future<bool> fail(SyncOperation _) async =>
+          throw Exception('SocketException');
+
+      await svc.processQueue(fail); // attempt 1 -> attempts=1, kept
+      expect(svc.pendingCount, 1);
+      expect(svc.pendingOperations.single.attempts, 1);
+      await svc.processQueue(fail); // attempt 2 -> attempts=2, kept
+      expect(svc.pendingOperations.single.attempts, 2);
+      await svc.processQueue(fail); // attempt 3 -> hits cap, discarded
+      expect(svc.pendingCount, 0);
+    });
+
+    test('unknown op type (handler returns false) is discarded', () async {
+      final svc = SyncQueueService(connectivityOverride: () async => true);
+      await svc.enqueue(_op('a', 'bogusOp'));
+      await svc.processQueue((_) async => false);
+      expect(svc.pendingCount, 0);
+    });
+
+    test('success dequeues the op', () async {
+      final svc = SyncQueueService(connectivityOverride: () async => true);
+      await svc.enqueue(_op('a', 'uploadSession'));
+      final n = await svc.processQueue((_) async => true);
+      expect(n, 1);
+      expect(svc.pendingCount, 0);
     });
   });
 }

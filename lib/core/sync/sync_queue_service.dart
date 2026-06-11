@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:flash_forward/core/sync/sync_error_classifier.dart';
 
 /// A record of a single cloud operation that failed and needs to be retried.
 ///
@@ -90,6 +91,18 @@ class SyncOperation {
 ///    Failed retries stay in the queue for the next attempt.
 class SyncQueueService {
   static const String _queueFileName = 'sync_queue.json';
+
+  /// Max transient retries before an op is discarded (poison-message guard).
+  final int maxAttempts;
+
+  /// Test seam: overrides the connectivity check so [processQueue] can run on
+  /// hosts where `connectivity_plus` reports no network.
+  final Future<bool> Function()? _connectivityOverride;
+
+  SyncQueueService({
+    this.maxAttempts = 5,
+    Future<bool> Function()? connectivityOverride,
+  }) : _connectivityOverride = connectivityOverride;
 
   List<SyncOperation> _queue = [];
   bool _isProcessing = false;
@@ -198,6 +211,8 @@ class SyncQueueService {
 
   /// Returns true if the device has an active internet connection.
   Future<bool> hasConnectivity() async {
+    final override = _connectivityOverride;
+    if (override != null) return override();
     final connectivityResult = await Connectivity().checkConnectivity();
     return connectivityResult.any((result) =>
       result == ConnectivityResult.wifi ||
@@ -247,10 +262,39 @@ class SyncQueueService {
             // a successful uploadSession) is preserved for the next retry.
             await dequeue(operation.id, operation.type);
             successCount++;
+          } else {
+            // Handler explicitly cannot process this op (e.g. an unknown
+            // operation type). It will never succeed, so discard it rather
+            // than letting it replay forever as a poison message.
+            await dequeue(operation.id, operation.type);
+            Sentry.captureMessage(
+                'Discarded un-handleable sync op: ${operation.type}');
           }
         } catch (e, stackTrace) {
-          Sentry.captureException(e, stackTrace: stackTrace);
-          // Keep in queue for retry — do not rethrow.
+          final kind = classifySyncFailure(e);
+          final willExhaust = kind == SyncFailureKind.permanent ||
+              operation.attempts + 1 >= maxAttempts;
+          if (willExhaust) {
+            // Permanent error, or out of retries: discard (silently — local
+            // data is unaffected) and report ONCE with context.
+            await dequeue(operation.id, operation.type);
+            Sentry.captureException(e, stackTrace: stackTrace,
+                withScope: (scope) {
+              scope.setContexts('sync_op', {
+                'type': operation.type,
+                'id': operation.id,
+                'attempts': operation.attempts + 1,
+                'disposition': kind.name,
+              });
+            });
+          } else {
+            // Transient and under the cap: keep for the next launch with an
+            // incremented attempt count. No Sentry report (avoids the per-retry
+            // spam that the old "keep forever" behaviour caused). Dequeue first
+            // so enqueue's same-(id,type) carry-over doesn't reset the bump.
+            await dequeue(operation.id, operation.type);
+            await enqueue(operation.copyWith(attempts: operation.attempts + 1));
+          }
         }
       }
     } finally {
