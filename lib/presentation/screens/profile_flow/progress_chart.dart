@@ -3,7 +3,7 @@ import 'dart:math' show pi;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flash_forward/data/grade_scales.dart';
 import 'package:flash_forward/models/grade_entry.dart';
-import 'package:flash_forward/services/progress_extractor.dart';
+import 'package:flash_forward/features/session_log/progress_extractor.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';

@@ -27,6 +27,16 @@ class TrashEntry {
         TrashKind.exercise => (payload as Exercise).id,
       };
 
+  /// The default id this entry suppresses, if it is a fork of a default.
+  /// Forking a default sets `templateId = <default slug>`; for a plain user
+  /// item (no templateId) this is just the item's own id. Used by the catalog
+  /// to keep a deleted default hidden even though the entry's id is a fresh UUID.
+  String get shadowId => switch (kind) {
+        TrashKind.session => (payload as Session).templateId ?? id,
+        TrashKind.workout => (payload as Workout).templateId ?? id,
+        TrashKind.exercise => (payload as Exercise).templateId ?? id,
+      };
+
   String get title => switch (kind) {
         TrashKind.session => (payload as Session).title,
         TrashKind.workout => (payload as Workout).title,

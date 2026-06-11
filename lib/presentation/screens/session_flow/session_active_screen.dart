@@ -2,21 +2,25 @@ import 'package:flash_forward/constants/field_limits.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/presentation/widgets/label_badge.dart';
-import 'package:flash_forward/utils/nullable.dart';
-import 'package:flash_forward/utils/superset_utils.dart';
+import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
+import 'package:flash_forward/core/nullable.dart';
+import 'package:flash_forward/core/superset_utils.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
-import 'package:flash_forward/utils/timer_utils.dart';
+import 'package:flash_forward/core/timer_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/models/workout.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_bottom_bar.dart';
-import 'package:flash_forward/providers/session_state_provider.dart';
-import 'package:flash_forward/providers/settings_provider.dart';
+import 'package:flash_forward/features/session_active/session_progress.dart';
+import 'package:flash_forward/features/session_active/session_state_machine.dart';
+import 'package:flash_forward/features/session_active/session_state_provider.dart';
+import 'package:flash_forward/core/settings_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'dart:io' show Platform;
 
@@ -40,6 +44,15 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
     with WidgetsBindingObserver {
   bool _timerInitialized = false;
 
+  // Context of the open edit-exercise modal, captured when it opens and
+  // cleared when it closes. Lets us pop it from outside (e.g. when the
+  // anchored exercise is deleted mid-session).
+  BuildContext? _editModalContext;
+
+  // Provider reference + listener for the anchor-deleted signal. Attached
+  // once in didChangeDependencies, detached in dispose.
+  SessionStateProvider? _sessionProvider;
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +60,36 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<SessionStateProvider>();
+    if (provider != _sessionProvider) {
+      _sessionProvider?.anchorDeletedSignal.removeListener(_onAnchorDeleted);
+      _sessionProvider = provider;
+      _sessionProvider!.anchorDeletedSignal.addListener(_onAnchorDeleted);
+    }
+  }
+
+  /// Closes the open edit-exercise modal when the anchored exercise was
+  /// deleted mid-session and re-anchoring jumped elsewhere. The modal's
+  /// target no longer exists, so editing it makes no sense.
+  ///
+  /// Deferred to the next frame: the signal fires from replaceActiveSession
+  /// while NewSessionScreen (the editor) is still on top of the modal and
+  /// about to pop itself. Popping now would target the wrong route, so we
+  /// wait until the editor has been removed.
+  void _onAnchorDeleted() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final modalContext = _editModalContext;
+      if (modalContext != null && modalContext.mounted) {
+        Navigator.of(modalContext).pop();
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _sessionProvider?.anchorDeletedSignal.removeListener(_onAnchorDeleted);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -64,7 +106,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<PresetProvider, SessionStateProvider>(
+    return Consumer2<CatalogProvider, SessionStateProvider>(
       builder: (context, presetData, sessionStateData, child) {
         // Initialize the timer & keep screen awake once when the screen first builds.
         // Passes the session to start(), which deep-copies it internally.
@@ -133,7 +175,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         }
 
         if (activeSession.workouts.any((w) => w.exercises.isEmpty)) {
-         return Scaffold(
+          return Scaffold(
             body: Center(
               child: Text(
                 'This session has workouts without exercises. Add exercises to your workouts before starting a session.',
@@ -145,9 +187,21 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
         final progress = sessionStateData.progress;
 
+        // workoutComplete is a live, navigable phase: the exercise-level UI is
+        // replaced by a "Workout complete" state, but the user can still jump
+        // back into the workout (bottom bar) or add exercises (edit button).
+        final bool isComplete =
+            sessionStateData.phase == TimerPhase.workoutComplete;
+
         Workout activeWorkout = activeSession.workouts[progress.workoutIndex];
+        // Clamp so this read never throws. In complete state the value is
+        // arbitrary-but-valid and isn't displayed; in every other phase
+        // exerciseIndex is already in range.
         Exercise activeExercise =
-            activeWorkout.exercises[progress.exerciseIndex];
+            activeWorkout.exercises[progress.exerciseIndex.clamp(
+              0,
+              activeWorkout.exercises.length - 1,
+            )];
 
         List<Widget> workoutNames =
             activeSession.workouts
@@ -202,6 +256,12 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         TextStyle phaseTextStyle = context.h2.copyWith(
           color: context.colorScheme.onPrimary,
         );
+        // Shared style for "get ready" — used by the standalone getReady phase
+        // and by the get-ready tail of an ordinary rest (see the label's
+        // ValueListenableBuilder below).
+        final getReadyTextStyle = context.h2.copyWith(
+          color: context.colorScheme.secondary,
+        );
         final effectiveSets = setsForExerciseInWorkout(
           activeWorkout,
           activeExercise,
@@ -230,9 +290,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
             );
           case TimerPhase.getReady:
             phaseText = 'get ready';
-            phaseTextStyle = context.h2.copyWith(
-              color: context.colorScheme.secondary,
-            );
+            phaseTextStyle = getReadyTextStyle;
           case TimerPhase.overtime:
             phaseText = 'overtime';
             phaseTextStyle = context.h2.copyWith(
@@ -251,6 +309,26 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
           repsText = '${activeExercise.reps}   reps';
         } else {
           repsText = '${progress.currentRep} / ${activeExercise.reps}   reps';
+        }
+
+        Color timerColor(Duration displayValue) {
+          if (sessionStateData.isPaused) {
+            return context.colorScheme.tertiary;
+          } else if (sessionStateData.phase == TimerPhase.getReady) {
+            return context.colorScheme.secondary;
+          } else if (sessionStateData.phase == TimerPhase.rep) {
+            return context.colorScheme.onPrimary;
+          } else if (sessionStateData.phase == TimerPhase.overtime) {
+            return context.colorScheme.secondary;
+          } else if ((sessionStateData.phase == TimerPhase.repRest ||
+                  sessionStateData.phase == TimerPhase.setRest ||
+                  sessionStateData.phase == TimerPhase.supersetRest ||
+                  sessionStateData.phase == TimerPhase.exerciseRest) &&
+              displayValue < Duration(seconds: 10)) {
+            return context.colorScheme.secondary;
+          } else {
+            return context.colorScheme.onPrimary;
+          }
         }
 
         return Scaffold(
@@ -301,296 +379,363 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                         ),
                         child: null,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          60.0,
-                          60.0,
-                          20.0,
-                          12.0,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (() {
-                              final ss = supersetForExercise(
-                                activeWorkout,
-                                activeExercise.id,
-                              );
-                              return ss != null;
-                            }())
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Container(
-                                  width: 32,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: () {
-                                      final ss =
-                                          supersetForExercise(
-                                            activeWorkout,
-                                            activeExercise.id,
-                                          )!;
-                                      final idx = activeWorkout.supersets
-                                          .indexWhere((s) => s.id == ss.id);
-                                      return idx >= 0
-                                          ? supersetColorForIndex(idx)
-                                          : supersetColor(ss.id);
-                                    }(),
-                                    borderRadius: BorderRadius.circular(2),
+                      if (isComplete)
+                        Center(
+                          child: Text(
+                            'Workout complete',
+                            style: context.h1.copyWith(
+                              color: context.colorScheme.onPrimary,
+                            ),
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            60.0,
+                            60.0,
+                            20.0,
+                            12.0,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (() {
+                                final ss = supersetForExercise(
+                                  activeWorkout,
+                                  activeExercise.id,
+                                );
+                                return ss != null;
+                              }())
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Container(
+                                    width: 32,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: () {
+                                        final superset =
+                                            supersetForExercise(
+                                              activeWorkout,
+                                              activeExercise.id,
+                                            )!;
+                                        final idx = activeWorkout.supersets
+                                            .indexWhere(
+                                              (s) => s.id == superset.id,
+                                            );
+                                        return idx >= 0
+                                            ? supersetColorForIndex(idx)
+                                            : supersetColor(superset.id);
+                                      }(),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
                                   ),
                                 ),
+                              Text(
+                                activeExercise.title,
+                                style: context.h1.copyWith(
+                                  color: context.colorScheme.onPrimary,
+                                ),
                               ),
-                            Text(
-                              activeExercise.title,
-                              style: context.h1.copyWith(
-                                color: context.colorScheme.onPrimary,
+                              SizedBox(height: 8),
+                              Text(
+                                activeExercise.description,
+                                style: context.bodyLarge.copyWith(
+                                  color: context.colorScheme.onPrimary,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              activeExercise.description,
-                              style: context.bodyLarge.copyWith(
-                                color: context.colorScheme.onPrimary,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
                 Container(
                   color: context.colorScheme.primary,
-                  child: Column(
-                    children: [
-                      Center(child: Text(phaseText, style: phaseTextStyle)),
-                      // ── Timer or manual-advance button ──────────
-                      if (isManualRep)
-                        _ManualAdvanceButton(
-                          isLastSet: progress.currentSet >= effectiveSets,
-                          onPressed: () => sessionStateData.advanceManually(),
-                          color: context.colorScheme.onPrimary,
-                        )
-                      else
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Center(
-                              child: ValueListenableBuilder<Duration>(
-                                valueListenable:
-                                    sessionStateData.timerDisplayNotifier,
-                                builder: (context, displayValue, _) {
-                                  return Text(
-                                    sessionStateData.phase ==
-                                            TimerPhase.overtime
-                                        ? formatDuration(displayValue)
-                                        : formatCountdown(displayValue),
-                                    style: context.h1.copyWith(
-                                      color: () {
-                                        if (sessionStateData.isPaused) {
-                                          return context.colorScheme.tertiary;
-                                        } else if (sessionStateData.phase ==
-                                            TimerPhase.getReady) {
-                                          return context.colorScheme.secondary;
-                                        } else if (sessionStateData.phase ==
-                                            TimerPhase.rep) {
-                                          return context.colorScheme.onPrimary;
-                                        } else if (sessionStateData.phase ==
-                                            TimerPhase.overtime) {
-                                          return context.colorScheme.secondary;
-                                        } else if ((sessionStateData.phase ==
-                                                    TimerPhase.repRest ||
-                                                sessionStateData.phase ==
-                                                    TimerPhase.setRest ||
-                                                sessionStateData.phase ==
-                                                    TimerPhase.supersetRest ||
-                                                sessionStateData.phase ==
-                                                    TimerPhase.exerciseRest) &&
-                                            displayValue <
-                                                Duration(seconds: 10)) {
-                                          return context.colorScheme.secondary;
-                                        } else {
-                                          return context.colorScheme.onPrimary;
-                                        }
-                                      }(),
+                  child:
+                      isComplete
+                          ? Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20.0,
+                              vertical: 12.0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                // Edit stays available so the user can add
+                                // exercises. There is no current exercise, so go
+                                // straight to the session editor (no per-exercise
+                                // modal).
+                                _RoundedBox(
+                                  width: 50,
+                                  borderColor: context.colorScheme.onPrimary,
+                                  child: IconButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => NewSessionScreen(
+                                                mode:
+                                                    NewSessionScreenMode
+                                                        .editActive,
+                                                session:
+                                                    sessionStateData
+                                                        .activeSession!,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(
+                                      Icons.edit,
+                                      color: context.colorScheme.onPrimary,
+                                      size: 24,
                                     ),
-                                    textScaler: TextScaler.linear(2.5),
-                                  );
-                                },
-                              ),
-                            ),
-                            Positioned(
-                              right: 20,
-                              child: _PauseResumeOvertimeButton(
-                                sessionStateData: sessionStateData,
-                              ),
-                            ),
-                          ],
-                        ),
-                      SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // REPS
-                            _RoundedBox(
-                              width: 150,
-                              borderColor: context.colorScheme.onPrimary,
-                              child: Text(
-                                repsText,
-                                style: context.titleLarge.copyWith(
-                                  color: context.colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                            // LOAD
-                            _RoundedBox(
-                              width: 180,
-                              borderColor: context.colorScheme.onPrimary,
-                              child: Text(
-                                'Load: ${activeExercise.load.toString()} kg',
-                                style: context.titleLarge.copyWith(
-                                  color: context.colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // MINUS
-                            if (sessionStateData.phase !=
-                                TimerPhase.exerciseRest)
-                              _RoundedBox(
-                                width: 50,
-                                borderColor:
-                                    sessionStateData.phase ==
-                                            TimerPhase.overtime
-                                        ? context.colorScheme.onSurface
-                                            .withValues(alpha: 0.38)
-                                        : context.colorScheme.onPrimary,
-                                child: IconButton(
-                                  onPressed:
-                                      sessionStateData.phase ==
-                                              TimerPhase.overtime
-                                          ? null
-                                          : () {
-                                            sessionStateData.jumpToSet(
-                                              progress.currentSet - 1,
-                                            );
-                                          },
-                                  icon: Icon(
-                                    Icons.remove_rounded,
-                                    color:
-                                        sessionStateData.phase ==
-                                                TimerPhase.overtime
-                                            ? context.colorScheme.onSurface
-                                                .withValues(alpha: 0.38)
-                                            : context.colorScheme.onPrimary,
-                                    size: 24,
                                   ),
                                 ),
-                              ),
-                            SizedBox(width: 8),
-                            // SETS
-                            _RoundedBox(
-                              width: 150,
-                              borderColor: context.colorScheme.onPrimary,
-                              child: Text(
-                                '${progress.currentSet} / $effectiveSets   sets',
-                                style: context.titleLarge.copyWith(
-                                  color: context.colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
+                                SizedBox(width: 24),
+                              ],
                             ),
-                            SizedBox(width: 8),
-                            // PLUS
-                            if (sessionStateData.phase !=
-                                TimerPhase.exerciseRest)
-                              _RoundedBox(
-                                width: 50,
-                                borderColor:
-                                    sessionStateData.phase ==
-                                            TimerPhase.overtime
-                                        ? context.colorScheme.onSurface
-                                            .withValues(alpha: 0.38)
-                                        : context.colorScheme.onPrimary,
-                                child: IconButton(
-                                  onPressed:
-                                      sessionStateData.phase ==
-                                              TimerPhase.overtime
-                                          ? null
-                                          : () {
-                                            sessionStateData.jumpToSet(
-                                              progress.currentSet + 1,
-                                            );
-                                          },
-                                  icon: Icon(
-                                    Icons.add_rounded,
-                                    color:
-                                        sessionStateData.phase ==
-                                                TimerPhase.overtime
-                                            ? context.colorScheme.onSurface
-                                                .withValues(alpha: 0.38)
-                                            : context.colorScheme.onPrimary,
-                                    size: 24,
-                                  ),
+                          )
+                          : Column(
+                            children: [
+                              Center(
+                                // The label reacts to the per-tick countdown so
+                                // it can flip to "get ready" mid-phase, in the
+                                // final getReadyLeadIn seconds of a rest. Those
+                                // updates flow through timerDisplayNotifier (not
+                                // notifyListeners), so the label rebuilds here
+                                // just like the timer number below.
+                                child: ValueListenableBuilder<Duration>(
+                                  valueListenable:
+                                      sessionStateData.timerDisplayNotifier,
+                                  builder: (context, displayValue, _) {
+                                    // getReady already reads "get ready" via the
+                                    // switch; only the carved rests need the
+                                    // tail override.
+                                    final inGetReadyTail =
+                                        sessionStateData.phase !=
+                                            TimerPhase.getReady &&
+                                        SessionStateMachine.isGetReadyMoment(
+                                          sessionStateData.phase,
+                                          displayValue,
+                                        );
+                                    return Text(
+                                      inGetReadyTail ? 'get ready' : phaseText,
+                                      style:
+                                          inGetReadyTail
+                                              ? getReadyTextStyle
+                                              : phaseTextStyle,
+                                    );
+                                  },
                                 ),
                               ),
-                            Spacer(),
-                            //EDIT
-                            _RoundedBox(
-                              width: 50,
-                              borderColor:
-                                  sessionStateData.phase == TimerPhase.overtime
-                                      ? context.colorScheme.onSurface
-                                          .withValues(alpha: 0.38)
-                                      : context.colorScheme.onPrimary,
-                              child: IconButton(
-                                onPressed:
-                                    sessionStateData.phase ==
-                                            TimerPhase.overtime
-                                        ? null
-                                        : () {
-                                          _showEditExerciseDialog(
-                                            context,
-                                            activeExercise,
-                                            sessionStateData,
-                                            progress.workoutIndex,
-                                            progress.exerciseIndex,
+                              // ── Timer or manual-advance button ──────────
+                              if (isManualRep)
+                                _ManualAdvanceButton(
+                                  isLastSet:
+                                      progress.currentSet >= effectiveSets,
+                                  onPressed:
+                                      () => sessionStateData.advanceManually(),
+                                  color: context.colorScheme.onPrimary,
+                                )
+                              else
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Center(
+                                      child: ValueListenableBuilder<Duration>(
+                                        valueListenable:
+                                            sessionStateData
+                                                .timerDisplayNotifier,
+                                        builder: (context, displayValue, _) {
+                                          return Text(
+                                            sessionStateData.phase ==
+                                                    TimerPhase.overtime
+                                                ? formatDuration(displayValue)
+                                                : formatCountdown(displayValue),
+                                            style: context.h1.copyWith(
+                                              color: timerColor(displayValue),
+                                            ),
+                                            textScaler: TextScaler.linear(2.5),
                                           );
                                         },
-                                icon: Icon(
-                                  Icons.edit,
-                                  color:
-                                      sessionStateData.phase ==
-                                              TimerPhase.overtime
-                                          ? context.colorScheme.onSurface
-                                              .withValues(alpha: 0.38)
-                                          : context.colorScheme.onPrimary,
-                                  size: 24,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: 20,
+                                      child: _PauseResumeOvertimeButton(
+                                        sessionStateData: sessionStateData,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              SizedBox(height: 24),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    // REPS
+                                    _RoundedBox(
+                                      width: 150,
+                                      borderColor:
+                                          context.colorScheme.onPrimary,
+                                      child: Text(
+                                        repsText,
+                                        style: context.titleLarge.copyWith(
+                                          color: context.colorScheme.onPrimary,
+                                          fontWeight: FontWeight.bold,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                    // LOAD
+                                    _RoundedBox(
+                                      width: 180,
+                                      borderColor:
+                                          context.colorScheme.onPrimary,
+                                      child: Text(
+                                        'Load: ${activeExercise.load.toString()} kg',
+                                        style: context.titleLarge.copyWith(
+                                          color: context.colorScheme.onPrimary,
+                                          fontWeight: FontWeight.bold,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 24),
-                    ],
-                  ),
+                              SizedBox(height: 12),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    // MINUS
+                                    if (sessionStateData.phase !=
+                                        TimerPhase.exerciseRest)
+                                      MyIconButton(
+                                        onTap:
+                                            sessionStateData.phase ==
+                                                    TimerPhase.overtime
+                                                ? null
+                                                : () {
+                                                  sessionStateData.jumpToSet(
+                                                    progress.currentSet - 1,
+                                                  );
+                                                },
+                                        icon: Icons.remove_rounded,
+                                        backgroundColor:
+                                            context.colorScheme.onPrimary,
+                                        foregroundColor:
+                                            sessionStateData.phase ==
+                                                    TimerPhase.overtime
+                                                ? context.colorScheme.onSurface
+                                                    .withValues(alpha: 0.38)
+                                                : context.colorScheme.primary,
+                                        borderColor:
+                                            sessionStateData.phase ==
+                                                    TimerPhase.overtime
+                                                ? context.colorScheme.onSurface
+                                                    .withValues(alpha: 0.38)
+                                                : context.colorScheme.onPrimary,
+                                        size: 44,
+                                      ),
+                                    SizedBox(width: 8),
+                                    // SETS
+                                    _RoundedBox(
+                                      width: 150,
+                                      borderColor:
+                                          context.colorScheme.onPrimary,
+                                      child: Text(
+                                        '${progress.currentSet} / $effectiveSets   sets',
+                                        style: context.titleLarge.copyWith(
+                                          color: context.colorScheme.onPrimary,
+                                          fontWeight: FontWeight.bold,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    // PLUS
+                                    if (sessionStateData.phase !=
+                                        TimerPhase.exerciseRest)
+                                      MyIconButton(
+                                        onTap:
+                                            sessionStateData.phase ==
+                                                    TimerPhase.overtime
+                                                ? null
+                                                : () {
+                                                  sessionStateData.jumpToSet(
+                                                    progress.currentSet + 1,
+                                                  );
+                                                },
+                                        icon: Icons.add_rounded,
+                                        backgroundColor:
+                                            context.colorScheme.onPrimary,
+                                        foregroundColor:
+                                            sessionStateData.phase ==
+                                                    TimerPhase.overtime
+                                                ? context.colorScheme.onSurface
+                                                    .withValues(alpha: 0.38)
+                                                : context.colorScheme.primary,
+                                        borderColor:
+                                            sessionStateData.phase ==
+                                                    TimerPhase.overtime
+                                                ? context.colorScheme.onSurface
+                                                    .withValues(alpha: 0.38)
+                                                : context.colorScheme.onPrimary,
+                                        size: 44,
+                                      ),
+
+                                    Spacer(),
+                                    //EDIT
+                                    MyIconButton(
+                                      onTap:
+                                          sessionStateData.phase ==
+                                                  TimerPhase.overtime
+                                              ? null
+                                              : () {
+                                                _showEditExerciseDialog(
+                                                  context,
+                                                  activeExercise,
+                                                  sessionStateData,
+                                                  progress.workoutIndex,
+                                                  progress.exerciseIndex,
+                                                );
+                                              },
+                                      icon: Icons.edit,
+                                      backgroundColor:
+                                          context.colorScheme.onPrimary,
+                                      foregroundColor:
+                                          sessionStateData.phase ==
+                                                  TimerPhase.overtime
+                                              ? context.colorScheme.onSurface
+                                                  .withValues(alpha: 0.38)
+                                              : context.colorScheme.primary,
+                                      borderColor:
+                                          sessionStateData.phase ==
+                                                  TimerPhase.overtime
+                                              ? context.colorScheme.onSurface
+                                                  .withValues(alpha: 0.38)
+                                              : context.colorScheme.onPrimary,
+                                      size: 50,
+                                      iconSize: 26,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 24),
+                            ],
+                          ),
                 ),
               ],
             ),
@@ -654,7 +799,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
     // path below routes back via updateActiveSupersetSets.
     final activeWorkout =
         sessionStateData.activeSession?.workouts[workoutIndex];
-    final ssMembership =
+    final supersetMembership =
         activeWorkout != null
             ? supersetForExercise(activeWorkout, activeExercise.id)
             : null;
@@ -688,7 +833,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (BuildContext context) {
+      builder: (BuildContext modalContext) {
+        // Captured so the anchor-deleted listener can pop this modal from
+        // outside when its target exercise is removed mid-session.
+        _editModalContext = modalContext;
         // Resume is handled via .then() below — covers save, dismiss, and drag-close.
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -699,19 +847,21 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
               // preserved unchanged so removing the exercise from the
               // superset later restores its original set count.
               final exerciseEditedSets =
-                  ssMembership != null ? activeExercise.sets : localSets;
-              if (ssMembership != null && localSets != initialSets) {
+                  supersetMembership != null ? activeExercise.sets : localSets;
+              if (supersetMembership != null && localSets != initialSets) {
                 sessionStateData.updateActiveSupersetSets(
-                  workoutIndex: workoutIndex,
+                  workoutId: activeWorkout!.id,
                   exerciseId: activeExercise.id,
                   newSupersetSets: localSets,
                 );
               }
               // Apply all local edits to the live session copy via the provider.
               // Uses copyWith (not deepCopy) — keeps the same IDs, only replaces fields.
+              // Target by ID, not index: a mid-session structural edit may have
+              // shifted positions while the modal was open. No-op if deleted.
               sessionStateData.updateActiveExercise(
-                workoutIndex,
-                exerciseIndex,
+                activeWorkout!.id,
+                activeExercise.id,
                 activeExercise.copyWith(
                   sets: exerciseEditedSets,
                   reps: Nullable(localRepsEnabled ? localReps : null),
@@ -779,7 +929,40 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                           horizontal: 16,
                           vertical: 16,
                         ),
+
                         children: [
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => NewSessionScreen(
+                                        mode: NewSessionScreenMode.editActive,
+                                        session:
+                                            sessionStateData.activeSession!,
+                                      ),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor:
+                                  context.colorScheme.surfaceBright,
+                              side: BorderSide(
+                                color: context.colorScheme.primary,
+                                width: 0.5,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Edit this session's workouts and exercises.",
+                                style: context.titleMedium.copyWith(
+                                  color: context.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           // ── Exercise info (read-only) ──────────────
                           _SessionEditSectionHeader(title: 'Exercise'),
                           const SizedBox(height: 8),
@@ -1193,6 +1376,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
         );
       },
     ).then((_) {
+      _editModalContext = null;
       if (!wasAlreadyPaused) sessionStateData.resume();
     });
   }
@@ -1217,7 +1401,8 @@ class _PauseResumeOvertimeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     IconData icon = Icons.pause_rounded;
-    Color widgetColor = context.colorScheme.onPrimary;
+    Color widgetColor = context.colorScheme.primary;
+    Color borderColor = context.colorScheme.onPrimary;
     VoidCallback onTap = () {
       sessionStateData.pause();
       WakelockPlus.disable();
@@ -1242,16 +1427,14 @@ class _PauseResumeOvertimeButton extends StatelessWidget {
       };
     }
 
-    return GestureDetector(
+    return MyIconButton(
+      icon: icon,
       onTap: onTap,
       onLongPress: onLongPress,
-      child: _RoundedBox(
-        width: 44,
-        height: 44,
-        shadow: false,
-        borderColor: widgetColor,
-        child: Icon(icon, color: widgetColor),
-      ),
+      size: 44,
+      borderColor: borderColor,
+      backgroundColor: context.colorScheme.onPrimary,
+      foregroundColor: widgetColor,
     );
   }
 }
@@ -1403,6 +1586,7 @@ class _RoundedBox extends StatelessWidget {
     this.height = 50,
     this.shadow = true,
     required this.borderColor,
+    this.backgroundColor,
   });
 
   final double width;
@@ -1410,14 +1594,17 @@ class _RoundedBox extends StatelessWidget {
   final bool shadow;
   final Widget child;
   final Color borderColor;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
+    final bgColor = backgroundColor ?? context.colorScheme.primary;
+
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: context.colorScheme.primary,
+        color: bgColor,
         boxShadow: shadow ? context.shadowMedium : null,
         borderRadius: BorderRadius.circular(16),
         border: BoxBorder.all(color: borderColor, width: 2),

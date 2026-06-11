@@ -7,13 +7,14 @@ import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_scr
 import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
+import 'package:flash_forward/features/catalog/trash_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:flash_forward/services/supabase_config.dart';
+import 'package:flash_forward/core/sync/supabase_config.dart';
 import 'package:provider/provider.dart';
 
 enum ItemType { sessions, workouts, exercises }
@@ -57,36 +58,39 @@ class _ProgramListviewState extends State<ProgramListview> {
   List<dynamic> sortListItems(List<dynamic> items) {
     final labelOrder = kDefaultLabels.keys.toList();
     return items..sort((a, b) {
-      final labelCompare = labelOrder.indexOf(a.label).compareTo(labelOrder.indexOf(b.label));
+      final labelCompare = labelOrder
+          .indexOf(a.label)
+          .compareTo(labelOrder.indexOf(b.label));
       if (labelCompare != 0) return labelCompare;
       return a.title.toLowerCase().compareTo(b.title.toLowerCase());
     });
   }
 
   Future<void> _copyItem(dynamic item) async {
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    final catalogProvider = Provider.of<CatalogProvider>(context, listen: false);
     final userId = supabase.auth.currentUser?.id;
     switch (widget.itemType) {
       case ItemType.sessions:
         final copy = (item as Session).deepCopy();
-        await presetProvider.addPresetSession(
+        await catalogProvider.upsertSession(
           copy.copyWith(title: '${copy.title} - copy', userId: userId),
         );
       case ItemType.workouts:
         final copy = (item as Workout).deepCopy();
-        await presetProvider.addPresetWorkout(
+        await catalogProvider.upsertWorkout(
           copy.copyWith(title: '${copy.title} - copy', userId: userId),
         );
       case ItemType.exercises:
         final copy = (item as Exercise).deepCopy();
-        await presetProvider.addPresetExercise(
+        await catalogProvider.upsertExercise(
           copy.copyWith(title: '${copy.title} - copy', userId: userId),
         );
     }
   }
 
   Future<void> _moveToTrash(dynamic item) async {
-    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+    final catalogProvider = Provider.of<CatalogProvider>(context, listen: false);
+    final trashProvider = context.read<TrashProvider>();
     final kind = switch (widget.itemType) {
       ItemType.sessions => TrashKind.session,
       ItemType.workouts => TrashKind.workout,
@@ -94,14 +98,24 @@ class _ProgramListviewState extends State<ProgramListview> {
     };
     final references = switch (kind) {
       TrashKind.workout =>
-        presetProvider.sessionsContainingWorkout(item.id).map((s) => s.title).toList(),
+        catalogProvider
+            .sessionsContainingWorkout(item.id)
+            .map((s) => s.title)
+            .toList(),
       TrashKind.exercise =>
-        presetProvider.workoutsContainingExercise(item.id).map((w) => w.title).toList(),
+        catalogProvider
+            .workoutsContainingExercise(item.id)
+            .map((w) => w.title)
+            .toList(),
       TrashKind.session => const <String>[],
     };
-    final confirm = await _showTrashConfirmationDialog(item.title, references, kind);
+    final confirm = await _showTrashConfirmationDialog(
+      item.title,
+      references,
+      kind,
+    );
     if (confirm != true) return;
-    await presetProvider.deleteToTrash(id: item.id, kind: kind);
+    await trashProvider.deleteToTrash(id: item.id, kind: kind);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -111,7 +125,7 @@ class _ProgramListviewState extends State<ProgramListview> {
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () async {
-            await presetProvider.restoreFromTrash(item.id);
+            await trashProvider.restoreFromTrash(item.id);
           },
         ),
       ),
@@ -138,10 +152,12 @@ class _ProgramListviewState extends State<ProgramListview> {
             TrashKind.exercise => isPlural ? 'workouts' : 'workout',
             TrashKind.session => isPlural ? 'items' : 'item',
           };
-          final intro = isPlural ? 'these $referenceNoun' : 'this $referenceNoun';
-          final trailing = isPlural
-              ? 'those $referenceNoun, they keep their own copy.'
-              : 'that $referenceNoun, it keeps its own copy.';
+          final intro =
+              isPlural ? 'these $referenceNoun' : 'this $referenceNoun';
+          final trailing =
+              isPlural
+                  ? 'those $referenceNoun, they keep their own copy.'
+                  : 'that $referenceNoun, it keeps its own copy.';
           body =
               '"$title" is currently used in $intro:\n$list\n\nMoving it to the trash won\'t affect $trailing';
         }
@@ -165,7 +181,7 @@ class _ProgramListviewState extends State<ProgramListview> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PresetProvider>(
+    return Consumer<CatalogProvider>(
       builder: (BuildContext context, presetData, Widget? child) {
         List<dynamic> listItems = [];
 
@@ -265,7 +281,7 @@ class CatalogListviewCard extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) => NewSessionScreen(session: filteredListItem),
+                      (context) => NewSessionScreen(mode: NewSessionScreenMode.editCatalog, session: filteredListItem),
                 ),
               );
 

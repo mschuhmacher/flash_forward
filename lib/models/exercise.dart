@@ -1,4 +1,4 @@
-import 'package:flash_forward/utils/nullable.dart';
+import 'package:flash_forward/core/nullable.dart';
 import 'package:uuid/uuid.dart';
 
 enum ExerciseType { timedReps, fixedDuration, manual }

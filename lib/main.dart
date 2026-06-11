@@ -1,5 +1,8 @@
 import 'dart:async';
-import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/features/auth/auth_provider.dart';
+import 'package:flash_forward/features/catalog/edit_commit_controller.dart';
+import 'package:flash_forward/core/sync/sync_status_provider.dart';
+import 'package:flash_forward/features/catalog/trash_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
@@ -7,13 +10,13 @@ import 'package:flutter/services.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/loading_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/reset_password_screen.dart';
-import 'package:flash_forward/services/supabase_config.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/providers/session_log_provider.dart';
-import 'package:flash_forward/providers/session_state_provider.dart';
-import 'package:flash_forward/providers/settings_provider.dart';
-import 'package:flash_forward/services/audio_beep_player.dart';
-import 'package:flash_forward/services/beep_scheduler.dart';
+import 'package:flash_forward/core/sync/supabase_config.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
+import 'package:flash_forward/features/session_log/session_log_provider.dart';
+import 'package:flash_forward/features/session_active/session_state_provider.dart';
+import 'package:flash_forward/core/settings_provider.dart';
+import 'package:flash_forward/features/session_active/audio_beep_player.dart';
+import 'package:flash_forward/features/session_active/beep_scheduler.dart';
 import 'package:flash_forward/themes/app_theme.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -37,15 +40,17 @@ void main() async {
   final audioPlayer = AudioBeepPlayer();
   await audioPlayer.init();
 
-  final sessionStateProvider = SessionStateProvider()
-    ..setBeepScheduler(beepScheduler)
-    ..setAudioBeepPlayer(audioPlayer);
+  final sessionStateProvider =
+      SessionStateProvider()
+        ..setBeepScheduler(beepScheduler)
+        ..setAudioBeepPlayer(audioPlayer);
 
   final packageInfo = await PackageInfo.fromPlatform();
 
   await SentryFlutter.init(
     (options) {
-      options.dsn = kDebugMode ? '' : const String.fromEnvironment('SENTRY_DSN');
+      options.dsn =
+          kDebugMode ? '' : const String.fromEnvironment('SENTRY_DSN');
       options.environment = kDebugMode ? 'debug' : 'production';
       options.release =
           'flash_forward@${packageInfo.version}+${packageInfo.buildNumber}';
@@ -56,18 +61,44 @@ void main() async {
       options.replay.sessionSampleRate = 0.1;
       options.replay.onErrorSampleRate = 1.0;
     },
-    appRunner: () => runApp(SentryWidget(child:
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
-        ChangeNotifierProvider(create: (context) => SessionLogProvider()),
-        ChangeNotifierProvider(create: (context) => PresetProvider()),
-        ChangeNotifierProvider(create: (_) => sessionStateProvider),
-        ChangeNotifierProvider(create: (context) => SettingsProvider()),
-      ],
-      child: const MyApp(),
-    ),
-  )),
+    appRunner:
+        () => runApp(
+          SentryWidget(
+            child: MultiProvider(
+              providers: [
+                ChangeNotifierProvider(create: (context) => AuthProvider()),
+                ChangeNotifierProvider(
+                  create: (context) => SessionLogProvider(),
+                ),
+                ChangeNotifierProvider(
+                  create: (context) => SyncStatusProvider(),
+                ),
+                ChangeNotifierProvider(create: (context) => CatalogProvider()),
+                ChangeNotifierProxyProvider2<
+                  CatalogProvider,
+                  SyncStatusProvider,
+                  TrashProvider
+                >(
+                  create:
+                      (context) => TrashProvider(
+                        catalog: context.read<CatalogProvider>(),
+                        syncStatus: context.read<SyncStatusProvider>(),
+                      ),
+                  update:
+                      (context, value, value2, previous) =>
+                          previous ??
+                          TrashProvider(catalog: value, syncStatus: value2),
+                ),
+                ProxyProvider<CatalogProvider, EditCommitController>(
+                  update: (_, catalog, __) => EditCommitController(catalog),
+                ),
+                ChangeNotifierProvider(create: (_) => sessionStateProvider),
+                ChangeNotifierProvider(create: (context) => SettingsProvider()),
+              ],
+              child: const MyApp(),
+            ),
+          ),
+        ),
   );
 }
 
@@ -121,7 +152,8 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: lightAppTheme,
       darkTheme: darkAppTheme,
-      themeMode: ThemeMode.light, // switch to system when better dark mode colors set
+      themeMode:
+          ThemeMode.light, // switch to system when better dark mode colors set
       home: const LoadingScreen(),
     );
   }

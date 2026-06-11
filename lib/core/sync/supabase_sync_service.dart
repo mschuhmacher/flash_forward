@@ -1,0 +1,463 @@
+import 'package:flash_forward/models/exercise.dart';
+import 'package:flash_forward/core/sync/supabase_config.dart';
+import 'package:flash_forward/core/sync/sync_queue_service.dart';
+import 'package:flash_forward/models/session.dart';
+import 'package:flash_forward/models/workout.dart';
+import 'package:flash_forward/models/trash_entry.dart';
+
+/// Handles syncing local data with Supabase cloud storage
+/// This allows migration from local-only to cloud-backed storage
+///
+/// IMPORTANT: After construction, call `await syncQueue.loadQueue()` before
+/// reading [syncQueue.pendingOperations]. The queue is loaded from disk
+/// asynchronously; skipping the await will return an empty list.
+class SupabaseSyncService {
+  final String userId;
+  final SyncQueueService _syncQueue = SyncQueueService();
+
+  SupabaseSyncService({required this.userId});
+
+  /// Get the sync queue for external access
+  SyncQueueService get syncQueue => _syncQueue;
+
+  /// Check if there are pending operations
+  bool get hasPendingSync => _syncQueue.hasPendingOperations;
+
+  /// Get count of pending operations
+  int get pendingSyncCount => _syncQueue.pendingCount;
+
+  // ========== Session Sync ==========
+
+  /// Upload a session to the cloud
+  /// Sessions contain complete nested workout/exercise data as JSON
+  /// If upload fails, queues the operation for retry
+  Future<void> uploadSession(Session session, {bool isRetry = false}) async {
+    try {
+      await supabase.from('user_sessions').upsert({
+        'id': session.id,
+        'user_id': userId,
+        'title': session.title,
+        'label': session.label,
+        'description': session.description,
+        'completed_at': session.completedAt?.toIso8601String(),
+        'workouts': session.workouts.map((w) => w.toJson()).toList(),
+        'set_events': session.setEvents?.map((e) => e.toJson()).toList(),
+        'rest_events': session.restEvents?.map((e) => e.toJson()).toList(),
+        'summary': session.summary?.toJson(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: session.id,
+          type: 'uploadSession',
+          data: session.toJson(),
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetch all user's sessions from the cloud
+  Future<List<Session>> fetchUserSessions() async {
+    final response = await supabase
+        .from('user_sessions')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+
+    return (response as List).map((json) {
+      // Use Session.fromJson so field renames and backward-compat fallbacks are handled centrally
+      return Session.fromJson({
+        ...json as Map<String, dynamic>,
+        'userId': json['user_id'],
+      });
+    }).toList();
+  }
+
+  /// Delete a session from the cloud
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteSession(String sessionId, {bool isRetry = false}) async {
+    try {
+      await supabase
+          .from('user_sessions')
+          .delete()
+          .eq('id', sessionId)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: sessionId,
+          type: 'deleteSession',
+          data: {'sessionId': sessionId},
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  // ========== Logged Sessions Sync (Workout History) ==========
+
+  /// Log a completed session to workout history
+  /// This creates a permanent record separate from the session itself
+  /// If log fails, queues the operation for retry
+  Future<void> logCompletedSession(Session session, {bool isRetry = false}) async {
+    final completedAt = DateTime.now().toIso8601String();
+    try {
+      await supabase.from('session_logs').insert({
+        'user_id': userId,
+        'session_id': session.id,
+        'completed_at': completedAt,
+        'session_data': session.toJson(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: '${session.id}_$completedAt',
+          type: 'logSession',
+          data: {
+            'session': session.toJson(),
+            'completedAt': completedAt,
+          },
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetch session history (logged sessions) from the cloud
+  /// Can filter by date range for calendar views
+  Future<List<Session>> fetchLoggedSessions({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    // Start with the base query (no select yet)
+    var query = supabase
+        .from('session_logs')
+        .select('session_data, completed_at');
+
+    // Apply filters
+    query = query.eq('user_id', userId);
+
+    if (startDate != null) {
+      query = query.gte('completed_at', startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      query = query.lte('completed_at', endDate.toIso8601String());
+    }
+
+    // Apply ordering and execute
+    final response = await query.order('completed_at', ascending: false);
+
+    return (response as List).map((item) {
+      final sessionData = item['session_data'] as Map<String, dynamic>;
+
+      // Inject completed_at from the log row — overrides whatever is in session_data
+      return Session.fromJson({
+        ...sessionData,
+        'completedAt': item['completed_at'],
+        'userId': sessionData['userId'] ?? sessionData['user_id'],
+      });
+    }).toList();
+  }
+
+  /// Clear all logged sessions (workout history)
+  /// Use with caution - this deletes workout history permanently
+  Future<void> clearLoggedSessions() async {
+    await supabase.from('session_logs').delete().eq('user_id', userId);
+  }
+
+  // ========== Workout Presets Sync ==========
+
+  /// Upload a custom workout to user's workout library
+  /// Workouts contain complete nested exercise data as JSON
+  /// If upload fails, queues the operation for retry
+  Future<void> uploadWorkout(Workout workout, {bool isRetry = false}) async {
+    try {
+      await supabase.from('user_workouts').upsert({
+        'id': workout.id,
+        'user_id': userId,
+        'title': workout.title,
+        'label': workout.label,
+        'description': workout.description,
+        'difficulty': workout.difficulty,
+        'equipment': workout.equipment,
+        'time_between_exercises': workout.timeBetweenExercises,
+        'exercises': workout.exercises.map((e) => e.toJson()).toList(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: workout.id,
+          type: 'uploadWorkout',
+          data: workout.toJson(),
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetch all user's custom workouts from the cloud
+  Future<List<Workout>> fetchUserWorkouts() async {
+    final response = await supabase
+        .from('user_workouts')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+
+    return (response as List).map((json) {
+      // Use Workout.fromJson so field renames and backward-compat fallbacks are handled centrally
+      return Workout.fromJson({
+        ...json as Map<String, dynamic>,
+        'timeBetweenExercises': json['time_between_exercises'],
+        'userId': json['user_id'],
+      });
+    }).toList();
+  }
+
+  /// Delete a custom workout from user's library
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteWorkout(String workoutId, {bool isRetry = false}) async {
+    try {
+      await supabase
+          .from('user_workouts')
+          .delete()
+          .eq('id', workoutId)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: workoutId,
+          type: 'deleteWorkout',
+          data: {'workoutId': workoutId},
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  // ========== Trash Sync ==========
+
+  // Conflict note: if a device edits an item after another device trashed it,
+  // the edit re-uploads to _userWorkouts. The provider's load order resolves
+  // this on the next sync — trash wins over the user list when both are present.
+
+  /// Upload a trash entry to the cloud
+  /// If upload fails, queues the operation for retry
+  Future<void> uploadTrashEntry(TrashEntry entry, {bool isRetry = false}) async {
+    try {
+      await supabase.from('trash_entries').upsert({
+        'id': entry.id,
+        'user_id': userId,
+        'kind': entry.kind.name,
+        'payload': entry.toJson()['payload'],
+        'deleted_at': entry.deletedAt.toIso8601String(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: entry.id,
+          type: 'uploadTrashEntry',
+          data: entry.toJson(),
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetch all user's trash entries from the cloud
+  Future<List<TrashEntry>> fetchUserTrashEntries() async {
+    final response = await supabase
+        .from('trash_entries')
+        .select()
+        .eq('user_id', userId)
+        .order('deleted_at', ascending: false);
+
+    return (response as List).map((row) {
+      return TrashEntry.fromJson({
+        'kind': row['kind'],
+        'deletedAt': row['deleted_at']?.toString(),
+        'payload': row['payload'],
+      });
+    }).toList();
+  }
+
+  /// Delete a trash entry from the cloud
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteTrashEntry(String id, {bool isRetry = false}) async {
+    try {
+      await supabase
+          .from('trash_entries')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: id,
+          type: 'deleteTrashEntry',
+          data: {'trashEntryId': id},
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  // ========== Exercise Presets Sync ==========
+
+  /// Upload a custom exercise to user's exercise library
+  /// If upload fails, queues the operation for retry
+  Future<void> uploadExercise(Exercise exercise, {bool isRetry = false}) async {
+    try {
+      await supabase.from('user_exercises').upsert({
+        'id': exercise.id,
+        'user_id': userId,
+        'title': exercise.title,
+        'label': exercise.label,
+        'description': exercise.description,
+        'sets': exercise.sets,
+        'reps': exercise.reps,
+        'time_between_sets': exercise.timeBetweenSets,
+        'time_per_rep': exercise.timePerRep,
+        'time_between_reps': exercise.timeBetweenReps,
+        'load': exercise.load,
+        'load_unit': exercise.loadUnit,
+        'rpe': exercise.rpe,
+        'equipment': exercise.equipment,
+        'muscle_groups': exercise.muscleGroups,
+        'difficulty': exercise.difficulty,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: exercise.id,
+          type: 'uploadExercise',
+          data: exercise.toJson(),
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetch all user's custom exercises from the cloud
+  Future<List<Exercise>> fetchUserExercises() async {
+    final response = await supabase
+        .from('user_exercises')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+
+    return (response as List).map((json) {
+      // Map snake_case Supabase columns to camelCase Exercise fields
+      return Exercise(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        label: json['label'] as String,
+        description: json['description'] as String,
+        sets: json['sets'] as int,
+        reps: json['reps'] as int,
+        timeBetweenSets: json['time_between_sets'] as int,
+        timePerRep: json['time_per_rep'] as int,
+        timeBetweenReps: json['time_between_reps'] as int,
+        load: (json['load'] as num).toDouble(),
+        loadUnit: json['load_unit'] as String?,
+        rpe: json['rpe'] as int?,
+        equipment: json['equipment'] as String?,
+        muscleGroups: json['muscle_groups'] as String?,
+        difficulty: json['difficulty'] as String?,
+        userId: json['user_id'] as String,
+      );
+    }).toList();
+  }
+
+  /// Delete a custom exercise from user's library
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteExercise(String exerciseId, {bool isRetry = false}) async {
+    try {
+      await supabase
+          .from('user_exercises')
+          .delete()
+          .eq('id', exerciseId)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(SyncOperation(
+          id: exerciseId,
+          type: 'deleteExercise',
+          data: {'exerciseId': exerciseId},
+          createdAt: DateTime.now(),
+        ));
+      }
+      rethrow;
+    }
+  }
+
+  // ========== Queue Processing ==========
+
+  /// Process all queued operations
+  /// Call this when connectivity is restored
+  Future<int> processPendingSync() async {
+    return await _syncQueue.processQueue((operation) async {
+      // NOTE: this handler deliberately does NOT catch. Failures must propagate
+      // to SyncQueueService.processQueue, which classifies them (permanent vs
+      // transient), caps retries, and reports to Sentry exactly once. Returning
+      // `false` signals an un-handleable op (discarded there, not retried).
+      switch (operation.type) {
+        case 'uploadSession':
+          final session = Session.fromJson(operation.data);
+          await uploadSession(session, isRetry: true);
+          return true;
+        case 'deleteSession':
+          await deleteSession(operation.data['sessionId'] as String, isRetry: true);
+          return true;
+        case 'logSession':
+          final session = Session.fromJson(operation.data['session']);
+          // Use the original completedAt time
+          await supabase.from('session_logs').insert({
+            'user_id': userId,
+            'session_id': session.id,
+            'completed_at': operation.data['completedAt'],
+            'session_data': session.toJson(),
+          });
+          return true;
+        case 'uploadWorkout':
+          final workout = Workout.fromJson(operation.data);
+          await uploadWorkout(workout, isRetry: true);
+          return true;
+        case 'uploadExercise':
+          final exercise = Exercise.fromJson(operation.data);
+          await uploadExercise(exercise, isRetry: true);
+          return true;
+        case 'deleteWorkout':
+          await deleteWorkout(
+              operation.data['workoutId'] as String, isRetry: true);
+          return true;
+        case 'deleteExercise':
+          await deleteExercise(
+              operation.data['exerciseId'] as String, isRetry: true);
+          return true;
+        case 'uploadTrashEntry':
+          final entry = TrashEntry.fromJson(operation.data);
+          await uploadTrashEntry(entry, isRetry: true);
+          return true;
+        case 'deleteTrashEntry':
+          await deleteTrashEntry(
+              operation.data['trashEntryId'] as String, isRetry: true);
+          return true;
+        default:
+          // Unknown op type — un-handleable; processQueue discards + reports.
+          return false;
+      }
+    });
+  }
+}

@@ -2,7 +2,7 @@ import 'package:flash_forward/presentation/screens/auth_flow/email_confirmation_
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/providers/auth_provider.dart';
+import 'package:flash_forward/features/auth/auth_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';

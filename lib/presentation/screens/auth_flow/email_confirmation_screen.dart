@@ -1,10 +1,10 @@
 import 'package:flash_forward/presentation/screens/auth_flow/loading_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
-import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/services/auth_service.dart';
+import 'package:flash_forward/features/auth/auth_provider.dart';
+import 'package:flash_forward/features/auth/auth_service.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
-import 'package:flash_forward/utils/timer_utils.dart';
+import 'package:flash_forward/core/timer_utils.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
@@ -48,7 +48,8 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => const LoginScreen(showEmailConfirmationMessage: true),
+            builder:
+                (_) => const LoginScreen(showEmailConfirmationMessage: true),
           ),
         );
       }
@@ -59,18 +60,23 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
     _pollingTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
       if (!mounted) return;
 
-      final EmailStatus emailStatus = await _authProvider.pollForEmailConfirmation(
-        widget.email,
-      );
+      final EmailStatus emailStatus = await _authProvider
+          .pollForEmailConfirmation(widget.email);
 
       if (emailStatus == EmailStatus.confirmed && mounted) {
         timer.cancel();
         _countdownTimer?.cancel();
-        final success = await _authProvider.autoSignInAfterConfirmation(widget.email);
+        final success = await _authProvider.autoSignInAfterConfirmation(
+          widget.email,
+        );
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (_) => success ? const LoadingScreen() : const LoginScreen(showEmailConfirmedMessage: true),
+            builder:
+                (_) =>
+                    success
+                        ? const LoadingScreen()
+                        : const LoginScreen(showEmailConfirmedMessage: true),
           ),
           (route) => false,
         );
@@ -103,7 +109,10 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
             SizedBox(height: 16),
             Text('The confirmation email was sent to: \n${widget.email}'),
             SizedBox(height: 16),
-
+            Text(
+              "Please check your spam folder if you can't find the confirmation email", style: context.titleMedium,
+            ),
+            SizedBox(height: 16),
             Text(formatCountdown(_remainingToResend), style: context.h3),
             SizedBox(height: 16),
             OutlinedButton(

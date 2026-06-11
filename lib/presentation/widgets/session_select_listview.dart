@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
-import 'package:flash_forward/providers/session_log_provider.dart';
-import 'package:flash_forward/providers/session_state_provider.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
+import 'package:flash_forward/features/session_log/session_log_provider.dart';
+import 'package:flash_forward/features/session_active/session_state_provider.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -80,7 +80,7 @@ class MyListViewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 20, right: 20),
-      child: Consumer2<PresetProvider, SessionStateProvider>(
+      child: Consumer2<CatalogProvider, SessionStateProvider>(
         builder: (context, presetData, sessionStateData, child) {
           return Container(
             padding: EdgeInsets.all(20.0),
@@ -120,19 +120,18 @@ class MyListViewCard extends StatelessWidget {
                               presetData.presetSessions.length - 1) {
                             sessionStateData.decrementSessionIndex();
                           }
-                          presetData.deleteUserPresetSession(item[index].id);
+                          presetData.deleteSession(item[index].id);
                         },
                         icon: Icon(Icons.delete),
                       ),
                     ],
                   ],
                 ),
-                Divider(
-                  thickness: 0.75,
-                  color: context.colorScheme.onSurface,
-                ),
+                Divider(thickness: 0.75, color: context.colorScheme.onSurface),
                 // loops through the exerciseList and creates Text widget for each one. ListView iterates through the blockList.
-                for (var item in item[index].exercises) //TODO: remove the edit button in the session_select_screen
+                for (var item
+                    in item[index]
+                        .exercises) //TODO: remove the edit button in the session_select_screen
                   Text(item.title, style: context.bodyMedium),
               ],
             ),

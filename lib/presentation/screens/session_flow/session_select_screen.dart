@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -80,7 +80,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
       centerTitle: true,
     );
 
-    return Consumer<PresetProvider>(
+    return Consumer<CatalogProvider>(
       builder: (context, presetData, child) {
         final currentSessionList = presetData.presetSessions;
 
@@ -292,8 +292,15 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                       MaterialPageRoute(
                         builder:
                             (context) => NewSessionScreen(
+                              mode: NewSessionScreenMode.editBeforeStart,
                               session: session,
-                              startAfterSave: true,
+                              onSaveAndStart: (s) => Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ActiveSessionScreen(session: s),
+                                ),
+                                (route) => route.isFirst,
+                              ),
                             ),
                       ),
                     );

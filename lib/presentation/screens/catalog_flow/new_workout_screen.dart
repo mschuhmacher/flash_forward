@@ -1,11 +1,10 @@
 import 'package:flash_forward/constants/field_limits.dart';
-import 'package:flash_forward/utils/nullable.dart';
-import 'package:flash_forward/utils/superset_utils.dart';
+import 'package:flash_forward/core/nullable.dart';
+import 'package:flash_forward/core/superset_utils.dart';
 import 'package:flash_forward/data/labels.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/pending_change.dart';
 import 'package:flash_forward/models/superset_config.dart';
-import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
@@ -15,8 +14,10 @@ import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
 import 'package:flash_forward/presentation/widgets/rename_on_collision_dialog.dart';
 import 'package:flash_forward/presentation/widgets/unsaved_changes_dialog.dart';
-import 'package:flash_forward/providers/auth_provider.dart';
-import 'package:flash_forward/providers/preset_provider.dart';
+import 'package:flash_forward/features/auth/auth_provider.dart';
+import 'package:flash_forward/features/catalog/edit_commit_controller.dart';
+import 'package:flash_forward/features/catalog/catalog_provider.dart';
+import 'package:flash_forward/features/catalog/trash_provider.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -28,7 +29,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 class NewWorkoutScreen extends StatefulWidget {
   final Workout? workout;
 
-  /// When true, saving will persist the workout to [PresetProvider] (add or
+  /// When true, saving will persist the workout to [CatalogProvider] (add or
   /// update). Use this when opening the screen standalone (e.g. from the FAB
   /// or catalog). Leave false when used as a sub-editor inside another form
   /// (e.g. editing a workout within a session).
@@ -60,12 +61,16 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
   // Captured once so dirty-check has a stable baseline. Empty map for new workouts
   // so any input immediately reads as dirty.
-  late final Map<String, dynamic> _initialSnapshot = widget.workout?.toJson() ?? {};
+  late final Map<String, dynamic> _initialSnapshot =
+      widget.workout?.toJson() ?? {};
 
   bool get _isDirty {
-    if (_titleController.text.trim() != (widget.workout?.title ?? '')) return true;
+    if (_titleController.text.trim() != (widget.workout?.title ?? ''))
+      return true;
     if (_itemLabelController.text != (widget.workout?.label ?? '')) return true;
-    if (_descriptionController.text.trim() != (widget.workout?.description ?? '')) return true;
+    if (_descriptionController.text.trim() !=
+        (widget.workout?.description ?? ''))
+      return true;
     final initialRest = widget.workout?.timeBetweenExercises ?? 120;
     if (_timeBetweenExercises != initialRest) return true;
     final initialExercises = _initialSnapshot['exercises'];
@@ -93,8 +98,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   late final _descriptionController = TextEditingController(
     text: widget.workout?.description,
   );
-  late int _timeBetweenExercises =
-      widget.workout?.timeBetweenExercises ?? 120;
+  late int _timeBetweenExercises = widget.workout?.timeBetweenExercises ?? 120;
 
   @override
   void dispose() {
@@ -139,14 +143,15 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             Provider.of<AuthProvider>(context, listen: false).userId,
       );
       if (widget.persistToProvider) {
-        final presetProvider = Provider.of<PresetProvider>(
+        final catalogProvider = Provider.of<CatalogProvider>(
           context,
           listen: false,
         );
 
         if (_isNew) {
-          await presetProvider.addPresetWorkout(workout);
+          await catalogProvider.upsertWorkout(workout);
         } else {
+          final editCommit = context.read<EditCommitController>();
           final bag = PendingChangeBag()..addWorkout(workout);
           for (final ec in _pending.exercisesById.values) {
             bag.addExercise(ec.exercise);
@@ -154,7 +159,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
           // excludeWorkoutId filters the parent workout out of each exercise's
           // affected-workouts list — those edits ride along with the workout
           // commit and don't need a separate propagation entry.
-          final result = await presetProvider.commitChanges(
+          final result = await editCommit.commitChanges(
             bag,
             excludeWorkoutId: workout.id,
           );
@@ -190,7 +195,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             );
             if (selection == null) return; // user cancelled — stay on screen
             if (!selection.isEmpty) {
-              await presetProvider.propagateBag(bag, selection: selection);
+              await editCommit.propagateBag(bag, selection: selection);
             }
           }
         }
@@ -202,8 +207,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   }
 
   Future<void> _saveExerciseToCatalog(Exercise exercise) async {
-    final pp = Provider.of<PresetProvider>(context, listen: false);
-    final titles = pp.presetExercises.map((e) => e.title).toList();
+    final catalog = Provider.of<CatalogProvider>(context, listen: false);
+    final titles = catalog.presetExercises.map((e) => e.title).toList();
     String? finalTitle = exercise.title;
     if (titles.contains(exercise.title)) {
       finalTitle = await showRenameOnCollisionDialog(
@@ -213,13 +218,12 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       );
       if (finalTitle == null) return;
     }
-    await pp.liftToCatalog(
-      item:
-          finalTitle == exercise.title
-              ? exercise
-              : exercise.copyWith(title: finalTitle),
-      kind: TrashKind.exercise,
-    );
+    final toSave =
+        finalTitle == exercise.title
+            ? exercise
+            : exercise.copyWith(title: finalTitle);
+    await catalog.upsertExercise(toSave);
+    
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -569,336 +573,343 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         }
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SizedBox.shrink(),
-            Text(_isNew ? 'New workout' : 'Edit workout'),
-            ElevatedButton(
-              onPressed: _save,
-              style: ButtonStyle().copyWith(
-                padding: WidgetStatePropertyAll(
-                  EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                ),
-              ),
-              child: Text('Save'),
-            ),
-          ],
-        ),
-      ),
-      body: Form(
-        key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Column(
+        appBar: AppBar(
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SizedBox(height: 16),
-              GroupFormCard(
-                children: [
-                  GroupFormRow(
-                    label: 'Title',
-                    trailing: GroupFormCounter(
-                      current: _titleController.text.length,
-                      max: FieldLimits.workoutTitleMaxLength,
-                    ),
-                    child: TextFormField(
-                      controller: _titleController,
-                      maxLength: FieldLimits.workoutTitleMaxLength,
-                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        counterText: '',
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      validator: (v) {
-                        final presetProvider = Provider.of<PresetProvider>(
-                          context,
-                          listen: false,
-                        );
-                        return FieldValidators.workoutTitle(
-                          v,
-                          existingTitles:
-                              presetProvider.presetWorkouts
-                                  .map((w) => w.title)
-                                  .toList(),
-                          ownTitle: widget.workout?.title,
-                        );
-                      },
-                    ),
+              SizedBox.shrink(),
+              Text(_isNew ? 'New workout' : 'Edit workout'),
+              ElevatedButton(
+                onPressed: _save,
+                style: ButtonStyle().copyWith(
+                  padding: WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                   ),
-                  GroupFormRow(
-                    label: 'Label',
-                    child: MyLabelDropdownButton(
-                      value:
-                          _itemLabelController.text.isNotEmpty
-                              ? _itemLabelController.text
-                              : null,
-                      onChanged: (value) {
-                        setState(() {
-                          _itemLabelController.text = value ?? '';
-                        });
-                      },
-                      validator: FieldValidators.label,
-                      flat: true,
-                    ),
-                  ),
-                  GroupFormRow(
-                    label: 'Info',
-                    trailing: GroupFormCounter(
-                      current: _descriptionController.text.length,
-                      max: FieldLimits.workoutDescriptionMaxLength,
-                    ),
-                    child: TextFormField(
-                      controller: _descriptionController,
-                      maxLength: FieldLimits.workoutDescriptionMaxLength,
-                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                      maxLines: null,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        counterText: '',
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      validator: FieldValidators.workoutDescription,
-                    ),
-                  ),
-                  GroupFormRestRow(
-                    label: 'Rest between exercises',
-                    value: _timeBetweenExercises,
-                    minimum: 0,
-                    maximum: FieldLimits.timeLimit,
-                    onDecrement: () => setState(
-                      () => _timeBetweenExercises =
-                          (_timeBetweenExercises - 5).clamp(0, FieldLimits.timeLimit),
-                    ),
-                    onIncrement: () => setState(
-                      () => _timeBetweenExercises =
-                          (_timeBetweenExercises + 5).clamp(0, FieldLimits.timeLimit),
-                    ),
-                  ),
-                ],
+                ),
+                child: Text('Save'),
               ),
-              SizedBox(height: 8),
-              workout.exercises.isEmpty
-                  ? Expanded(
-                    child: Center(
-                      child: Text(
-                        'No exercises yet',
-                        style: context.bodyMedium.copyWith(
-                          color: context.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  )
-                  : Expanded(
-                    child: ReorderableListView.builder(
-                      padding: EdgeInsets.only(top: 4, bottom: 16),
-                      itemCount: workout.exercises.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        final exercise = workout.exercises[index];
-                        final presetProvider = Provider.of<PresetProvider>(
-                          context,
-                          listen: false,
-                        );
-                        final notInCatalog = presetProvider.presetExercises
-                            .every((e) => e.id != exercise.id);
-                        final notInTrash = presetProvider.trashedItems.every(
-                          (e) => e.id != exercise.id,
-                        );
-                        final paletteIndex = _supersetIndexForExercise(
-                          exercise,
-                        );
-                        final superset = _supersetForExercise(exercise);
-                        // While dragging a superset member, fade the OTHER
-                        // members of the same block so the user reads the
-                        // dragged card (with its peek-stack proxy) as
-                        // representing the whole group.
-                        final fadeSibling =
-                            _draggingSupersetId != null &&
-                            superset?.id == _draggingSupersetId &&
-                            index != _draggingExerciseIndex;
-                        final card = _ExerciseCard(
-                          exercise: exercise,
-                          onCopy: () => _copyExercise(exercise),
-                          onDelete: () => _deleteExercise(exercise),
-                          onSuperset: () => _onSupersetSlidableTap(exercise),
-                          onSaveToCatalog:
-                              (notInCatalog && notInTrash)
-                                  ? () => _saveExerciseToCatalog(exercise)
-                                  : null,
-                          supersetPaletteIndex: paletteIndex,
-                          supersetSets: superset?.supersetSets,
-                          supersetSetRest: superset?.supersetSetRest,
-                          onTap: () async {
-                            final result =
-                                await Navigator.push<NewExerciseResult>(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => NewExerciseScreen(
-                                          exercise: exercise,
-                                          parentWorkout: _workout,
-                                        ),
-                                  ),
-                                );
-                            if (result == null) return;
-                            setState(() {
-                              _workout.exercises[index] = result.exercise;
-                              if (result.supersetSetsChange != null) {
-                                _workout = _workout.copyWith(
-                                  supersets:
-                                      _workout.supersets
-                                          .map(
-                                            (ss) =>
-                                                ss.exerciseIds.contains(
-                                                      result.exercise.id,
-                                                    )
-                                                    ? ss.copyWith(
-                                                      supersetSets:
-                                                          result
-                                                              .supersetSetsChange,
-                                                    )
-                                                    : ss,
-                                          )
-                                          .toList(),
-                                );
-                              }
-                            });
-                            // Track the exercise change so Save can propagate it.
-                            // Copies (from _copyExercise) are brand-new ids with
-                            // no existing consumers, so they are never added here.
-                            // Skip when nothing actually changed — avoids
-                            // spurious propagation prompts on no-op edits.
-                            final changed =
-                                !_mapsEqual(
-                                  exercise.toJson(),
-                                  result.exercise.toJson(),
-                                );
-                            if (changed || result.supersetSetsChange != null) {
-                              _pending.addExercise(result.exercise);
-                            }
-                          },
-                        );
-                        return KeyedSubtree(
-                          // Keep the same key contract on the outer widget
-                          // so ReorderableListView identifies items
-                          // consistently across rebuilds.
-                          key: ValueKey('$index-${exercise.id}'),
-                          child: AnimatedOpacity(
-                            opacity: fadeSibling ? 0.2 : 1.0,
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
-                            child: card,
-                          ),
-                        );
-                      },
-                      onReorder: _onReorder,
-                      onReorderStart: (index) {
-                        final exercise = _workout.exercises[index];
-                        final ss = _supersetForExercise(exercise);
-                        setState(() {
-                          _draggingSupersetId = ss?.id;
-                          _draggingExerciseIndex = index;
-                        });
-                      },
-                      onReorderEnd: (_) {
-                        setState(() {
-                          _draggingSupersetId = null;
-                          _draggingExerciseIndex = null;
-                        });
-                      },
-                      proxyDecorator: (child, index, animation) {
-                        final exercise = _workout.exercises[index];
-                        final ss = _supersetForExercise(exercise);
-                        if (ss == null) return child;
-                        // Cap visible stack edges so very large supersets
-                        // don't render an unwieldy tower of peeks.
-                        final siblingCount = (ss.exerciseIds.length - 1).clamp(
-                          0,
-                          3,
-                        );
-                        // Peeks render BELOW the lifted card via negative
-                        // `bottom` + Clip.none, fanning out from underneath.
-                        // Stack with no `bottom` clipping means hit-test
-                        // bounds equal the card's intrinsic size.
-                        return Material(
-                          color: Colors.transparent,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              for (var i = siblingCount; i > 0; i--)
-                                Positioned(
-                                  bottom: -i * 4.0,
-                                  left: i * 3.0,
-                                  right: i * 3.0,
-                                  child: Container(
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: context.colorScheme.surfaceBright,
-                                      border: Border.all(
-                                        color: context.colorScheme.outline
-                                            .withValues(alpha: 0.3),
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.08,
-                                          ),
-                                          blurRadius: 3,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              child,
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          List<Exercise>? newExercises = await Navigator.push(
-            context,
-            MaterialPageRoute<List<Exercise>>(
-              builder:
-                  (context) => AddItemScreen(
-                    itemType: ItemType.exercises,
-                    existingItemIds: existingExerciseIds,
-                  ),
+        body: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Column(
+              children: [
+                SizedBox(height: 16),
+                GroupFormCard(
+                  children: [
+                    GroupFormRow(
+                      label: 'Title',
+                      trailing: GroupFormCounter(
+                        current: _titleController.text.length,
+                        max: FieldLimits.workoutTitleMaxLength,
+                      ),
+                      child: TextFormField(
+                        controller: _titleController,
+                        maxLength: FieldLimits.workoutTitleMaxLength,
+                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          counterText: '',
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        validator: (v) {
+                          final catalogProvider = Provider.of<CatalogProvider>(
+                            context,
+                            listen: false,
+                          );
+                          return FieldValidators.workoutTitle(
+                            v,
+                            existingTitles:
+                                catalogProvider.presetWorkouts
+                                    .map((w) => w.title)
+                                    .toList(),
+                            ownTitle: widget.workout?.title,
+                          );
+                        },
+                      ),
+                    ),
+                    GroupFormRow(
+                      label: 'Label',
+                      child: MyLabelDropdownButton(
+                        value:
+                            _itemLabelController.text.isNotEmpty
+                                ? _itemLabelController.text
+                                : null,
+                        onChanged: (value) {
+                          setState(() {
+                            _itemLabelController.text = value ?? '';
+                          });
+                        },
+                        validator: FieldValidators.label,
+                        flat: true,
+                      ),
+                    ),
+                    GroupFormRow(
+                      label: 'Info',
+                      trailing: GroupFormCounter(
+                        current: _descriptionController.text.length,
+                        max: FieldLimits.workoutDescriptionMaxLength,
+                      ),
+                      child: TextFormField(
+                        controller: _descriptionController,
+                        maxLength: FieldLimits.workoutDescriptionMaxLength,
+                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                        maxLines: null,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          counterText: '',
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        validator: FieldValidators.workoutDescription,
+                      ),
+                    ),
+                    GroupFormRestRow(
+                      label: 'Rest between exercises',
+                      value: _timeBetweenExercises,
+                      minimum: 0,
+                      maximum: FieldLimits.timeLimit,
+                      onDecrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenExercises = (_timeBetweenExercises -
+                                        5)
+                                    .clamp(0, FieldLimits.timeLimit),
+                          ),
+                      onIncrement:
+                          () => setState(
+                            () =>
+                                _timeBetweenExercises = (_timeBetweenExercises +
+                                        5)
+                                    .clamp(0, FieldLimits.timeLimit),
+                          ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                workout.exercises.isEmpty
+                    ? Expanded(
+                      child: Center(
+                        child: Text(
+                          'No exercises yet',
+                          style: context.bodyMedium.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    )
+                    : Expanded(
+                      child: ReorderableListView.builder(
+                        padding: EdgeInsets.only(top: 4, bottom: 16),
+                        itemCount: workout.exercises.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final exercise = workout.exercises[index];
+                          final catalogProvider = Provider.of<CatalogProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final trash = context.read<TrashProvider>();
+                          final notInCatalog = catalogProvider.presetExercises
+                              .every((e) => e.id != exercise.id);
+                          final notInTrash = trash.trashedItems.every(
+                            (e) => e.id != exercise.id,
+                          );
+                          final paletteIndex = _supersetIndexForExercise(
+                            exercise,
+                          );
+                          final superset = _supersetForExercise(exercise);
+                          // While dragging a superset member, fade the OTHER
+                          // members of the same block so the user reads the
+                          // dragged card (with its peek-stack proxy) as
+                          // representing the whole group.
+                          final fadeSibling =
+                              _draggingSupersetId != null &&
+                              superset?.id == _draggingSupersetId &&
+                              index != _draggingExerciseIndex;
+                          final card = _ExerciseCard(
+                            exercise: exercise,
+                            onCopy: () => _copyExercise(exercise),
+                            onDelete: () => _deleteExercise(exercise),
+                            onSuperset: () => _onSupersetSlidableTap(exercise),
+                            onSaveToCatalog:
+                                (notInCatalog && notInTrash)
+                                    ? () => _saveExerciseToCatalog(exercise)
+                                    : null,
+                            supersetPaletteIndex: paletteIndex,
+                            supersetSets: superset?.supersetSets,
+                            supersetSetRest: superset?.supersetSetRest,
+                            onTap: () async {
+                              final result =
+                                  await Navigator.push<NewExerciseResult>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => NewExerciseScreen(
+                                            exercise: exercise,
+                                            parentWorkout: _workout,
+                                          ),
+                                    ),
+                                  );
+                              if (result == null) return;
+                              setState(() {
+                                _workout.exercises[index] = result.exercise;
+                                if (result.supersetSetsChange != null) {
+                                  _workout = _workout.copyWith(
+                                    supersets:
+                                        _workout.supersets
+                                            .map(
+                                              (ss) =>
+                                                  ss.exerciseIds.contains(
+                                                        result.exercise.id,
+                                                      )
+                                                      ? ss.copyWith(
+                                                        supersetSets:
+                                                            result
+                                                                .supersetSetsChange,
+                                                      )
+                                                      : ss,
+                                            )
+                                            .toList(),
+                                  );
+                                }
+                              });
+                              // Track the exercise change so Save can propagate it.
+                              // Copies (from _copyExercise) are brand-new ids with
+                              // no existing consumers, so they are never added here.
+                              // Skip when nothing actually changed — avoids
+                              // spurious propagation prompts on no-op edits.
+                              final changed =
+                                  !_mapsEqual(
+                                    exercise.toJson(),
+                                    result.exercise.toJson(),
+                                  );
+                              if (changed ||
+                                  result.supersetSetsChange != null) {
+                                _pending.addExercise(result.exercise);
+                              }
+                            },
+                          );
+                          return KeyedSubtree(
+                            // Keep the same key contract on the outer widget
+                            // so ReorderableListView identifies items
+                            // consistently across rebuilds.
+                            key: ValueKey('$index-${exercise.id}'),
+                            child: AnimatedOpacity(
+                              opacity: fadeSibling ? 0.2 : 1.0,
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOut,
+                              child: card,
+                            ),
+                          );
+                        },
+                        onReorder: _onReorder,
+                        onReorderStart: (index) {
+                          final exercise = _workout.exercises[index];
+                          final ss = _supersetForExercise(exercise);
+                          setState(() {
+                            _draggingSupersetId = ss?.id;
+                            _draggingExerciseIndex = index;
+                          });
+                        },
+                        onReorderEnd: (_) {
+                          setState(() {
+                            _draggingSupersetId = null;
+                            _draggingExerciseIndex = null;
+                          });
+                        },
+                        proxyDecorator: (child, index, animation) {
+                          final exercise = _workout.exercises[index];
+                          final ss = _supersetForExercise(exercise);
+                          if (ss == null) return child;
+                          // Cap visible stack edges so very large supersets
+                          // don't render an unwieldy tower of peeks.
+                          final siblingCount = (ss.exerciseIds.length - 1)
+                              .clamp(0, 3);
+                          // Peeks render BELOW the lifted card via negative
+                          // `bottom` + Clip.none, fanning out from underneath.
+                          // Stack with no `bottom` clipping means hit-test
+                          // bounds equal the card's intrinsic size.
+                          return Material(
+                            color: Colors.transparent,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                for (var i = siblingCount; i > 0; i--)
+                                  Positioned(
+                                    bottom: -i * 4.0,
+                                    left: i * 3.0,
+                                    right: i * 3.0,
+                                    child: Container(
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            context.colorScheme.surfaceBright,
+                                        border: Border.all(
+                                          color: context.colorScheme.outline
+                                              .withValues(alpha: 0.3),
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.08,
+                                            ),
+                                            blurRadius: 3,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                child,
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+              ],
             ),
-          );
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            List<Exercise>? newExercises = await Navigator.push(
+              context,
+              MaterialPageRoute<List<Exercise>>(
+                builder:
+                    (context) => AddItemScreen(
+                      itemType: ItemType.exercises,
+                      existingItemIds: existingExerciseIds,
+                    ),
+              ),
+            );
 
-          if (newExercises != null && newExercises.isNotEmpty) {
-            setState(() {
-              _workout = _workout.copyWith(
-                exercises: [..._workout.exercises, ...newExercises],
-              );
-            });
-          }
-        },
+            if (newExercises != null && newExercises.isNotEmpty) {
+              setState(() {
+                _workout = _workout.copyWith(
+                  exercises: [..._workout.exercises, ...newExercises],
+                );
+              });
+            }
+          },
 
-        child: Icon(Icons.add),
+          child: Icon(Icons.add),
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _ExerciseCard extends StatelessWidget {
@@ -982,8 +993,11 @@ class _ExerciseCard extends StatelessWidget {
               SlidableAction(
                 borderRadius: BorderRadius.circular(12),
                 onPressed: (_) => onSuperset(),
-                backgroundColor: supersetPaletteIndex != null
-                        ? supersetColorForIndex(supersetPaletteIndex!) : kDefaultLabels[exercise.label]?.color ?? context.colorScheme.secondary,
+                backgroundColor:
+                    supersetPaletteIndex != null
+                        ? supersetColorForIndex(supersetPaletteIndex!)
+                        : kDefaultLabels[exercise.label]?.color ??
+                            context.colorScheme.secondary,
                 foregroundColor: context.colorScheme.onPrimary,
                 icon:
                     supersetPaletteIndex != null
@@ -1013,9 +1027,10 @@ class _ExerciseCard extends StatelessWidget {
   }
 
   Widget _cardBody(BuildContext context) {
-    final supersetColor = supersetPaletteIndex != null
-        ? supersetColorForIndex(supersetPaletteIndex!)
-        : null;
+    final supersetColor =
+        supersetPaletteIndex != null
+            ? supersetColorForIndex(supersetPaletteIndex!)
+            : null;
     final content = Padding(
       padding: EdgeInsets.only(
         left: supersetColor != null ? 10 : 14,
@@ -1093,19 +1108,20 @@ class _ExerciseCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15),
-        child: supersetColor != null
-            ? Stack(
-                children: [
-                  content,
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    child: Container(width: 4, color: supersetColor),
-                  ),
-                ],
-              )
-            : content,
+        child:
+            supersetColor != null
+                ? Stack(
+                  children: [
+                    content,
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(width: 4, color: supersetColor),
+                    ),
+                  ],
+                )
+                : content,
       ),
     );
   }
