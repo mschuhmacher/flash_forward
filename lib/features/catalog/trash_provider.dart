@@ -11,6 +11,14 @@ import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+/// A trash entry plus whether it is a deleted default (a fork), for the
+/// Restore screen.
+class RestorableEntry {
+  const RestorableEntry(this.entry, this.isDefault);
+  final TrashEntry entry;
+  final bool isDefault;
+}
+
 class TrashProvider extends ChangeNotifier {
   TrashProvider({
     required CatalogProvider catalog,
@@ -39,6 +47,28 @@ class TrashProvider extends ChangeNotifier {
         .where((e) => e.kind == kind)
         .map((e) => e.shadowId)
         .toSet();
+  }
+
+  /// All trash entries, newest-deletion first, each tagged with whether it is a
+  /// deleted default (a fork — `shadowId != id`). Drives the Restore screen.
+  List<RestorableEntry> get entriesByRecency {
+    final list = _trashedItems
+        .map((e) => RestorableEntry(e, e.shadowId != e.id))
+        .toList()
+      ..sort((a, b) => b.entry.deletedAt.compareTo(a.entry.deletedAt));
+    return list;
+  }
+
+  /// Every deleted default (any age) — the target of "Restore all defaults".
+  List<TrashEntry> get deletedDefaults =>
+      _trashedItems.where((e) => e.shadowId != e.id).toList();
+
+  /// Restores every deleted default — a factory reset of the catalog. Recent
+  /// and long-purge-exempt defaults alike. Each goes through [restoreFromTrash].
+  Future<void> restoreAllDefaults() async {
+    for (final entry in deletedDefaults) {
+      await restoreFromTrash(entry.id);
+    }
   }
 
   @visibleForTesting

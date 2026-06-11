@@ -88,6 +88,40 @@ void main() {
     });
   });
 
+  group('restore screen data', () {
+    test('entriesByRecency sorts newest-first and flags defaults', () {
+      final userE =
+          TrashEntry.session(session: _session(id: 'u-1'), deletedAt: DateTime(2026, 6, 1));
+      final defE = TrashEntry.session(
+        session: _session(id: 'x').copyWith(id: 'fork', templateId: 'cat-s'),
+        deletedAt: DateTime(2026, 6, 5),
+      );
+      trash.debugSeedTrash([userE, defE]);
+
+      final view = trash.entriesByRecency;
+      expect(view.first.entry.id, 'fork'); // newest first
+      expect(view.first.isDefault, isTrue);
+      expect(view.last.entry.id, 'u-1');
+      expect(view.last.isDefault, isFalse);
+    });
+
+    test('restoreAllDefaults restores every deleted default', () async {
+      catalog.debugSeedDefaults(
+        sessions: [_session(id: 'cat-s1'), _session(id: 'cat-s2')],
+      );
+      await trash.deleteToTrash(id: 'cat-s1', kind: TrashKind.session);
+      await trash.deleteToTrash(id: 'cat-s2', kind: TrashKind.session);
+      expect(trash.deletedDefaults.length, 2);
+
+      await trash.restoreAllDefaults();
+
+      expect(trash.trashedItems, isEmpty);
+      // Both defaults are restored (as forks shadowing the stock defaults).
+      expect(catalog.presetSessions.where((s) => s.templateId == 'cat-s1'), hasLength(1));
+      expect(catalog.presetSessions.where((s) => s.templateId == 'cat-s2'), hasLength(1));
+    });
+  });
+
   group('trashedItems getter', () {
     test('trashedItems is empty on a fresh provider', () {
       expect(trash.trashedItems, isEmpty);
