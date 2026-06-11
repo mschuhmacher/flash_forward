@@ -55,6 +55,9 @@ class TrashService {
     return purged.map((e) => e.id).toList();
   }
 
+  /// Removes every entry from the local trash file (used by factory reset).
+  Future<void> clear() async => _write(const []);
+
   Future<void> _write(List<TrashEntry> entries) async {
     final file = await _file();
     await file.writeAsString(

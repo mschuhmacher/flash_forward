@@ -8,15 +8,17 @@ import 'package:provider/provider.dart';
 
 /// Settings screen for restoring deleted items.
 ///
-/// Entries are shown newest-deletion first. Deleted *defaults* are tagged
-/// "default" and never expire, so the long tail (older than the 90-day TTL —
-/// necessarily all defaults, since user items are purged by then) is tucked
-/// into a collapsed "Older" section. That section also offers a low-emphasis
-/// "Restore all defaults" reset-to-factory action.
+/// Two lists:
+///  - "Recent removals": everything deleted in the last 90 days, newest first.
+///    Each row labels the kind (Session/Workout/Exercise) and whether it is a
+///    default, with a right-aligned box showing days until expiry (user items)
+///    or days since removal (defaults, which never expire).
+///  - "Removed default data": collapsed by default; the >90-day tail, which is
+///    necessarily all defaults (user items are purged by then).
 ///
-/// When restoring, if an item's title clashes with an existing catalog entry
-/// the user is asked to pick a new title via [showRenameOnCollisionDialog]
-/// before the restore proceeds.
+/// Below them, an error-coloured outlined "Factory reset" button wipes all
+/// user-generated items (local + cloud) and restores every deleted default to
+/// stock, gated behind a type-"factory reset"-to-confirm prompt.
 class RestoreItemsScreen extends StatefulWidget {
   const RestoreItemsScreen({super.key});
 
@@ -29,20 +31,24 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  int _daysRemaining(DateTime deletedAt) {
+  int _daysUntilExpiry(DateTime deletedAt) {
     final expiresAt = deletedAt.add(const Duration(days: 90));
-    final diff = expiresAt.difference(DateTime.now());
-    return diff.inDays.clamp(0, 90);
+    return expiresAt.difference(DateTime.now()).inDays.clamp(0, 90);
   }
 
-  bool _titleClashes(CatalogProvider catalog, TrashEntry entry) {
-    return _existingTitlesForKind(catalog, entry.kind).contains(entry.title);
-  }
+  int _daysSinceRemoval(DateTime deletedAt) =>
+      DateTime.now().difference(deletedAt).inDays.clamp(0, 1 << 31);
 
-  List<String> _existingTitlesForKind(
-    CatalogProvider catalog,
-    TrashKind kind,
-  ) {
+  String _kindLabel(TrashKind kind) => switch (kind) {
+        TrashKind.session => 'Session',
+        TrashKind.workout => 'Workout',
+        TrashKind.exercise => 'Exercise',
+      };
+
+  bool _titleClashes(CatalogProvider catalog, TrashEntry entry) =>
+      _existingTitlesForKind(catalog, entry.kind).contains(entry.title);
+
+  List<String> _existingTitlesForKind(CatalogProvider catalog, TrashKind kind) {
     return switch (kind) {
       TrashKind.session => catalog.presetSessions.map((s) => s.title).toList(),
       TrashKind.workout => catalog.presetWorkouts.map((w) => w.title).toList(),
@@ -51,7 +57,7 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
     };
   }
 
-  // ── Restore actions ─────────────────────────────────────────────────────────
+  // ── Actions ─────────────────────────────────────────────────────────────────
 
   Future<void> _restoreSelected(
     CatalogProvider catalog,
@@ -89,53 +95,70 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
     setState(() => _selected.clear());
   }
 
-  Future<void> _restoreAllDefaults(TrashProvider trash) async {
-    final confirmed = await showDialog<bool>(
+  Future<void> _factoryReset(CatalogProvider catalog, TrashProvider trash) async {
+    final controller = TextEditingController();
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Restore all defaults?'),
-        content: const Text(
-          'This brings back every deleted built-in preset, resetting your '
-          'catalog to the factory defaults.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Factory reset?', style: context.h3),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'This deletes all your created sessions, workouts and exercises '
+                'and restores every removed default. This is irreversible.',
+                style: context.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Text("Type 'factory reset' to confirm.", style: context.bodyMedium),
+              const SizedBox(height: 8),
+              TextField(controller: controller),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Restore all'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller,
+              builder: (context, value, child) {
+                return ElevatedButton(
+                  onPressed: value.text == 'factory reset'
+                      ? () => Navigator.of(context).pop(true)
+                      : null,
+                  child: const Text('Factory reset'),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
-    if (confirmed != true) return;
-    await trash.restoreAllDefaults();
+
+    if (confirm != true) return;
+    await catalog.factoryReset();
+    await trash.clearAll();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Restored all default presets')),
-    );
     setState(() => _selected.clear());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Catalog reset to factory defaults')),
+    );
   }
 
-  // ── Row builder ─────────────────────────────────────────────────────────────
+  // ── Row ──────────────────────────────────────────────────────────────────────
 
   Widget _row(RestorableEntry r) {
     final entry = r.entry;
-    final String subtitle;
-    if (r.isDefault) {
-      subtitle = 'Hidden default';
-    } else {
-      final days = _daysRemaining(entry.deletedAt);
-      subtitle = days == 0
-          ? 'Expires today'
-          : 'Expires in $days day${days == 1 ? '' : 's'}';
-    }
-    final isUrgent = !r.isDefault && _daysRemaining(entry.deletedAt) <= 7;
+    final scheme = Theme.of(context).colorScheme;
+    final subtitle =
+        r.isDefault ? '${_kindLabel(entry.kind)} · default' : _kindLabel(entry.kind);
 
     return CheckboxListTile(
       value: _selected.contains(entry.id),
+      controlAffinity: ListTileControlAffinity.leading,
       onChanged: (checked) => setState(() {
         if (checked == true) {
           _selected.add(entry.id);
@@ -143,22 +166,18 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
           _selected.remove(entry.id);
         }
       }),
-      title: Row(
-        children: [
-          Expanded(child: Text(entry.title, style: context.bodyLarge)),
-          if (r.isDefault) const _DefaultChip(),
-        ],
-      ),
+      title: Text(entry.title, style: context.bodyLarge),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          color: isUrgent
-              ? Theme.of(context).colorScheme.error
-              : Theme.of(context).colorScheme.onSurfaceVariant,
-          fontSize: 13,
-        ),
+        style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
       ),
-      controlAffinity: ListTileControlAffinity.leading,
+      secondary: _DaysBox(
+        days: r.isDefault
+            ? _daysSinceRemoval(entry.deletedAt)
+            : _daysUntilExpiry(entry.deletedAt),
+        caption: r.isDefault ? 'ago' : 'left',
+        urgent: !r.isDefault && _daysUntilExpiry(entry.deletedAt) <= 7,
+      ),
     );
   }
 
@@ -171,14 +190,9 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
       body: Consumer2<CatalogProvider, TrashProvider>(
         builder: (context, catalog, trash, _) {
           final all = trash.entriesByRecency;
-          if (all.isEmpty) {
-            return const Center(child: Text('Trash is empty'));
-          }
-
           final cutoff = DateTime.now().subtract(const Duration(days: 90));
           final recent =
               all.where((r) => r.entry.deletedAt.isAfter(cutoff)).toList();
-          // Older than the TTL — necessarily all defaults (user items purge).
           final older =
               all.where((r) => !r.entry.deletedAt.isAfter(cutoff)).toList();
 
@@ -187,26 +201,36 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
               Expanded(
                 child: ListView(
                   children: [
-                    ...recent.map(_row),
-                    if (older.isNotEmpty)
-                      ExpansionTile(
-                        title: Text('Older (${older.length})', style: context.h3),
-                        children: [
-                          ...older.map(_row),
-                          Padding(
-                            padding:
-                                const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton(
-                                onPressed: () => _restoreAllDefaults(trash),
-                                child: const Text('Restore all defaults'),
-                              ),
+                    _SectionHeader('Recent removals'),
+                    if (recent.isEmpty)
+                      const _EmptyHint('Nothing removed in the last 90 days')
+                    else
+                      ...recent.map(_row),
+                    ExpansionTile(
+                      title: Text('Removed default data', style: context.h3),
+                      childrenPadding: EdgeInsets.zero,
+                      children: older.isEmpty
+                          ? [const _EmptyHint('No older removed defaults')]
+                          : older.map(_row).toList(),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: () => _factoryReset(catalog, trash),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor:
+                                Theme.of(context).colorScheme.error,
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.error,
                             ),
                           ),
-                        ],
+                          child: const Text('Factory reset'),
+                        ),
                       ),
-                    const SizedBox(height: 80), // breathing room above button
+                    ),
+                    const SizedBox(height: 80), // room above pinned button
                   ],
                 ),
               ),
@@ -232,21 +256,65 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
   }
 }
 
-class _DefaultChip extends StatelessWidget {
-  const _DefaultChip();
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+        child: Text(text, style: context.h3),
+      );
+}
+
+class _EmptyHint extends StatelessWidget {
+  const _EmptyHint(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Text(
+          text,
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      );
+}
+
+/// Right-aligned box showing a day count with a small caption.
+class _DaysBox extends StatelessWidget {
+  const _DaysBox({
+    required this.days,
+    required this.caption,
+    required this.urgent,
+  });
+
+  final int days;
+  final String caption;
+  final bool urgent;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final color = urgent ? scheme.error : scheme.onSurfaceVariant;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      width: 56,
+      padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: scheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(10),
+        color: (urgent ? scheme.errorContainer : scheme.surfaceContainerHighest)
+            .withValues(alpha: urgent ? 1 : 0.6),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        'default',
-        style: TextStyle(fontSize: 11, color: scheme.onSecondaryContainer),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$days',
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w600, color: color),
+          ),
+          Text(caption, style: TextStyle(fontSize: 10, color: color)),
+        ],
       ),
     );
   }

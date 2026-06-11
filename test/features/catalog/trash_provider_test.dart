@@ -122,6 +122,34 @@ void main() {
     });
   });
 
+  group('factory reset', () {
+    test('clearAll empties trash and un-shadows deleted defaults', () async {
+      catalog.debugSeedDefaults(sessions: [_session(id: 'cat-s')]);
+      await trash.deleteToTrash(id: 'cat-s', kind: TrashKind.session);
+      expect(catalog.presetSessions.any((s) => s.id == 'cat-s'), isFalse);
+
+      await trash.clearAll();
+
+      expect(trash.trashedItems, isEmpty);
+      // Stock default is visible again.
+      expect(catalog.presetSessions.any((s) => s.id == 'cat-s'), isTrue);
+    });
+
+    test('catalog.factoryReset removes user items and leaves stock defaults',
+        () async {
+      catalog.debugSeedDefaults(sessions: [_session(id: 'cat-s', title: 'Stock')]);
+      await catalog.upsertSession(_session(id: 'cat-s', title: 'Mine')); // forks
+      await catalog.upsertSession(_session(id: 'user-1', title: 'Solo'));
+      expect(catalog.presetSessions.map((s) => s.title).toSet(), {'Mine', 'Solo'});
+
+      await catalog.factoryReset();
+
+      // Fork + Solo gone; the stock default is un-shadowed.
+      expect(catalog.presetSessions.map((s) => s.title).toList(), ['Stock']);
+      expect(catalog.presetUserSessionIDs, isEmpty);
+    });
+  });
+
   group('trashedItems getter', () {
     test('trashedItems is empty on a fresh provider', () {
       expect(trash.trashedItems, isEmpty);

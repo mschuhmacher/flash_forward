@@ -225,6 +225,22 @@ class CatalogProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Factory reset of the catalog: deletes every user item locally **and** in
+  /// the cloud (per-row, so the cloud row is gone and won't re-sync). Removing
+  /// the user items also un-shadows the defaults they forked, leaving only
+  /// stock defaults. Trash is cleared separately via [TrashProvider.clearAll].
+  Future<void> factoryReset() async {
+    for (final id in _userSessions.map((s) => s.id).toList()) {
+      await deleteSession(id);
+    }
+    for (final id in _userWorkouts.map((w) => w.id).toList()) {
+      await deleteWorkout(id);
+    }
+    for (final id in _userExercises.map((e) => e.id).toList()) {
+      await deleteExercise(id);
+    }
+  }
+
   Future<void> deleteAllUserPresetSessions() async {
     _userSessions = [];
 

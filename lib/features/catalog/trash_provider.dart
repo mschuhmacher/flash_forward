@@ -71,6 +71,25 @@ class TrashProvider extends ChangeNotifier {
     }
   }
 
+  /// Empties the trash locally and in the cloud. Clearing default-derived
+  /// entries un-shadows their stock defaults — part of a factory reset.
+  Future<void> clearAll() async {
+    final ids = _trashedItems.map((e) => e.id).toList();
+    _trashedItems = [];
+    await _trashService.clear();
+    final service = _syncStatus.service;
+    if (service != null) {
+      for (final id in ids) {
+        try {
+          await service.deleteTrashEntry(id);
+        } catch (e, st) {
+          Sentry.captureException(e, stackTrace: st);
+        }
+      }
+    }
+    notifyListeners();
+  }
+
   @visibleForTesting
   void debugSeedTrash(List<TrashEntry> entries) {
     _trashedItems = List.from(entries);
