@@ -113,6 +113,30 @@ void main() {
       expect(remaining.first.id, 'recent');
     });
 
+    test('purgeOlderThan keeps default-derived entries regardless of age',
+        () async {
+      final now = DateTime(2026, 4, 30);
+      final oldUser = TrashEntry.session(
+        session: _se('u-old'),
+        deletedAt: now.subtract(const Duration(days: 200)),
+      );
+      // A forked default: templateId set, so shadowId != id.
+      final oldDefault = TrashEntry.session(
+        session: _se('x').copyWith(id: 'fork-uuid', templateId: 'projecting-session'),
+        deletedAt: now.subtract(const Duration(days: 200)),
+      );
+
+      await svc.add(oldUser);
+      await svc.add(oldDefault);
+
+      final purged = await svc.purgeOlderThan(const Duration(days: 90), now: now);
+      expect(purged, contains('u-old')); // user item purged
+      expect(purged, isNot(contains('fork-uuid'))); // default kept
+
+      final remaining = await svc.readAll();
+      expect(remaining.map((e) => e.id), ['fork-uuid']);
+    });
+
     test('restore returns the entry and removes it; unknown id returns null',
         () async {
       final now = DateTime(2026, 4, 30);

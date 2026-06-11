@@ -39,12 +39,18 @@ class TrashService {
   /// Purges entries older than [ttl] from the local trash file and returns the
   /// ids that were removed. Callers that also sync to the cloud use the returned
   /// ids to delete the corresponding cloud rows.
+  ///
+  /// Default-derived entries (a deleted/customized default — `shadowId != id`,
+  /// i.e. `templateId` is set) are **never** auto-purged: they are the durable
+  /// record that keeps a stock default hidden, and there are only ever a few.
   Future<List<String>> purgeOlderThan(Duration ttl, {DateTime? now}) async {
     final cutoff = (now ?? DateTime.now()).subtract(ttl);
+    bool isExpired(TrashEntry e) =>
+        e.deletedAt.isBefore(cutoff) && e.shadowId == e.id;
     final entries = await readAll();
-    final purged = entries.where((e) => e.deletedAt.isBefore(cutoff)).toList();
+    final purged = entries.where(isExpired).toList();
     if (purged.isEmpty) return const [];
-    entries.removeWhere((e) => e.deletedAt.isBefore(cutoff));
+    entries.removeWhere(isExpired);
     await _write(entries);
     return purged.map((e) => e.id).toList();
   }
