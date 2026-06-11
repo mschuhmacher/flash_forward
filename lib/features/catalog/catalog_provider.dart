@@ -193,6 +193,14 @@ class CatalogProvider extends ChangeNotifier {
   void debugSeedUserExercises(List<Exercise> exercises) =>
       _userExercises = List.from(exercises);
 
+  /// Whether [id] is the id of a stock default (not a user item). Used to
+  /// decide whether a promote/delete must fork the item to a UUID first, since
+  /// default ids are human-readable slugs that the cloud's uuid columns reject.
+  bool isDefaultSessionId(String id) => _defaultSessions.any((s) => s.id == id);
+  bool isDefaultWorkoutId(String id) => _defaultWorkouts.any((w) => w.id == id);
+  bool isDefaultExerciseId(String id) =>
+      _defaultExercises.any((e) => e.id == id);
+
   Future<void> deleteAllUserPresets() async {
     _userSessions = [];
     _userWorkouts = [];

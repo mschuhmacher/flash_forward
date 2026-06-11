@@ -44,6 +44,22 @@ void main() {
 
   tearDown(() async => tmpDir.delete(recursive: true));
 
+  group('default-id helpers', () {
+    test('isDefault*Id is true only for seeded default ids', () {
+      provider.debugSeedDefaults(
+        sessions: [_session(id: 'cat-s')],
+        workouts: [_workout(id: 'cat-w')],
+        exercises: [_exercise(id: 'cat-e')],
+      );
+      expect(provider.isDefaultSessionId('cat-s'), isTrue);
+      expect(provider.isDefaultWorkoutId('cat-w'), isTrue);
+      expect(provider.isDefaultExerciseId('cat-e'), isTrue);
+      expect(provider.isDefaultSessionId('11111111-1111-4111-8111-111111111111'),
+          isFalse);
+      expect(provider.isDefaultWorkoutId('cat-s'), isFalse);
+    });
+  });
+
   group('shadow rules', () {
     test(
       'presetWorkouts: user copy with default id shadows the default',
