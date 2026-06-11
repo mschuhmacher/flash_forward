@@ -61,6 +61,36 @@ void main() {
     });
   });
 
+  group('heal on load', () {
+    test('healSlugIdUserItems re-ids slug-id user items to uuid + templateId',
+        () async {
+      provider.debugSeedUserSessions([
+        _session(id: 'projecting-session', title: 'Customized'),
+      ]);
+      provider.debugSeedUserWorkouts([_workout(id: 'cat-w', title: 'W')]);
+
+      await provider.healSlugIdUserItems();
+
+      final s = provider.presetSessions.firstWhere((s) => s.title == 'Customized');
+      expect(isUuid(s.id), isTrue);
+      expect(s.templateId, 'projecting-session');
+      final w = provider.presetWorkouts.firstWhere((w) => w.title == 'W');
+      expect(isUuid(w.id), isTrue);
+      expect(w.templateId, 'cat-w');
+    });
+
+    test('healSlugIdUserItems leaves already-uuid items untouched', () async {
+      final uuid = '11111111-1111-4111-8111-111111111111';
+      provider.debugSeedUserSessions([_session(id: uuid, title: 'Keep')]);
+
+      await provider.healSlugIdUserItems();
+
+      final s = provider.presetSessions.firstWhere((s) => s.title == 'Keep');
+      expect(s.id, uuid);
+      expect(s.templateId, isNull);
+    });
+  });
+
   group('fork on promote', () {
     test('promoting a stock default forks to a UUID with templateId = slug', () async {
       provider.debugSeedDefaults(sessions: [_session(id: 'cat-s', title: 'Default')]);

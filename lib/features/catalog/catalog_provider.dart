@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'package:flash_forward/core/uuid.dart';
 import 'package:flash_forward/features/catalog/preset_loader.dart';
 import 'package:flash_forward/core/sync/sync_status_provider.dart';
 import 'package:flash_forward/core/sync/synced_item_ops.dart';
@@ -141,6 +142,11 @@ class CatalogProvider extends ChangeNotifier {
       _userExercises = local.exercises;
     }
 
+    // Heal legacy slug-id user items (re-id to UUID + templateId) and drop the
+    // matching poison ops before anything tries to sync them.
+    await healSlugIdUserItems();
+    await service?.syncQueue.dropNonUuidOps();
+
     if (trash != null) {
       await trash.loadAndPurge();
       await trash.selfHealCatalogTrashDrift();
@@ -165,6 +171,8 @@ class CatalogProvider extends ChangeNotifier {
       _userSessions = result.sessions;
       _userWorkouts = result.workouts;
       _userExercises = result.exercises;
+      await healSlugIdUserItems();
+      await service.syncQueue.dropNonUuidOps();
       return;
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
@@ -266,6 +274,43 @@ class CatalogProvider extends ChangeNotifier {
     final existing = _userExercises.where((u) => u.templateId == e.id).toList();
     final newId = existing.isEmpty ? const Uuid().v4() : existing.first.id;
     return e.deepCopy(keepId: true).copyWith(id: newId, templateId: e.id);
+  }
+
+  /// One-time load heal: re-id any user item whose id is a non-uuid slug (a
+  /// customized default from before fork-on-promote, whose cloud upload always
+  /// failed) to a fresh UUID + templateId = old slug, so it can finally sync.
+  /// Idempotent — uuid-id items are left untouched.
+  Future<void> healSlugIdUserItems() async {
+    var changed = false;
+    for (var i = 0; i < _userSessions.length; i++) {
+      final s = _userSessions[i];
+      if (isUuid(s.id)) continue;
+      _userSessions[i] = s
+          .deepCopy(keepId: true)
+          .copyWith(id: const Uuid().v4(), templateId: s.templateId ?? s.id);
+      changed = true;
+    }
+    for (var i = 0; i < _userWorkouts.length; i++) {
+      final w = _userWorkouts[i];
+      if (isUuid(w.id)) continue;
+      _userWorkouts[i] = w
+          .deepCopy(keepId: true)
+          .copyWith(id: const Uuid().v4(), templateId: w.templateId ?? w.id);
+      changed = true;
+    }
+    for (var i = 0; i < _userExercises.length; i++) {
+      final e = _userExercises[i];
+      if (isUuid(e.id)) continue;
+      _userExercises[i] = e
+          .deepCopy(keepId: true)
+          .copyWith(id: const Uuid().v4(), templateId: e.templateId ?? e.id);
+      changed = true;
+    }
+    if (!changed) return;
+    await PresetLogger.savePresetToFile('user_preset_sessions.json', _userSessions);
+    await PresetLogger.savePresetToFile('user_preset_workouts.json', _userWorkouts);
+    await PresetLogger.savePresetToFile('user_preset_exercises.json', _userExercises);
+    notifyListeners();
   }
 
   Future<void> upsertSession(Session session) async {

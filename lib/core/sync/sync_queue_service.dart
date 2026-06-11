@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flash_forward/core/sync/sync_error_classifier.dart';
+import 'package:flash_forward/core/uuid.dart';
 
 /// A record of a single cloud operation that failed and needs to be retried.
 ///
@@ -301,6 +302,16 @@ class SyncQueueService {
       _isProcessing = false;
     }
     return successCount;
+  }
+
+  /// Drops queued ops whose entity id is not a valid UUID. These are legacy
+  /// poison ops created before fork-on-promote (a preset slug id headed for a
+  /// uuid column); they can never succeed, so clear them on load to stop the
+  /// per-startup Sentry noise immediately rather than waiting for the cap.
+  Future<void> dropNonUuidOps() async {
+    final before = _queue.length;
+    _queue.removeWhere((op) => !isUuid(op.id));
+    if (_queue.length != before) await _saveQueue();
   }
 
   /// Removes all pending operations and persists the empty queue to disk.

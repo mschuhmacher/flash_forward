@@ -129,4 +129,17 @@ void main() {
       expect(svc.pendingCount, 0);
     });
   });
+
+  group('dropNonUuidOps', () {
+    test('removes ops whose entity id is not a UUID', () async {
+      await queue.enqueue(_op('projecting-session', 'uploadSession'));
+      await queue.enqueue(
+          _op('11111111-1111-4111-8111-111111111111', 'uploadSession'));
+
+      await queue.dropNonUuidOps();
+
+      expect(queue.pendingOperations.map((o) => o.id),
+          ['11111111-1111-4111-8111-111111111111']);
+    });
+  });
 }
