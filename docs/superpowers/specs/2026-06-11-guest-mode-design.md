@@ -62,7 +62,7 @@ New method, completing the seam treatment the other providers already got:
 
 Failure semantics match today's offline behavior: a failed claim leaves sessions local; the pending-sync queue retries later; Sentry captures exceptions. Whether the claim reuses the pending-ops queue or enumerates local storage directly is decided at planning stage.
 
-Edge: guest sessions claimed into a different person's account (shared device) — accepted per the auto-claim decision. Planning verifies whether sign-out clears local session storage, which would make this moot.
+Edge: guest sessions claimed into a different person's account (shared device) — moot in practice: the settings-drawer sign-out already calls `SessionLogProvider.reset()`, which clears local session storage (`SessionLogger.clearLoggedSessions()`). A guest after sign-out starts from an empty local store, so the claim only ever pushes genuine guest sessions.
 
 ## 4. The auth wall — `requireAuth`
 
@@ -93,14 +93,22 @@ If `requireAuth` resolves `true` (user authed during the detour), the pending sa
 - `SettingsDrawer` (guest): hide sign-out, delete-account, restore-items; show sign-in / create-account CTA.
 - Nav bar label already falls back to "Climber" — no change.
 
-## 6. Out of scope
+## 6. Sign-out must also clear local catalog/trash storage (new requirement)
+
+Verified 2026-06-11: sign-out clears local **session** storage (`SessionLogProvider.reset()` → `SessionLogger.clearLoggedSessions()`) but `CatalogProvider.reset()` and `TrashProvider.reset()` clear only in-memory state. The local preset files (`user_preset_*.json`, written on every signed-in mutation as the offline mirror) and the local trash store survive sign-out. Today this is invisible — the only post-sign-out path is sign-in → `init` → cloud load. With guest mode, `initForGuest` loads via `PresetLoader.loadFromLocal()`, so a guest on a device where someone signed out would see the previous user's custom catalog items.
+
+Requirement: the sign-out flow (settings drawer, and the account-delete flow) additionally clears local catalog and trash storage. `PresetLogger.deleteAllUserPresetFiles()` already exists for the catalog side; `CatalogProvider.reset()` becomes async and calls it (or the sign-out handler calls `deleteAllUserPresets()`); `TrashProvider.reset()` gets the equivalent for its local store. Since guests cannot save catalog items, guest-mode local preset files are then always empty — guests see stock defaults only.
+
+(This also narrows a pre-existing offline edge: user B signing in offline on user A's old device falls back to `loadFromLocal()` and would see user A's items.)
+
+## 7. Out of scope
 
 - Premium/subscription gating (max user sessions/workouts, >1-month graphs). Separate feature; only constraint honored here is the single-guard-call shape at gate sites.
 - Draft persistence for catalog editors across OS kill.
 - Unifying `initForUser` with `initForGuest + onSignedIn`. Possible later simplification; not now.
 
-## 7. Testing
+## 8. Testing
 
-- **Unit:** coordinator wiring order per entry point (mocked providers); `SessionLogProvider.refreshAfterSignIn` claim incl. failure path; `AuthProvider` guest-flag persistence and clearing.
+- **Unit:** coordinator wiring order per entry point (mocked providers); `SessionLogProvider.refreshAfterSignIn` claim incl. failure path; `AuthProvider` guest-flag persistence and clearing; sign-out clears local catalog/trash storage (§6).
 - **Widget:** `requireAuth` resolves true/false correctly; gated saves show the sheet for guests and not for authed users; nested (`persistToProvider: false`) saves never gate; guest ProfileScreen shows CTA.
 - Run via `scripts/run_tests.sh`.
