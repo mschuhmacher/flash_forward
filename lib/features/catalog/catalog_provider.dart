@@ -179,6 +179,20 @@ class CatalogProvider extends ChangeNotifier {
     _defaultExercises = List.from(exercises);
   }
 
+  /// Seed the in-memory *user* lists directly. Tests use this to set up
+  /// override/shadow/heal scenarios without going through init().
+  @visibleForTesting
+  void debugSeedUserSessions(List<Session> sessions) =>
+      _userSessions = List.from(sessions);
+
+  @visibleForTesting
+  void debugSeedUserWorkouts(List<Workout> workouts) =>
+      _userWorkouts = List.from(workouts);
+
+  @visibleForTesting
+  void debugSeedUserExercises(List<Exercise> exercises) =>
+      _userExercises = List.from(exercises);
+
   Future<void> deleteAllUserPresets() async {
     _userSessions = [];
     _userWorkouts = [];

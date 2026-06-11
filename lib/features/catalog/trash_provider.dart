@@ -13,12 +13,14 @@ class TrashProvider extends ChangeNotifier {
   TrashProvider({
     required CatalogProvider catalog,
     required SyncStatusProvider syncStatus,
+    TrashService? trashService,
   }) : _catalog = catalog,
-       _syncStatus = syncStatus;
+       _syncStatus = syncStatus,
+       _trashService = trashService ?? TrashService();
 
   final CatalogProvider _catalog;
   final SyncStatusProvider _syncStatus;
-  final TrashService _trashService = TrashService();
+  final TrashService _trashService;
 
   List<TrashEntry> _trashedItems = [];
   List<TrashEntry> get trashedItems => List.unmodifiable(_trashedItems);
