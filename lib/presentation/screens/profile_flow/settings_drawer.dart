@@ -117,48 +117,76 @@ class SettingsDrawer extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           DropdownMenu<SoundMode>(
-                            width: double.infinity,
                             initialSelection: settings.soundMode,
                             onSelected: (mode) {
                               if (mode != null) settings.setSoundMode(mode);
                             },
+                            expandedInsets: EdgeInsets.symmetric(horizontal: 8),
                             textStyle: context.bodyMedium,
+                            menuStyle: MenuStyle(
+                              backgroundColor: WidgetStatePropertyAll(
+                                context.colorScheme.surfaceBright,
+                              ),
+                              // optional, to match:
+                              surfaceTintColor: const WidgetStatePropertyAll(
+                                Colors.transparent,
+                              ),
+                              shape: WidgetStatePropertyAll(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
                             dropdownMenuEntries: [
                               DropdownMenuEntry(
                                 value: SoundMode.both,
                                 label: 'Both',
-                                labelWidget: 
+                                labelWidget: Text(
+                                  'Both',
+                                  style: context.bodyMedium,
+                                ),
                               ),
                               DropdownMenuEntry(
                                 value: SoundMode.soundsOnly,
                                 label: 'Sounds only',
-                                
+                                labelWidget: Text(
+                                  'Sounds only',
+                                  style: context.bodyMedium,
+                                ),
                               ),
                               DropdownMenuEntry(
                                 value: SoundMode.notificationsOnly,
                                 label: 'Notifications only',
+                                labelWidget: Text(
+                                  'Notifications only',
+                                  style: context.bodyMedium,
+                                ),
                               ),
                               DropdownMenuEntry(
                                 value: SoundMode.none,
                                 label: 'None',
+                                labelWidget: Text(
+                                  'None',
+                                  style: context.bodyMedium,
+                                ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 20),
-                          Text('Session', style: context.titleMedium),
+                          Text('Overtime', style: context.titleMedium),
                           const SizedBox(height: 4),
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
                             title: Text(
-                              'Hold rest on background',
+                              'Automatically extend rests into overtime when the app is backgrounded.',
                               style: context.bodyMedium,
                             ),
-                            subtitle: Text(
-                              'Automatically extend rest when the app is backgrounded.',
-                              style: context.bodyMedium.copyWith(
-                                color: context.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
+                            // subtitle: Text(
+                            //   'Automatically extend rests into overtime when the app is backgrounded.',
+                            //   style: context.bodyMedium.copyWith(
+                            //     color: context.colorScheme.onSurfaceVariant,
+                            //   ),
+                            // ),
                             value: settings.restOvertimeOnBackground,
                             onChanged:
                                 (value) =>
