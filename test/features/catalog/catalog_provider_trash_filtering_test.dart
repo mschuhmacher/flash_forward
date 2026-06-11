@@ -4,6 +4,7 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/trash_entry.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/features/catalog/catalog_provider.dart';
+import 'package:flash_forward/core/uuid.dart';
 import 'package:flash_forward/core/sync/sync_status_provider.dart';
 import 'package:flash_forward/features/catalog/trash_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -168,7 +169,10 @@ void main() {
 
           await trash.deleteToTrash(id: 'def-w', kind: TrashKind.workout);
 
-          expect(trash.trashedItems.single.id, 'def-w');
+          // The default is forked on delete: trash entry gets a fresh UUID with
+          // templateId pointing back to the default slug.
+          expect(isUuid(trash.trashedItems.single.id), isTrue);
+          expect((trash.trashedItems.single.payload as Workout).templateId, 'def-w');
           expect(catalog.presetWorkouts.any((w) => w.id == 'def-w'), isFalse);
         },
       );

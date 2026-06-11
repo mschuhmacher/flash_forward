@@ -6,6 +6,8 @@ import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/features/catalog/preset_sync_merger.dart';
 import 'package:flash_forward/core/sync/sync_status_provider.dart';
 import 'package:flash_forward/features/catalog/trash_service.dart';
+import 'package:flash_forward/core/uuid.dart';
+import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -166,27 +168,46 @@ class TrashProvider extends ChangeNotifier {
     final TrashEntry entry;
     switch (kind) {
       case TrashKind.session:
-        final src = _catalog.presetSessions.firstWhere(
+        var src = _catalog.presetSessions.firstWhere(
           (s) => s.id == id,
           orElse:
               () => throw StateError('deleteToTrash: session $id not found'),
         );
+        // A never-promoted stock default carries a slug id that the cloud's
+        // uuid columns reject. Fork it (top-level UUID + templateId = slug,
+        // embedded ids kept) so the trash entry is uuid-clean and keeps the
+        // default shadowed via its shadowId.
+        if (_catalog.isDefaultSessionId(src.id)) {
+          src = src
+              .deepCopy(keepId: true)
+              .copyWith(id: const Uuid().v4(), templateId: src.id);
+        }
         await _catalog.removeSessionLocal(id);
         entry = TrashEntry.session(session: src, deletedAt: now);
       case TrashKind.workout:
-        final src = _catalog.presetWorkouts.firstWhere(
+        var src = _catalog.presetWorkouts.firstWhere(
           (w) => w.id == id,
           orElse:
               () => throw StateError('deleteToTrash: workout $id not found'),
         );
+        if (_catalog.isDefaultWorkoutId(src.id)) {
+          src = src
+              .deepCopy(keepId: true)
+              .copyWith(id: const Uuid().v4(), templateId: src.id);
+        }
         await _catalog.removeWorkoutLocal(id);
         entry = TrashEntry.workout(workout: src, deletedAt: now);
       case TrashKind.exercise:
-        final src = _catalog.presetExercises.firstWhere(
+        var src = _catalog.presetExercises.firstWhere(
           (e) => e.id == id,
           orElse:
               () => throw StateError('deleteToTrash: exercise $id not found'),
         );
+        if (_catalog.isDefaultExerciseId(src.id)) {
+          src = src
+              .deepCopy(keepId: true)
+              .copyWith(id: const Uuid().v4(), templateId: src.id);
+        }
         await _catalog.removeExerciseLocal(id);
         entry = TrashEntry.exercise(exercise: src, deletedAt: now);
     }
@@ -199,17 +220,22 @@ class TrashProvider extends ChangeNotifier {
     } catch (e, st) {
       Sentry.captureException(e, stackTrace: st);
     }
-    try {
-      switch (kind) {
-        case TrashKind.workout:
-          await service.deleteWorkout(id);
-        case TrashKind.exercise:
-          await service.deleteExercise(id);
-        case TrashKind.session:
-          await service.deleteSession(id);
+    // Only delete a cloud row when [id] is a real UUID. A never-promoted default
+    // (slug id) was never synced, and sending its slug to a uuid column would
+    // itself throw 22P02 and re-poison the queue.
+    if (isUuid(id)) {
+      try {
+        switch (kind) {
+          case TrashKind.workout:
+            await service.deleteWorkout(id);
+          case TrashKind.exercise:
+            await service.deleteExercise(id);
+          case TrashKind.session:
+            await service.deleteSession(id);
+        }
+      } catch (e, st) {
+        Sentry.captureException(e, stackTrace: st);
       }
-    } catch (e, st) {
-      Sentry.captureException(e, stackTrace: st);
     }
     notifyListeners();
   }

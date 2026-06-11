@@ -6,6 +6,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/core/sync/sync_status_provider.dart';
 import 'package:flash_forward/features/catalog/trash_provider.dart';
+import 'package:flash_forward/core/uuid.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -62,6 +63,30 @@ void main() {
   });
 
   tearDown(() async => tmpDir.delete(recursive: true));
+
+  group('fork on delete-of-a-default', () {
+    test('deleting a never-customized default trashes a UUID-bearing fork', () async {
+      catalog.debugSeedDefaults(sessions: [_session(id: 'projecting-session')]);
+      await trash.deleteToTrash(id: 'projecting-session', kind: TrashKind.session);
+
+      final entry = trash.trashedItems.single;
+      expect(isUuid(entry.id), isTrue);
+      expect((entry.payload as Session).templateId, 'projecting-session');
+      expect(catalog.presetSessions.any((s) => s.id == 'projecting-session'),
+          isFalse);
+    });
+
+    test('deleting an already-forked item keeps its UUID id', () async {
+      catalog.debugSeedDefaults(workouts: [_workout(id: 'cat-w')]);
+      await catalog.upsertWorkout(_workout(id: 'cat-w', title: 'Mine'));
+      final fork =
+          catalog.presetWorkouts.firstWhere((w) => w.templateId == 'cat-w');
+      await trash.deleteToTrash(id: fork.id, kind: TrashKind.workout);
+
+      expect(trash.trashedItems.single.id, fork.id);
+      expect((trash.trashedItems.single.payload as Workout).templateId, 'cat-w');
+    });
+  });
 
   group('trashedItems getter', () {
     test('trashedItems is empty on a fresh provider', () {
