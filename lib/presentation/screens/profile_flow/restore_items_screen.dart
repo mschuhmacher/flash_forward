@@ -31,11 +31,6 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  int _daysUntilExpiry(DateTime deletedAt) {
-    final expiresAt = deletedAt.add(const Duration(days: 90));
-    return expiresAt.difference(DateTime.now()).inDays.clamp(0, 90);
-  }
-
   int _daysSinceRemoval(DateTime deletedAt) =>
       DateTime.now().difference(deletedAt).inDays.clamp(0, 1 << 31);
 
@@ -152,9 +147,6 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
 
   Widget _row(RestorableEntry r) {
     final entry = r.entry;
-    final scheme = Theme.of(context).colorScheme;
-    final subtitle =
-        r.isDefault ? '${_kindLabel(entry.kind)} · default' : _kindLabel(entry.kind);
 
     return CheckboxListTile(
       value: _selected.contains(entry.id),
@@ -166,17 +158,22 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
           _selected.remove(entry.id);
         }
       }),
-      title: Text(entry.title, style: context.bodyLarge),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+      title: Row(
+        children: [
+          Flexible(child: Text(entry.title, style: context.bodyLarge)),
+          if (r.isDefault) ...[
+            const SizedBox(width: 8),
+            const _DefaultChip(),
+          ],
+        ],
       ),
-      secondary: _DaysBox(
-        days: r.isDefault
-            ? _daysSinceRemoval(entry.deletedAt)
-            : _daysUntilExpiry(entry.deletedAt),
-        caption: r.isDefault ? 'ago' : 'left',
-        urgent: !r.isDefault && _daysUntilExpiry(entry.deletedAt) <= 7,
+      subtitle: Text(_kindLabel(entry.kind), style: context.bodyMedium),
+      // De-emphasised: the day count is only the sorting cue, not the focus.
+      secondary: Text(
+        '${_daysSinceRemoval(entry.deletedAt)}d ago',
+        style: context.bodyMedium.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -276,45 +273,32 @@ class _EmptyHint extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: Text(
           text,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: context.bodyMedium.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       );
 }
 
-/// Right-aligned box showing a day count with a small caption.
-class _DaysBox extends StatelessWidget {
-  const _DaysBox({
-    required this.days,
-    required this.caption,
-    required this.urgent,
-  });
-
-  final int days;
-  final String caption;
-  final bool urgent;
+/// Small "default" pill shown next to a deleted default's title.
+class _DefaultChip extends StatelessWidget {
+  const _DefaultChip();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = urgent ? scheme.error : scheme.onSurfaceVariant;
     return Container(
-      width: 56,
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: (urgent ? scheme.errorContainer : scheme.surfaceContainerHighest)
-            .withValues(alpha: urgent ? 1 : 0.6),
-        borderRadius: BorderRadius.circular(8),
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$days',
-            style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w600, color: color),
-          ),
-          Text(caption, style: TextStyle(fontSize: 10, color: color)),
-        ],
+      child: Text(
+        'default',
+        style: context.bodyMedium.copyWith(
+          fontSize: 12,
+          color: scheme.onSecondaryContainer,
+        ),
       ),
     );
   }

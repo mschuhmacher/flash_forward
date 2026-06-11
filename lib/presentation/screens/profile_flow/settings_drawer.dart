@@ -181,12 +181,6 @@ class SettingsDrawer extends StatelessWidget {
                               'Automatically extend rests into overtime when the app is backgrounded.',
                               style: context.bodyMedium,
                             ),
-                            // subtitle: Text(
-                            //   'Automatically extend rests into overtime when the app is backgrounded.',
-                            //   style: context.bodyMedium.copyWith(
-                            //     color: context.colorScheme.onSurfaceVariant,
-                            //   ),
-                            // ),
                             value: settings.restOvertimeOnBackground,
                             onChanged:
                                 (value) =>
@@ -209,7 +203,7 @@ class SettingsDrawer extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.restore_rounded),
-                title: Text('Restore items', style: context.bodyLarge),
+                title: Text('Restore trash', style: context.bodyLarge),
                 onTap:
                     () => Navigator.push(
                       context,
