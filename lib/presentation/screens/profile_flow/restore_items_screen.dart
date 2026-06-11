@@ -35,10 +35,10 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
       DateTime.now().difference(deletedAt).inDays.clamp(0, 1 << 31);
 
   String _kindLabel(TrashKind kind) => switch (kind) {
-        TrashKind.session => 'Session',
-        TrashKind.workout => 'Workout',
-        TrashKind.exercise => 'Exercise',
-      };
+    TrashKind.session => 'Session',
+    TrashKind.workout => 'Workout',
+    TrashKind.exercise => 'Exercise',
+  };
 
   bool _titleClashes(CatalogProvider catalog, TrashEntry entry) =>
       _existingTitlesForKind(catalog, entry.kind).contains(entry.title);
@@ -90,7 +90,10 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
     setState(() => _selected.clear());
   }
 
-  Future<void> _factoryReset(CatalogProvider catalog, TrashProvider trash) async {
+  Future<void> _factoryReset(
+    CatalogProvider catalog,
+    TrashProvider trash,
+  ) async {
     final controller = TextEditingController();
     final confirm = await showDialog<bool>(
       context: context,
@@ -107,7 +110,10 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
                 style: context.bodyMedium,
               ),
               const SizedBox(height: 16),
-              Text("Type 'factory reset' to confirm.", style: context.bodyMedium),
+              Text(
+                "Type 'factory reset' to confirm.",
+                style: context.bodyMedium,
+              ),
               const SizedBox(height: 8),
               TextField(controller: controller),
             ],
@@ -121,9 +127,10 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
               valueListenable: controller,
               builder: (context, value, child) {
                 return ElevatedButton(
-                  onPressed: value.text == 'factory reset'
-                      ? () => Navigator.of(context).pop(true)
-                      : null,
+                  onPressed:
+                      value.text == 'factory reset'
+                          ? () => Navigator.of(context).pop(true)
+                          : null,
                   child: const Text('Factory reset'),
                 );
               },
@@ -148,40 +155,49 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
   Widget _row(RestorableEntry r) {
     final entry = r.entry;
 
-    return CheckboxListTile(
-      value: _selected.contains(entry.id),
-      controlAffinity: ListTileControlAffinity.leading,
-      onChanged: (checked) => setState(() {
-        if (checked == true) {
-          _selected.add(entry.id);
-        } else {
-          _selected.remove(entry.id);
-        }
-      }),
-      title: Text(entry.title, style: context.bodyLarge),
-      subtitle: Text(_kindLabel(entry.kind), style: context.bodyMedium),
-      secondary: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Reserve the chip's space even when absent so the day count below
-          // stays vertically aligned across rows.
-          Visibility(
-            visible: r.isDefault,
-            maintainSize: true,
-            maintainAnimation: true,
-            maintainState: true,
-            child: const _DefaultChip(),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceBright,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: CheckboxListTile(
+          value: _selected.contains(entry.id),
+          controlAffinity: ListTileControlAffinity.leading,
+          onChanged:
+              (checked) => setState(() {
+                if (checked == true) {
+                  _selected.add(entry.id);
+                } else {
+                  _selected.remove(entry.id);
+                }
+              }),
+          title: Text(entry.title, style: context.bodyLarge),
+          subtitle: Text(_kindLabel(entry.kind), style: context.bodyMedium),
+          secondary: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Reserve the chip's space even when absent so the day count below
+              // stays vertically aligned across rows.
+              Visibility(
+                visible: r.isDefault,
+                maintainSize: true,
+                maintainAnimation: true,
+                maintainState: true,
+                child: const _DefaultChip(),
+              ),
+              const SizedBox(height: 4),
+              // De-emphasised: the day count is only the sorting cue, not the focus.
+              Text(
+                '${_daysSinceRemoval(entry.deletedAt)}d ago',
+                style: context.bodyMedium.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          // De-emphasised: the day count is only the sorting cue, not the focus.
-          Text(
-            '${_daysSinceRemoval(entry.deletedAt)}d ago',
-            style: context.bodyMedium.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -214,9 +230,10 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
                     ExpansionTile(
                       title: Text('Removed default data', style: context.h3),
                       childrenPadding: EdgeInsets.zero,
-                      children: older.isEmpty
-                          ? [const _EmptyHint('No older removed defaults')]
-                          : older.map(_row).toList(),
+                      children:
+                          older.isEmpty
+                              ? [const _EmptyHint('No older removed defaults')]
+                              : older.map(_row).toList(),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
@@ -245,9 +262,10 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _selected.isEmpty
-                          ? null
-                          : () => _restoreSelected(catalog, trash),
+                      onPressed:
+                          _selected.isEmpty
+                              ? null
+                              : () => _restoreSelected(catalog, trash),
                       child: const Text('Restore selected'),
                     ),
                   ),
@@ -267,9 +285,9 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-        child: Text(text, style: context.h3),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+    child: Text(text, style: context.h3),
+  );
 }
 
 class _EmptyHint extends StatelessWidget {
@@ -278,14 +296,14 @@ class _EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Text(
-          text,
-          style: context.bodyMedium.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+    child: Text(
+      text,
+      style: context.bodyMedium.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    ),
+  );
 }
 
 /// Small "default" pill shown next to a deleted default's title.
