@@ -158,22 +158,30 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
           _selected.remove(entry.id);
         }
       }),
-      title: Row(
-        children: [
-          Flexible(child: Text(entry.title, style: context.bodyLarge)),
-          if (r.isDefault) ...[
-            const SizedBox(width: 8),
-            const _DefaultChip(),
-          ],
-        ],
-      ),
+      title: Text(entry.title, style: context.bodyLarge),
       subtitle: Text(_kindLabel(entry.kind), style: context.bodyMedium),
-      // De-emphasised: the day count is only the sorting cue, not the focus.
-      secondary: Text(
-        '${_daysSinceRemoval(entry.deletedAt)}d ago',
-        style: context.bodyMedium.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
+      secondary: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Reserve the chip's space even when absent so the day count below
+          // stays vertically aligned across rows.
+          Visibility(
+            visible: r.isDefault,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: const _DefaultChip(),
+          ),
+          const SizedBox(height: 4),
+          // De-emphasised: the day count is only the sorting cue, not the focus.
+          Text(
+            '${_daysSinceRemoval(entry.deletedAt)}d ago',
+            style: context.bodyMedium.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -183,7 +191,7 @@ class _RestoreItemsScreenState extends State<RestoreItemsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Restore items')),
+      appBar: AppBar(title: const Text('Restore trash')),
       body: Consumer2<CatalogProvider, TrashProvider>(
         builder: (context, catalog, trash, _) {
           final all = trash.entriesByRecency;
