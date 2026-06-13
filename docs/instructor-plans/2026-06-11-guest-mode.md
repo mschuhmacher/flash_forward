@@ -12,8 +12,8 @@ Branch: `develop`
 
 ## Task Summary
 
-- [ ] Task 1 of 13: GuestModeStore — the persisted guest flag
-- [ ] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
+- [x] Task 1 of 13: GuestModeStore — the persisted guest flag
+- [~] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
 - [ ] Task 3 of 13: Preserve session date on claim + a fake sync service
 - [ ] Task 4 of 13: SessionLogProvider.refreshAfterSignIn — seam + claim
 - [ ] Task 5 of 13: reset() clears local catalog/trash storage
@@ -28,7 +28,7 @@ Branch: `develop`
 
 ---
 
-### [ ] Task 1 of 13: GuestModeStore — the persisted guest flag
+### [x] Task 1 of 13: GuestModeStore — the persisted guest flag
 
 **Why:** Everything downstream keys off one piece of durable state: "has this person chosen to use the app as a guest?" It has to survive app restarts so a returning guest skips the login screen. Building this first gives every later task something concrete to read and write.
 
@@ -47,7 +47,7 @@ Branch: `develop`
 
 ---
 
-### [ ] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
+### [~] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
 
 **Why:** Later tasks (the auth wall, the profile CTA) need to test UI in both signed-in and guest states. Right now `AuthProvider` hard-creates its `AuthService`, which talks to Supabase — untestable without a live backend. Making the service swappable lets tests inject a stand-in. We also clear the guest flag on sign-out here, so a returning real user isn't mistaken for a guest.
 

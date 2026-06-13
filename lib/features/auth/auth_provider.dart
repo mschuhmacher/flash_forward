@@ -1,3 +1,4 @@
+import 'package:flash_forward/features/auth/guest_mode_store.dart';
 import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -5,7 +6,10 @@ import 'package:flash_forward/models/user_profile.dart';
 import 'package:flash_forward/features/auth/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
+  AuthProvider({AuthService? authService})
+    : _authService = authService ?? AuthService();
+
+  final AuthService _authService;
 
   UserProfile? _userProfile;
   bool _isLoading = false;
@@ -180,6 +184,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> signOut() async {
     await _authService.signOut();
     _userProfile = null;
+    await GuestModeStore.disable();
     notifyListeners();
   }
 
