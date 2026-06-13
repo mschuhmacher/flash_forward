@@ -179,6 +179,25 @@ class SessionLogProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshAfterSignIn(SupabaseSyncService syncService) async {
+    _syncService = syncService;
+
+    final unclaimedSessions = await SessionLogger.readLoggedSessions();
+
+    for (final session in unclaimedSessions) {
+      try {
+        await _syncService!.logCompletedSession(
+          session,
+          completedAt: session.completedAt,
+        );
+      } catch (e, stackTrace) {
+        Sentry.captureException(e, stackTrace: stackTrace);
+      }
+    }
+    await loadLoggedSessions();
+    updateSelectedSessionsCalendarFormat();
+  }
+
   /// Reset provider state on logout
   /// This allows re-initialization with a different user
   Future<void> reset() async {

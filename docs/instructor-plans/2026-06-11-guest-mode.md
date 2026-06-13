@@ -13,10 +13,10 @@ Branch: `develop`
 ## Task Summary
 
 - [x] Task 1 of 13: GuestModeStore — the persisted guest flag
-- [~] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
-- [ ] Task 3 of 13: Preserve session date on claim + a fake sync service
-- [ ] Task 4 of 13: SessionLogProvider.refreshAfterSignIn — seam + claim
-- [ ] Task 5 of 13: reset() clears local catalog/trash storage
+- [x] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
+- [x] Task 3 of 13: Preserve session date on claim + a fake sync service
+- [x] Task 4 of 13: SessionLogProvider.refreshAfterSignIn — seam + claim
+- [~] Task 5 of 13: reset() clears local catalog/trash storage
 - [ ] Task 6 of 13: SignInCoordinator — the wiring brain
 - [ ] Task 7 of 13: requireAuth — the auth-wall bottom sheet
 - [ ] Task 8 of 13: Detour mode through login → signup → confirmation
@@ -47,7 +47,7 @@ Branch: `develop`
 
 ---
 
-### [~] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
+### [x] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
 
 **Why:** Later tasks (the auth wall, the profile CTA) need to test UI in both signed-in and guest states. Right now `AuthProvider` hard-creates its `AuthService`, which talks to Supabase — untestable without a live backend. Making the service swappable lets tests inject a stand-in. We also clear the guest flag on sign-out here, so a returning real user isn't mistaken for a guest.
 
@@ -67,7 +67,7 @@ Branch: `develop`
 
 ---
 
-### [ ] Task 3 of 13: Preserve session date on claim + a fake sync service
+### [~] Task 3 of 13: Preserve session date on claim + a fake sync service
 
 **Why:** When a guest later signs in, their locally-saved sessions get pushed to the cloud ("claimed"). Each claimed session must keep the date it actually happened, not the date of the sign-in. The cloud-logging method currently stamps "now", so we give it an optional explicit timestamp. We also build a fake sync service here — the shared test double that stands in for all Supabase calls in later tasks.
 
@@ -86,7 +86,7 @@ Branch: `develop`
 
 ---
 
-### [ ] Task 4 of 13: SessionLogProvider.refreshAfterSignIn — seam + claim
+### [x] Task 4 of 13: SessionLogProvider.refreshAfterSignIn — seam + claim
 
 **Why:** This is the heart of "nothing you did as a guest is lost." When a guest signs in, this method attaches the real cloud service, pushes every locally-stored session up to that account (the *claim*), then reloads so an existing account's history shows. Other providers already have a `refreshAfterSignIn` seam; the session log is the one that's missing it.
 
@@ -106,7 +106,7 @@ Branch: `develop`
 
 ---
 
-### [ ] Task 5 of 13: reset() clears local catalog/trash storage
+### [~] Task 5 of 13: reset() clears local catalog/trash storage
 
 **Why:** This closes a real bug the spec found (§6). Sign-out clears the in-memory catalog and trash but leaves their *local files* on disk. Today that's invisible, because the only post-sign-out path reloads from the cloud. But a guest loads from those local files — so a guest on a device where someone signed out would see the previous user's custom items. Clearing the files on reset prevents that leak.
 
