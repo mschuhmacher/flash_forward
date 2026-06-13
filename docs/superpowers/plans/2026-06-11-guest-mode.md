@@ -320,16 +320,20 @@ void main() {
   test('a failing claim is swallowed and the rest still proceeds', () async {
     await SessionLogger.logSession(testSession(id: 'guest-1'));
     final provider = SessionLogProvider();
-    final fake = FakeSupabaseSyncService()..throwOnLogCompletedSession = true;
+    // Only the claim throws; fetchLoggedSessions still succeeds, so the reload
+    // proceeds. Seed one cloud session to make the assertion meaningful.
+    final fake = FakeSupabaseSyncService()
+      ..throwOnLogCompletedSession = true
+      ..cloudLoggedSessions = [testSession(id: 'cloud-1')];
 
     await provider.refreshAfterSignIn(fake); // must not throw
 
-    expect(provider.loggedSessions.map((s) => s.id), ['cloud... see note']);
+    expect(provider.loggedSessions.map((s) => s.id), ['cloud-1']);
   });
 }
 ```
 
-Notes for the executor: import `Nullable` from wherever `Session.copyWith` defines it (`grep -n "class Nullable" lib/`). In the failure test, `fetchLoggedSessions` still succeeds (only `logCompletedSession` throws), so assert `provider.loggedSessions` equals `fake.cloudLoggedSessions` (set it to one session to make the assertion meaningful). `Sentry.captureException` is a safe no-op when Sentry is uninitialized.
+Notes for the executor: `Nullable` lives in `lib/core/nullable.dart` (import it for the `completedAt:` wrapper). `Sentry.captureException` is a safe no-op when Sentry is uninitialized.
 
 - [ ] **Step 2: Run, verify failure** — `./scripts/run_tests.sh test/features/session_log/session_log_provider_refresh_test.dart` — expected: `refreshAfterSignIn` undefined.
 
@@ -510,7 +514,10 @@ void main() {
     await coordinator.onSignedIn('user-1');
 
     expect(env.syncStatus.service, same(fake));
-    expect(env.catalog.userSessions.map((s) => s.id),
+    // CatalogProvider exposes merged defaults+user items via `presetSessions`
+    // (there is no `userSessions` getter). After refreshAfterSignIn the seeded
+    // cloud session lands in `_userSessions` and so appears here.
+    expect(env.catalog.presetSessions.map((s) => s.id),
         contains('c0ffee00-0000-4000-8000-000000000001'));
     expect(await GuestModeStore.isEnabled(), false);
     await env.dispose();
@@ -518,7 +525,7 @@ void main() {
 }
 ```
 
-Note: check the public getter name for user sessions on `CatalogProvider` (`userSessions` vs similar — grep). Use a UUID-shaped id so `healSlugIdUserItems`/`dropNonUuidOps` don't re-id it.
+Note: use a UUID-shaped id (as above) so `healSlugIdUserItems`/`dropNonUuidOps` don't re-id it. `makeCatalogEnv` already calls `catalog.attachTrashProvider(trash)`; the coordinator calls it again — benign (idempotent setter), don't be surprised by it.
 
 - [ ] **Step 2: Run, verify failure** — file not found.
 
