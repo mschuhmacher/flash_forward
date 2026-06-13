@@ -287,8 +287,8 @@ class SettingsDrawer extends StatelessWidget {
       final trashProvider = context.read<TrashProvider>();
 
       await sessionLogProvider.reset();
-      catalogProvider.reset();
-      trashProvider.reset();
+      await catalogProvider.reset();
+      await trashProvider.reset();
       syncStatus.detach();
       await authProvider.signOut();
 
@@ -358,8 +358,8 @@ class SettingsDrawer extends StatelessWidget {
       final trashProvider = context.read<TrashProvider>();
 
       await sessionLogProvider.reset();
-      catalogProvider.reset();
-      trashProvider.reset();
+      await catalogProvider.reset();
+      await trashProvider.reset();
       syncStatus.detach();
       await authProvider.deleteUser();
 

@@ -288,11 +288,11 @@ void main() {
   });
 
   group('reset clears trash', () {
-    test('reset empties trashedItems', () {
+    test('reset empties trashedItems', () async {
       trash.debugSeedTrash([_trashedWorkout(id: 'w-1')]);
       expect(trash.trashedItems, hasLength(1));
 
-      trash.reset();
+      await trash.reset();
 
       expect(trash.trashedItems, isEmpty);
     });

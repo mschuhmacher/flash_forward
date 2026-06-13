@@ -52,10 +52,11 @@ class TrashProvider extends ChangeNotifier {
   /// All trash entries, newest-deletion first, each tagged with whether it is a
   /// deleted default (a fork — `shadowId != id`). Drives the Restore screen.
   List<RestorableEntry> get entriesByRecency {
-    final list = _trashedItems
-        .map((e) => RestorableEntry(e, e.shadowId != e.id))
-        .toList()
-      ..sort((a, b) => b.entry.deletedAt.compareTo(a.entry.deletedAt));
+    final list =
+        _trashedItems
+            .map((e) => RestorableEntry(e, e.shadowId != e.id))
+            .toList()
+          ..sort((a, b) => b.entry.deletedAt.compareTo(a.entry.deletedAt));
     return list;
   }
 
@@ -341,8 +342,7 @@ class TrashProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  
-// TODO: add in explanatory comment here
+  // TODO: add in explanatory comment here
   Future<void> refreshAfterSignIn() async {
     if (_syncStatus.service != null) {
       try {
@@ -358,8 +358,9 @@ class TrashProvider extends ChangeNotifier {
     }
   }
 
-  void reset() {
+  Future<void> reset() async {
     _trashedItems = [];
+    await _trashService.clear();
     notifyListeners();
   }
 }

@@ -323,9 +323,18 @@ class CatalogProvider extends ChangeNotifier {
       changed = true;
     }
     if (!changed) return;
-    await PresetLogger.savePresetToFile('user_preset_sessions.json', _userSessions);
-    await PresetLogger.savePresetToFile('user_preset_workouts.json', _userWorkouts);
-    await PresetLogger.savePresetToFile('user_preset_exercises.json', _userExercises);
+    await PresetLogger.savePresetToFile(
+      'user_preset_sessions.json',
+      _userSessions,
+    );
+    await PresetLogger.savePresetToFile(
+      'user_preset_workouts.json',
+      _userWorkouts,
+    );
+    await PresetLogger.savePresetToFile(
+      'user_preset_exercises.json',
+      _userExercises,
+    );
     notifyListeners();
   }
 
@@ -684,7 +693,7 @@ class CatalogProvider extends ChangeNotifier {
 
   /// Reset provider state on logout
   /// This allows re-initialization with a different user
-  void reset() {
+  Future<void> reset() async {
     _isInitialized = false;
     _isLoading = false;
     _defaultSessions = [];
@@ -693,6 +702,8 @@ class CatalogProvider extends ChangeNotifier {
     _userSessions = [];
     _userWorkouts = [];
     _userExercises = [];
+
+    await PresetLogger.deleteAllUserPresetFiles();
     notifyListeners();
   }
 }
