@@ -6,6 +6,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
+import 'package:flash_forward/presentation/widgets/auth_wall.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/features/catalog/trash_provider.dart';
@@ -89,6 +90,14 @@ class _ProgramListviewState extends State<ProgramListview> {
   }
 
   Future<void> _moveToTrash(dynamic item) async {
+    // Deleting a stock default forks it into a user item — a persisted
+    // mutation — so gate the whole delete behind an account.
+    final allowed = await requireAuth(
+      context,
+      message: 'customize your catalog',
+    );
+    if (!allowed || !mounted) return;
+
     final catalogProvider = Provider.of<CatalogProvider>(context, listen: false);
     final trashProvider = context.read<TrashProvider>();
     final kind = switch (widget.itemType) {

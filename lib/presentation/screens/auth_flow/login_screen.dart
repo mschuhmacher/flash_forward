@@ -1,3 +1,4 @@
+import 'package:flash_forward/features/auth/guest_mode_store.dart';
 import 'package:flash_forward/features/auth/sign_in_coordinator.dart';
 import 'package:flash_forward/presentation/screens/root_screen.dart';
 import 'package:flutter/material.dart';
@@ -413,6 +414,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
+
+                  // Continue as guest — hidden in detour mode (the user is
+                  // already a guest; backing out of the wall is their "not now").
+                  if (!widget.popOnSuccess) ...[
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: _continueAsGuest,
+                      child: Text('Continue as guest', style: context.titleLargePrimary),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -420,5 +431,15 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _continueAsGuest() async {
+    await GuestModeStore.enable();
+    if (!mounted) return;
+    await SignInCoordinator.of(context).initForGuest();
+    if (!mounted) return;
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const RootScreen()));
   }
 }

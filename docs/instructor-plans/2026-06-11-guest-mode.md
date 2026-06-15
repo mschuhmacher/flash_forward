@@ -18,13 +18,13 @@ Branch: `develop`
 - [x] Task 4 of 13: SessionLogProvider.refreshAfterSignIn — seam + claim
 - [x] Task 5 of 13: reset() clears local catalog/trash storage
 - [x] Task 6 of 13: SignInCoordinator — the wiring brain
-- [~] Task 7 of 13: requireAuth — the auth-wall bottom sheet
-- [ ] Task 8 of 13: Detour mode through login → signup → confirmation
-- [ ] Task 9 of 13: Cold-start routing + "Continue as guest" button
-- [ ] Task 10 of 13: Gate the catalog mutation sites (repetitive)
-- [ ] Task 11 of 13: Finish-session post-save nudge
-- [ ] Task 12 of 13: Guest ProfileScreen + SettingsDrawer
-- [ ] Task 13 of 13: Full verification
+- [x] Task 7 of 13: requireAuth — the auth-wall bottom sheet
+- [x] Task 8 of 13: Detour mode through login → signup → confirmation
+- [x] Task 9 of 13: Cold-start routing + "Continue as guest" button
+- [x] Task 10 of 13: Gate the catalog mutation sites (repetitive)
+- [x] Task 11 of 13: Finish-session post-save nudge
+- [x] Task 12 of 13: Guest ProfileScreen + SettingsDrawer
+- [~] Task 13 of 13: Full verification (automated done; manual walkthrough pending)
 
 ---
 
@@ -145,7 +145,7 @@ Branch: `develop`
 
 ---
 
-### [~] Task 7 of 13: requireAuth — the auth-wall bottom sheet
+### [x] Task 7 of 13: requireAuth — the auth-wall bottom sheet
 
 **Why:** This is the gate guests hit when they try to do something that needs an account. One reusable function keeps every gate site a single call, and shapes the choke point so the future premium-limit checks can stack at the same spot.
 
@@ -167,7 +167,7 @@ Branch: `develop`
 
 ---
 
-### [ ] Task 8 of 13: Detour mode through login → signup → confirmation
+### [x] Task 8 of 13: Detour mode through login → signup → confirmation
 
 **Why:** When a guest signs in *mid-task* (from the wall), they must land back exactly where they were, with their draft intact — not get bounced to a fresh home screen as the cold-start flow does. "Detour mode" is a flag threaded through the three auth screens that swaps "replace the whole stack" for "pop back to whoever opened me, reporting success."
 

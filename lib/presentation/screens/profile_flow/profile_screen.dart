@@ -1,4 +1,6 @@
 import 'package:flash_forward/presentation/screens/profile_flow/progress_chart.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
+import 'package:flash_forward/presentation/screens/auth_flow/signup_screen.dart';
 import 'package:flash_forward/features/auth/auth_provider.dart';
 import 'package:flash_forward/features/session_log/session_log_provider.dart';
 import 'package:flash_forward/features/session_log/progress_extractor.dart';
@@ -28,15 +30,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final settings = context.watch<SettingsProvider>();
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
+        final isGuest = !authProvider.isAuthenticated;
         final profile = authProvider.userProfile;
-        if (profile == null) return const SizedBox.shrink();
+        // Authed users need a loaded profile; guests have none and show a CTA.
+        if (!isGuest && profile == null) return const SizedBox.shrink();
         return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── User header ─────────────────────────────────────────────────
-                Row(
+                // ── Header: user info, or a sign-up CTA for guests ──────────────
+                if (isGuest)
+                  const _GuestProfileHeader()
+                else
+                  Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
@@ -332,4 +339,67 @@ void _showGradeReference({required BuildContext context}) {
       );
     },
   );
+}
+
+/// Replaces the user header for a guest: a sign-up call to action. The settings
+/// gear stays accessible so guests can still reach the drawer (and its sign-in
+/// entry). Both buttons run the auth screens in detour mode.
+class _GuestProfileHeader extends StatelessWidget {
+  const _GuestProfileHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => Scaffold.of(context).openEndDrawer(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: context.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("You're exploring as a guest", style: context.h3),
+              const SizedBox(height: 8),
+              Text(
+                'Create a free account to back up your sessions and build your '
+                'own training.',
+                style: context.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const SignUpScreen(popOnSuccess: true),
+                  ),
+                ),
+                child: const Text('Create account'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(popOnSuccess: true),
+                  ),
+                ),
+                child: const Text('Sign in'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

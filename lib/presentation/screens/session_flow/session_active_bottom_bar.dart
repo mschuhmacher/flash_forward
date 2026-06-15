@@ -5,6 +5,8 @@ import 'package:flash_forward/models/grade_entry.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
+import 'package:flash_forward/presentation/widgets/auth_wall.dart';
+import 'package:flash_forward/features/auth/auth_provider.dart';
 import 'package:flash_forward/features/session_log/session_log_provider.dart';
 import 'package:flash_forward/features/session_active/session_progress.dart';
 import 'package:flash_forward/features/session_active/session_state_provider.dart';
@@ -457,7 +459,12 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
 
                         Navigator.of(dialogContext).pop();
 
-                        sessionLogData.refreshSelectedSessions(finishedSession);
+                        // Await the save so the local write is guaranteed
+                        // before we prompt or navigate — a guest's session must
+                        // survive backgrounding/kill regardless of sign-in.
+                        await sessionLogData.refreshSelectedSessions(
+                          finishedSession,
+                        );
 
                         // Only use the buildContext is it still mounted. Meaning, the widget is still in the Widgettree.
                         // If user leaves screen before await is done, mounted would be false
@@ -474,8 +481,23 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           // Disable keeping the screen awake.
                           WakelockPlus.disable();
 
+                          // Post-save nudge: the session is already safe
+                          // locally, so this is not a gate — the result is
+                          // ignored. A later sign-in claims the session.
+                          if (!context.read<AuthProvider>().isAuthenticated) {
+                            await requireAuth(
+                              context,
+                              message: 'back up your progress to the cloud',
+                            );
+                          }
+
                           // Keeps popping routes until the current route is the first route. Not named,so no errors.
-                          Navigator.popUntil(context, (route) => route.isFirst);
+                          if (context.mounted) {
+                            Navigator.popUntil(
+                              context,
+                              (route) => route.isFirst,
+                            );
+                          }
                         }
                       },
                       child: Text('Finish'),

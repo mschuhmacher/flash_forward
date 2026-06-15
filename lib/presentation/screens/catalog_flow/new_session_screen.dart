@@ -4,6 +4,7 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
+import 'package:flash_forward/presentation/widgets/auth_wall.dart';
 import 'package:flash_forward/presentation/widgets/group_form_card.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
@@ -140,6 +141,13 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   }
 
   Future<void> _saveToCatalog(Session session) async {
+    // Reached only for create / editCatalog — both persist, so gate here.
+    final allowed = await requireAuth(
+      context,
+      message: 'save sessions to your catalog',
+    );
+    if (!allowed || !mounted) return;
+
     final catalogProvider = Provider.of<CatalogProvider>(
       context,
       listen: false,
@@ -207,6 +215,12 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       );
       return;
     }
+    final allowed = await requireAuth(
+      context,
+      message: 'save workouts to your catalog',
+    );
+    if (!allowed || !mounted) return;
+
     final catalog = Provider.of<CatalogProvider>(context, listen: false);
     final titles = catalog.presetWorkouts.map((w) => w.title).toList();
     String? finalTitle = workout.title;

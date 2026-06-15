@@ -20,6 +20,7 @@ class SettingsDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isAuthenticated = context.watch<AuthProvider>().isAuthenticated;
     return Drawer(
       backgroundColor: context.colorScheme.surfaceBright,
       child: SafeArea(
@@ -201,17 +202,17 @@ class SettingsDrawer extends StatelessWidget {
                 title: Text('Clear logs', style: context.bodyLarge),
                 onTap: () => _showClearLogsPopUp(context),
               ),
-              ListTile(
-                leading: const Icon(Icons.restore_rounded),
-                title: Text('Restore trash', style: context.bodyLarge),
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RestoreItemsScreen(),
-                      ),
+              if (isAuthenticated)
+                ListTile(
+                  leading: const Icon(Icons.restore_rounded),
+                  title: Text('Restore trash', style: context.bodyLarge),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RestoreItemsScreen(),
                     ),
-              ),
+                  ),
+                ),
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -231,16 +232,31 @@ class SettingsDrawer extends StatelessWidget {
                   await launchUrl(URL.privacyPolicy);
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.logout),
-                title: Text('Sign out', style: context.bodyLarge),
-                onTap: () => _signOut(context),
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_rounded),
-                title: Text('Delete account', style: context.bodyLarge),
-                onTap: () => _deleteAccount(context),
-              ),
+              if (isAuthenticated) ...[
+                ListTile(
+                  leading: const Icon(Icons.logout),
+                  title: Text('Sign out', style: context.bodyLarge),
+                  onTap: () => _signOut(context),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete_rounded),
+                  title: Text('Delete account', style: context.bodyLarge),
+                  onTap: () => _deleteAccount(context),
+                ),
+              ] else
+                ListTile(
+                  leading: const Icon(Icons.login),
+                  title: Text(
+                    'Sign in / Create account',
+                    style: context.bodyLarge,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LoginScreen(popOnSuccess: true),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
