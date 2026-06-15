@@ -16,9 +16,9 @@ Branch: `develop`
 - [x] Task 2 of 13: Make AuthProvider's service injectable + a fake for tests
 - [x] Task 3 of 13: Preserve session date on claim + a fake sync service
 - [x] Task 4 of 13: SessionLogProvider.refreshAfterSignIn — seam + claim
-- [~] Task 5 of 13: reset() clears local catalog/trash storage
-- [ ] Task 6 of 13: SignInCoordinator — the wiring brain
-- [ ] Task 7 of 13: requireAuth — the auth-wall bottom sheet
+- [x] Task 5 of 13: reset() clears local catalog/trash storage
+- [x] Task 6 of 13: SignInCoordinator — the wiring brain
+- [~] Task 7 of 13: requireAuth — the auth-wall bottom sheet
 - [ ] Task 8 of 13: Detour mode through login → signup → confirmation
 - [ ] Task 9 of 13: Cold-start routing + "Continue as guest" button
 - [ ] Task 10 of 13: Gate the catalog mutation sites (repetitive)
@@ -106,7 +106,7 @@ Branch: `develop`
 
 ---
 
-### [~] Task 5 of 13: reset() clears local catalog/trash storage
+### [x] Task 5 of 13: reset() clears local catalog/trash storage
 
 **Why:** This closes a real bug the spec found (§6). Sign-out clears the in-memory catalog and trash but leaves their *local files* on disk. Today that's invisible, because the only post-sign-out path reloads from the cloud. But a guest loads from those local files — so a guest on a device where someone signed out would see the previous user's custom items. Clearing the files on reset prevents that leak.
 
@@ -122,7 +122,7 @@ Branch: `develop`
 
 ---
 
-### [ ] Task 6 of 13: SignInCoordinator — the wiring brain
+### [x] Task 6 of 13: SignInCoordinator — the wiring brain
 
 **Why:** The four-step provider wiring (attach cloud service → plug catalog into sync + trash → init) is currently copy-pasted in two screens, and the new deferred-sign-in path needs a third variant. Centralising all three in one class removes the duplication and gives every entry point (cold start, guest start, mid-task sign-in) one well-ordered place to call. The wiring order is load-bearing: attach must happen before init/refresh.
 
@@ -145,7 +145,7 @@ Branch: `develop`
 
 ---
 
-### [ ] Task 7 of 13: requireAuth — the auth-wall bottom sheet
+### [~] Task 7 of 13: requireAuth — the auth-wall bottom sheet
 
 **Why:** This is the gate guests hit when they try to do something that needs an account. One reusable function keeps every gate site a single call, and shapes the choke point so the future premium-limit checks can stack at the same spot.
 
