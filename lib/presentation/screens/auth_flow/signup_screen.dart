@@ -118,14 +118,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       // Navigate to email confirmation screen.
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder:
-              (_) =>
-                  EmailConfirmationScreen(email: _emailController.text.trim()),
-        ),
-        (route) => false,
-      );
+      if (widget.popOnSuccess) {
+        // Detour: keep the confirmation screen on the stack so its success
+        // can pop back up through here to the wall.
+        final ok = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => EmailConfirmationScreen(
+              email: _emailController.text.trim(),
+              popOnSuccess: true,
+            ),
+          ),
+        );
+        if (ok == true && mounted) Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) =>
+                EmailConfirmationScreen(email: _emailController.text.trim()),
+          ),
+          (route) => false,
+        );
+      }
     } else {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(
