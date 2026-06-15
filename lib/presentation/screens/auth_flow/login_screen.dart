@@ -15,12 +15,14 @@ class LoginScreen extends StatefulWidget {
   final bool showEmailConfirmationMessage;
   final bool showEmailConfirmedMessage;
   final bool showPasswordResetMessage;
+  final bool popOnSuccess;
 
   const LoginScreen({
     super.key,
     this.showEmailConfirmationMessage = false,
     this.showEmailConfirmedMessage = false,
     this.showPasswordResetMessage = false,
+    this.popOnSuccess = false,
   });
 
   @override

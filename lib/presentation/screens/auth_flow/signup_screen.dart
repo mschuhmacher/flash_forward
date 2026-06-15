@@ -10,7 +10,8 @@ import 'package:flutter/gestures.dart';
 import 'package:country_picker/country_picker.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  const SignUpScreen({super.key, this.popOnSuccess = false});
+  final bool popOnSuccess;
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
