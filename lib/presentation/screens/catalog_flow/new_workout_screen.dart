@@ -209,6 +209,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         }
       }
       if (mounted) {
+        if (widget.persistToProvider) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved to catalog')),
+          );
+        }
         Navigator.pop(context, (workout: workout, pending: _pending));
       }
     }

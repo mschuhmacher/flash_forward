@@ -203,7 +203,12 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         }
       }
     }
-    if (mounted) Navigator.pop(context);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved to catalog')),
+      );
+      Navigator.pop(context);
+    }
   }
 
   Future<void> _saveWorkoutToCatalog(Workout workout) async {

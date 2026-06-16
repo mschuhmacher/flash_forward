@@ -280,6 +280,11 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
         }
       }
       if (mounted) {
+        if (widget.persistToProvider) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved to catalog')),
+          );
+        }
         Navigator.pop(
           context,
           NewExerciseResult(
