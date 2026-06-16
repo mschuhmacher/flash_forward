@@ -439,8 +439,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   /// or placing one block inside another) snap back with a snackbar.
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
-      if (oldIndex < newIndex) newIndex -= 1;
-
       final exercises = List<Exercise>.from(_workout.exercises);
       final dragged = exercises[oldIndex];
       final draggedSuperset = supersetForExercise(_workout, dragged.id);
@@ -829,7 +827,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                             ),
                           );
                         },
-                        onReorder: _onReorder,
+                        onReorderItem: _onReorder,
                         onReorderStart: (index) {
                           final exercise = _workout.exercises[index];
                           final ss = _supersetForExercise(exercise);
