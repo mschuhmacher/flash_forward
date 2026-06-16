@@ -170,6 +170,8 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _titleController.dispose();
     _descriptionController.dispose();
     _equipmentController.dispose();

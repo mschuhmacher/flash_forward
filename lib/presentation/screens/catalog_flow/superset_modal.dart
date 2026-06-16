@@ -100,6 +100,8 @@ class _SupersetModalState extends State<SupersetModal> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _restCtrl.dispose();
     _setsCtrl.dispose();
     _setRestCtrl.dispose();

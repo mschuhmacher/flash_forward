@@ -21,6 +21,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();

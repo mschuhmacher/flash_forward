@@ -24,6 +24,8 @@ class _SearchFilterRowState extends State<SearchFilterRow> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _searchController.dispose();
     _filterLabelController.dispose();
     super.dispose();
