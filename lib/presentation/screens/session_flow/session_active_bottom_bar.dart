@@ -476,7 +476,7 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           );
 
                           // Reset the session state data
-                          SessionStateProvider().reset();
+                          context.read<SessionStateProvider>().reset();
 
                           // Disable keeping the screen awake.
                           WakelockPlus.disable();

@@ -201,9 +201,8 @@ class _SupersetModalState extends State<SupersetModal> {
                   // explicit leading handle below.
                   buildDefaultDragHandles: false,
                   itemCount: _members.length,
-                  onReorder: (oldIndex, newIndex) {
+                  onReorderItem: (oldIndex, newIndex) {
                     setState(() {
-                      if (oldIndex < newIndex) newIndex -= 1;
                       final m = _members.removeAt(oldIndex);
                       _members.insert(newIndex, m);
                     });
