@@ -199,7 +199,7 @@ class TrashProvider extends ChangeNotifier {
       }
       for (final id in staleSessionIds) {
         try {
-          await _syncStatus.service!.deleteSession(id);
+          await _syncStatus.service!.deleteUserSession(id);
         } catch (e, st) {
           Sentry.captureException(e, stackTrace: st);
         }
@@ -281,7 +281,7 @@ class TrashProvider extends ChangeNotifier {
           case TrashKind.exercise:
             await service.deleteExercise(id);
           case TrashKind.session:
-            await service.deleteSession(id);
+            await service.deleteUserSession(id);
         }
       } catch (e, st) {
         Sentry.captureException(e, stackTrace: st);

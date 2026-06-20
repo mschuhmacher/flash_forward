@@ -136,6 +136,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 SlidableAction(
                   borderRadius: BorderRadius.circular(12),
                   onPressed: (context) async {
+                    // Capture before await: SlidableAction disposes its own
+                    // context when pressed, so a context.mounted guard after
+                    // the dialog would skip the delete.
+                    final sessionLogProvider =
+                        context.read<SessionLogProvider>();
                     final confirmed = await showDialog<bool>(
                       context: context,
                       builder:
@@ -157,10 +162,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                     );
-                    if (confirmed == true && context.mounted) {
-                      await context
-                          .read<SessionLogProvider>()
-                          .deleteLoggedSession(session.id);
+                    if (confirmed == true) {
+                      await sessionLogProvider.deleteLoggedSession(session.id);
                     }
                   },
                   backgroundColor: context.colorScheme.error,

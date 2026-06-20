@@ -80,7 +80,10 @@ class SupabaseSyncService {
 
   /// Delete a session from the cloud
   /// If delete fails, queues the operation for retry
-  Future<void> deleteSession(String sessionId, {bool isRetry = false}) async {
+  Future<void> deleteUserSession(
+    String sessionId, {
+    bool isRetry = false,
+  }) async {
     try {
       await supabase
           .from('user_sessions')
@@ -169,6 +172,33 @@ class SupabaseSyncService {
         'userId': sessionData['userId'] ?? sessionData['user_id'],
       });
     }).toList();
+  }
+
+  /// Delete a single logged session (workout history) from the cloud
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteLoggedSession(
+    String sessionId, {
+    bool isRetry = false,
+  }) async {
+    try {
+      await supabase
+          .from('session_logs')
+          .delete()
+          .eq('session_id', sessionId)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: sessionId,
+            type: 'deleteLoggedSession',
+            data: {'sessionId': sessionId},
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+      rethrow;
+    }
   }
 
   /// Clear all logged sessions (workout history)
@@ -440,7 +470,7 @@ class SupabaseSyncService {
           await uploadSession(session, isRetry: true);
           return true;
         case 'deleteSession':
-          await deleteSession(
+          await deleteUserSession(
             operation.data['sessionId'] as String,
             isRetry: true,
           );
