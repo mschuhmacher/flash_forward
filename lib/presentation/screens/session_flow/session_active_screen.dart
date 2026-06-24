@@ -71,11 +71,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
       'pauseResumeOvertimeButton': keyPauseResumeOvertimeButton,
       'editButton': keyEditButton,
       'activeSessionEditButton': keyActiveSessionEditButton,
-      'navigationBar': keyNavigationBar,
+      // 'navigationBar': keyNavigationBar,
     };
     if (!context.read<SettingsProvider>().onboardingSessionActiveComplete) {
       WidgetsBinding.instance.addPostFrameCallback((_) => createTutorial());
-      Future.delayed(Duration(milliseconds: 300), showTutorial);
+      Future.delayed(Duration(milliseconds: 500), showTutorial);
     }
     super.initState();
     WidgetsBinding.instance.addObserver(this);
@@ -1432,10 +1432,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
   /// Polls until [key] is attached to a laid-out widget (its currentContext has
   /// a RenderBox), or [maxAttempts] frames pass. Used to hold the tutorial on
   /// the current step until a target inside a freshly-opened modal exists.
-  Future<void> _waitForKey(
-    GlobalKey key, {
-    int maxAttempts = 30,
-  }) async {
+  Future<void> _waitForKey(GlobalKey key, {int maxAttempts = 30}) async {
     for (var i = 0; i < maxAttempts; i++) {
       final renderObject = key.currentContext?.findRenderObject();
       if (renderObject is RenderBox && renderObject.hasSize) return;
@@ -1448,7 +1445,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
       targets: createSessionActiveOnboardingTargets(
         onboardingKeys: onboardingKeys,
       ),
-      colorShadow: context.colorScheme.primary,
+      colorShadow: Colors.black,
       skipWidget: SkipOnboarding(),
       paddingFocus: 20,
       opacityShadow: 0.7,
@@ -1473,17 +1470,20 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
           // NotFoundTargetException when the key isn't mounted yet.
           await _waitForKey(keyActiveSessionEditButton);
         }
-        if (target.identify == "keyActiveSessionEditButton") {
-          if (mounted) Navigator.pop(context);
-        }
       },
       onFinish: () {
         context.read<SettingsProvider>().markOnboardingSessionActiveComplete();
-        context.read<SessionStateProvider>().resume();
+        if (mounted && _editModalContext != null) Navigator.pop(context);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.read<SessionStateProvider>().resume();
+        });
       },
       onSkip: () {
         context.read<SettingsProvider>().markOnboardingSessionActiveComplete();
-        context.read<SessionStateProvider>().resume();
+        if (mounted && _editModalContext != null) Navigator.pop(context);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.read<SessionStateProvider>().resume();
+        });
         return true;
       },
     );

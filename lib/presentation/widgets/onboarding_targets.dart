@@ -209,46 +209,46 @@ List<TargetFocus> createSessionActiveOnboardingTargets({
       ],
     ),
   );
-  targets.add(
-    TargetFocus(
-      identify: "keyNavigationBar",
-      keyTarget: onboardingKeys['navigationBar'],
-      alignSkip: Alignment.bottomLeft,
-      shape: ShapeLightFocus.RRect,
-      radius: 25,
-      contents: [
-        TargetContent(
-          align: ContentAlign.top,
-          builder: (context, controller) {
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                color: context.colorScheme.surfaceBright,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      "Jump to the next or previous exercise.",
-                      style: context.titleLarge,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      "And see which exercise is coming up.",
-                      style: context.bodyLarge,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    ),
-  );
+  // targets.add(
+  //   TargetFocus(
+  //     identify: "keyNavigationBar",
+  //     keyTarget: onboardingKeys['navigationBar'],
+  //     alignSkip: Alignment.bottomLeft,
+  //     shape: ShapeLightFocus.RRect,
+  //     radius: 25,
+  //     contents: [
+  //       TargetContent(
+  //         align: ContentAlign.top,
+  //         builder: (context, controller) {
+  //           return Container(
+  //             decoration: BoxDecoration(
+  //               borderRadius: BorderRadius.circular(25),
+  //               color: context.colorScheme.surfaceBright,
+  //             ),
+  //             child: Padding(
+  //               padding: const EdgeInsets.all(20.0),
+  //               child: Column(
+  //                 mainAxisSize: MainAxisSize.min,
+  //                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                 children: <Widget>[
+  //                   Text(
+  //                     "Jump to the next or previous exercise.",
+  //                     style: context.titleLarge,
+  //                   ),
+  //                   SizedBox(height: 16),
+  //                   Text(
+  //                     "And see which exercise is coming up.",
+  //                     style: context.bodyLarge,
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           );
+  //         },
+  //       ),
+  //     ],
+  //   ),
+  // );
   return targets;
 }
 

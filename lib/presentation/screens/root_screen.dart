@@ -236,7 +236,7 @@ class _RootScreenState extends State<RootScreen>
         }
       },
       onFinish: () {
-        // context.read<SettingsProvider>().markOnboardingCatalogComplete();
+        context.read<SettingsProvider>().markOnboardingCatalogComplete();
         Navigator.pop(context);
       },
       onSkip: () {
