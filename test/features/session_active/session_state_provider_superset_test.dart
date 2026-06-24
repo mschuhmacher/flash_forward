@@ -271,7 +271,9 @@ void main() {
       // *exercise* is next, not "set 2 of the same one."
       p.start(_ssMixed(e3Sets: 3));
       p.jumpToExercise(2); // solo e3, set 1 of 3
-      expect(p.nextStop, isNull); // e3 is the last exercise
+      // e3 is the last exercise; forward nav advances to the workoutComplete
+      // screen rather than straight to the finish checkmark.
+      expect(p.nextStop!.phase, TimerPhase.workoutComplete);
       // From mid-session a solo exercise's nextStop should also skip sets:
       p.start(_ssTwoWorkouts());
       // a1 has 2 sets; from a1 set 1, next is W2's b1, not a1 set 2.
@@ -281,9 +283,14 @@ void main() {
       expect(p.progress.currentSet, 1);
     });
 
-    test('last exercise of last workout → null', () {
+    test('last exercise of last workout → workoutComplete, then null', () {
       p.start(_ssMixed(e3Sets: 2));
       p.jumpToExercise(2);
+      // First forward press lands on the completion screen...
+      expect(p.nextStop!.phase, TimerPhase.workoutComplete);
+      p.jumpToNext();
+      expect(p.progress.phase, TimerPhase.workoutComplete);
+      // ...and once there, there's nothing after it (bottom bar shows finish).
       expect(p.nextStop, isNull);
     });
 

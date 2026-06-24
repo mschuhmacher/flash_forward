@@ -37,46 +37,57 @@ class SessionStateMachine {
     SessionProgress p,
     Session activeSession,
   ) {
+    // Already on the post-session "workout complete" screen — nothing follows
+    // it, so the bottom bar shows the finish checkmark.
+    if (p.phase == TimerPhase.workoutComplete) return null;
+
     final workout = activeSession.workouts[p.workoutIndex];
     final exercise = workout.exercises[p.exerciseIndex];
     final effectiveSets = setsForExerciseInWorkout(workout, exercise);
     final ss = supersetForExercise(workout, exercise.id);
 
+    // Next real exercise stop, or null when the session is exhausted.
+    final SessionProgress? next;
     if (ss != null) {
       if (hasNextInSuperset(workout, p.exerciseIndex)) {
-        return SessionProgress(
+        next = SessionProgress(
           workoutIndex: p.workoutIndex,
           exerciseIndex: p.exerciseIndex + 1,
           currentSet: p.currentSet,
           currentRep: 1,
           phase: TimerPhase.rep,
         );
-      }
-      // Last member of the group.
-      if (p.currentSet < effectiveSets) {
-        // More rounds: wrap to group start, bump set.
+      } else if (p.currentSet < effectiveSets) {
+        // Last member of the group, more rounds: wrap to group start, bump set.
         final groupStart = supersetGroupStartIndex(workout, p.exerciseIndex);
-        return SessionProgress(
+        next = SessionProgress(
           workoutIndex: p.workoutIndex,
           exerciseIndex: groupStart,
           currentSet: p.currentSet + 1,
           currentRep: 1,
           phase: TimerPhase.rep,
         );
+      } else {
+        // Group done — exit past the group's last index.
+        final groupEnd = supersetGroupEndIndex(workout, p.exerciseIndex);
+        next = firstStopAtOrAfter(p.workoutIndex, groupEnd + 1, activeSession);
       }
-      // Group done — exit past the group's last index.
-      final groupEnd = supersetGroupEndIndex(workout, p.exerciseIndex);
-      return firstStopAtOrAfter(p.workoutIndex, groupEnd + 1, activeSession);
+    } else {
+      // Solo exercise: next exercise (sets aren't stops here — they're the
+      // same exercise repeated, and the user wants to know what *exercise*
+      // they're doing next).
+      next = firstStopAtOrAfter(
+        p.workoutIndex,
+        p.exerciseIndex + 1,
+        activeSession,
+      );
     }
 
-    // Solo exercise: next exercise (sets aren't stops here — they're the
-    // same exercise repeated, and the user wants to know what *exercise*
-    // they're doing next).
-    return firstStopAtOrAfter(
-      p.workoutIndex,
-      p.exerciseIndex + 1,
-      activeSession,
-    );
+    // Session exhausted but not yet on the workout-complete screen: forward nav
+    // lands there first (keeping the final exercise's indices, matching how the
+    // timer transitions into workoutComplete) so the checkmark only appears once
+    // the user is actually on that screen.
+    return next ?? p.copyWith(phase: TimerPhase.workoutComplete);
   }
 
   /// Returns a `rep` (or `getReady`) stop at exercise [index] within

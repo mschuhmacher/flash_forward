@@ -696,10 +696,26 @@ void main() {
       expect(next!.exerciseIndex, 2); // exits to the solo e3
     });
 
-    test('returns null at the end of the session', () {
+    test('last exercise advances to the workoutComplete stop', () {
+      // The completion screen is a real stop after the last exercise, so
+      // forward nav lands there (keeping the final indices) rather than going
+      // straight to the finish checkmark.
       final s = _solo([_fixed('e1', sets: 2)]);
       final next = SessionStateMachine.calculateNextStop(
         _p(exerciseIndex: 0, currentSet: 1, phase: TimerPhase.rep),
+        s,
+      );
+      expect(next, isNotNull);
+      expect(next!.phase, TimerPhase.workoutComplete);
+      expect(next.exerciseIndex, 0); // same indices as the final exercise
+    });
+
+    test('returns null once already on the workoutComplete screen', () {
+      // Nothing follows the completion screen — null tells the bottom bar to
+      // show the finish checkmark.
+      final s = _solo([_fixed('e1', sets: 2)]);
+      final next = SessionStateMachine.calculateNextStop(
+        _p(exerciseIndex: 0, currentSet: 1, phase: TimerPhase.workoutComplete),
         s,
       );
       expect(next, isNull);

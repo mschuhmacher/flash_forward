@@ -38,12 +38,15 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
         // wrapping within a superset round.
         final nextStop = sessionStateData.nextStop;
         final String nextExerciseString;
-        if (nextStop == null) {
+        if (nextStop == null || nextStop.phase == TimerPhase.workoutComplete) {
+          // null = already on the completion screen (checkmark shows);
+          // workoutComplete = the last exercise, where forward nav goes to the
+          // completion screen rather than another exercise.
           nextExerciseString = 'Next exercise: \nDone';
         } else {
-          final nextExercise = activeSession
-              .workouts[nextStop.workoutIndex]
-              .exercises[nextStop.exerciseIndex];
+          final nextExercise =
+              activeSession.workouts[nextStop.workoutIndex].exercises[nextStop
+                  .exerciseIndex];
           nextExerciseString = 'Next exercise: \n${nextExercise.title}';
         }
 
@@ -62,16 +65,20 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                     previousStop == null
                         ? SizedBox.shrink()
                         : MyIconButton(
-                          onTap: sessionStateData.phase == TimerPhase.overtime
-                            ? null
-                            : () {
-                                sessionStateData.jumpToPrevious();
-                              },
+                          onTap:
+                              sessionStateData.phase == TimerPhase.overtime
+                                  ? null
+                                  : () {
+                                    sessionStateData.jumpToPrevious();
+                                  },
                           icon: Icons.arrow_back,
                           size: 44,
-                          foregroundColor: sessionStateData.phase == TimerPhase.overtime
-                              ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                              : context.colorScheme.primary,
+                          foregroundColor:
+                              sessionStateData.phase == TimerPhase.overtime
+                                  ? context.colorScheme.onSurface.withValues(
+                                    alpha: 0.38,
+                                  )
+                                  : context.colorScheme.primary,
                         ),
                     Expanded(
                       child: Center(
@@ -87,24 +94,29 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
 
                     nextStop != null
                         ? MyIconButton(
-                          onTap: sessionStateData.phase == TimerPhase.overtime
-                            ? null
-                            : () {
-                                sessionStateData.jumpToNext();},
+                          onTap:
+                              sessionStateData.phase == TimerPhase.overtime
+                                  ? null
+                                  : () {
+                                    sessionStateData.jumpToNext();
+                                  },
                           icon: Icons.arrow_forward,
                           size: 44,
-                          foregroundColor: sessionStateData.phase == TimerPhase.overtime
-                              ? context.colorScheme.onSurface.withValues(alpha: 0.38)
-                              : context.colorScheme.primary,
+                          foregroundColor:
+                              sessionStateData.phase == TimerPhase.overtime
+                                  ? context.colorScheme.onSurface.withValues(
+                                    alpha: 0.38,
+                                  )
+                                  : context.colorScheme.primary,
                         )
                         : MyIconButton(
                           onTap: () {
-                          _showFinishSessionDialog(
-                            context,
-                            activeSession,
-                            sessionLogData,
-                          );
-                        },
+                            _showFinishSessionDialog(
+                              context,
+                              activeSession,
+                              sessionLogData,
+                            );
+                          },
                           icon: Icons.check,
                           size: 44,
                           foregroundColor: context.colorScheme.primary,
@@ -417,8 +429,9 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                                       workout.exercises.map((exercise) {
                                         if (!ProgressExtractor.isMaxExercise(
                                           exercise,
-                                        ))
+                                        )) {
                                           return exercise;
+                                        }
                                         final key =
                                             exercise.templateId ??
                                             exercise.title;
@@ -457,6 +470,19 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           summary: telemetry.summary,
                         );
 
+                        // Capture references tied to the navigator/providers
+                        // before the auth wall. Signing in can unmount this
+                        // screen, so `context` may be dead when the wall
+                        // returns — reset() and popUntil() must run against
+                        // these survivors, ungated, so they fire on every path
+                        // (create / login / not now) and never softlock.
+                        final navigator = Navigator.of(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        final sessionState =
+                            context.read<SessionStateProvider>();
+                        final isAuthenticated =
+                            context.read<AuthProvider>().isAuthenticated;
+
                         Navigator.of(dialogContext).pop();
 
                         // Await the save so the local write is guaranteed
@@ -466,39 +492,28 @@ class _ActiveSessionBottomBarState extends State<ActiveSessionBottomBar> {
                           finishedSession,
                         );
 
-                        // Only use the buildContext is it still mounted. Meaning, the widget is still in the Widgettree.
-                        // If user leaves screen before await is done, mounted would be false
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Session saved to log!'),
-                            ),
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Session saved to log!'),
+                          ),
+                        );
+
+                        // Disable keeping the screen awake.
+                        WakelockPlus.disable();
+
+                        // Post-save nudge: the session is already safe locally,
+                        // so this is not a gate — the result is ignored. A
+                        // later sign-in claims the session. Reset and pop home
+                        // happen AFTER, so all wall paths land on home.
+                        if (!isAuthenticated && context.mounted) {
+                          await requireAuth(
+                            context,
+                            message: 'back up your progress to the cloud',
                           );
-
-                          // Reset the session state data
-                          context.read<SessionStateProvider>().reset();
-
-                          // Disable keeping the screen awake.
-                          WakelockPlus.disable();
-
-                          // Post-save nudge: the session is already safe
-                          // locally, so this is not a gate — the result is
-                          // ignored. A later sign-in claims the session.
-                          if (!context.read<AuthProvider>().isAuthenticated) {
-                            await requireAuth(
-                              context,
-                              message: 'back up your progress to the cloud',
-                            );
-                          }
-
-                          // Keeps popping routes until the current route is the first route. Not named,so no errors.
-                          if (context.mounted) {
-                            Navigator.popUntil(
-                              context,
-                              (route) => route.isFirst,
-                            );
-                          }
                         }
+
+                        sessionState.reset();
+                        navigator.popUntil((route) => route.isFirst);
                       },
                       child: Text('Finish'),
                     ),
