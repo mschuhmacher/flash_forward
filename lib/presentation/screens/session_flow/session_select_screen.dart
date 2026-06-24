@@ -33,6 +33,8 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _searchController.dispose();
     super.dispose();
   }

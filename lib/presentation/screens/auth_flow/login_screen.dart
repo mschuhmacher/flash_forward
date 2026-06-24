@@ -34,6 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();

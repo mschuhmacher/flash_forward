@@ -87,6 +87,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _titleController.dispose();
     _descriptionController.dispose();
     _itemLabelController.dispose();
@@ -462,12 +464,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                             },
                           );
                         },
-                        onReorder: (int oldIndex, int newIndex) {
+                        onReorderItem: (int oldIndex, int newIndex) {
                           setState(() {
-                            if (oldIndex < newIndex) {
-                              newIndex -=
-                                  1; // Since the widget if removed from its old index
-                            }
                             final Workout workout = session.workouts.removeAt(
                               oldIndex,
                             );

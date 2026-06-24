@@ -42,6 +42,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _pageController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
