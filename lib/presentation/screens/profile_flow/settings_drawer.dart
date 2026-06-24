@@ -197,16 +197,14 @@ class SettingsDrawer extends StatelessWidget {
                               style: context.bodyMedium,
                             ),
                             trailing: Text(
-                              settings.onboardingSessionSelectComplete
-                                  ? 'No'
-                                  : 'Yes',
+                              settings.onboardingResetRequested ? 'Yes' : 'No',
                               style: context.bodyMedium.copyWith(fontWeight: FontWeight.bold),
                             ),
                             onTap: () {
-                              if (settings.onboardingSessionSelectComplete) {
-                                settings.enableOnboarding();
-                              } else {
+                              if (settings.onboardingResetRequested) {
                                 settings.disableOnboarding();
+                              } else {
+                                settings.enableOnboarding();
                               }
                             },
                           ),

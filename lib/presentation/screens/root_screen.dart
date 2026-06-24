@@ -208,7 +208,7 @@ class _RootScreenState extends State<RootScreen>
   void createTutorial() {
     tutorialCoachMark = TutorialCoachMark(
       targets: createCatalogOnboardingTargets(onboardingKeys: onboardingKeys),
-      colorShadow: Colors.black,
+      colorShadow: context.colorScheme.primary,
       skipWidget: SkipOnboarding(),
       paddingFocus: 20,
       opacityShadow: 0.7,

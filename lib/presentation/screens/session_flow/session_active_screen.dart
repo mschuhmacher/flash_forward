@@ -1448,7 +1448,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
       targets: createSessionActiveOnboardingTargets(
         onboardingKeys: onboardingKeys,
       ),
-      colorShadow: Colors.black,
+      colorShadow: context.colorScheme.primary,
       skipWidget: SkipOnboarding(),
       paddingFocus: 20,
       opacityShadow: 0.7,

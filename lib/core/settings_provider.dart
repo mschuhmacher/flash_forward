@@ -26,6 +26,8 @@ class SettingsProvider extends ChangeNotifier {
       'pref_onboarding_session_active_complete';
   static const _keyOnboardingCatalogComplete =
       'pref_onboarding_catalog_complete';
+  static const _keyOnboardingResetRequested =
+      'pref_onboarding_reset_requested';
 
   String _weightUnit = 'kg';
   String _gradeSystem = 'fontainebleau';
@@ -34,6 +36,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _onboardingSessionSelectComplete = false;
   bool _onboardingSessionActiveComplete = false;
   bool _onboardingCatalogComplete = false;
+  bool _onboardingResetRequested = false;
 
   String get weightUnit => _weightUnit;
   String get gradeSystem => _gradeSystem;
@@ -42,6 +45,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get onboardingSessionSelectComplete => _onboardingSessionSelectComplete;
   bool get onboardingSessionActiveComplete => _onboardingSessionActiveComplete;
   bool get onboardingCatalogComplete => _onboardingCatalogComplete;
+  bool get onboardingResetRequested => _onboardingResetRequested;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -59,6 +63,11 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_keyOnboardingSessionActiveComplete) ?? false;
     _onboardingCatalogComplete =
         prefs.getBool(_keyOnboardingCatalogComplete) ?? false;
+
+    // The reset toggle is transient: always start as "not requested" on
+    // app launch, regardless of what was persisted last session.
+    _onboardingResetRequested = false;
+    await prefs.setBool(_keyOnboardingResetRequested, false);
 
     notifyListeners();
   }
@@ -113,22 +122,26 @@ class SettingsProvider extends ChangeNotifier {
     _onboardingSessionSelectComplete = false;
     _onboardingSessionActiveComplete = false;
     _onboardingCatalogComplete = false;
+    _onboardingResetRequested = true;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyOnboardingSessionSelectComplete, false);
     await prefs.setBool(_keyOnboardingSessionActiveComplete, false);
     await prefs.setBool(_keyOnboardingCatalogComplete, false);
+    await prefs.setBool(_keyOnboardingResetRequested, true);
   }
 
   Future<void> disableOnboarding() async {
     _onboardingSessionSelectComplete = true;
     _onboardingSessionActiveComplete = true;
     _onboardingCatalogComplete = true;
+    _onboardingResetRequested = false;
 
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyOnboardingSessionSelectComplete, true);
     await prefs.setBool(_keyOnboardingSessionActiveComplete, true);
     await prefs.setBool(_keyOnboardingCatalogComplete, true);
+    await prefs.setBool(_keyOnboardingResetRequested, false);
   }
 }
