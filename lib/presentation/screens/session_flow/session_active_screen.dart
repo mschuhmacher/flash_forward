@@ -6,6 +6,8 @@ import 'package:flash_forward/presentation/widgets/my_icon_button.dart';
 import 'package:flash_forward/core/nullable.dart';
 import 'package:flash_forward/core/superset_utils.dart';
 import 'package:flash_forward/presentation/widgets/increment_decrement_number.dart';
+import 'package:flash_forward/presentation/widgets/onboarding_skip_button.dart';
+import 'package:flash_forward/presentation/widgets/onboarding_targets.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flash_forward/core/timer_utils.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +23,7 @@ import 'package:flash_forward/core/settings_provider.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'dart:io' show Platform;
 
@@ -53,8 +56,27 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
   // once in didChangeDependencies, detached in dispose.
   SessionStateProvider? _sessionProvider;
 
+  late TutorialCoachMark tutorialCoachMark;
+
+  GlobalKey keyPauseResumeOvertimeButton = GlobalKey();
+  GlobalKey keyEditButton = GlobalKey();
+  GlobalKey keyNavigationBar = GlobalKey();
+  GlobalKey keyActiveSessionEditButton = GlobalKey();
+
+  late final Map<String, GlobalKey> onboardingKeys;
+
   @override
   void initState() {
+    onboardingKeys = {
+      'pauseResumeOvertimeButton': keyPauseResumeOvertimeButton,
+      'editButton': keyEditButton,
+      'activeSessionEditButton': keyActiveSessionEditButton,
+      'navigationBar': keyNavigationBar,
+    };
+    if (!context.read<SettingsProvider>().onboardingSessionActiveComplete) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => createTutorial());
+      Future.delayed(Duration(milliseconds: 300), showTutorial);
+    }
     super.initState();
     WidgetsBinding.instance.addObserver(this);
   }
@@ -107,7 +129,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
   @override
   Widget build(BuildContext context) {
     return Consumer2<CatalogProvider, SessionStateProvider>(
-      builder: (context, presetData, sessionStateData, child) {
+      builder: (context, catalogData, sessionStateData, child) {
         // Initialize the timer & keep screen awake once when the screen first builds.
         // Passes the session to start(), which deep-copies it internally.
         if (!_timerInitialized) {
@@ -124,6 +146,13 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
             // Start keeping screen awake
             WakelockPlus.enable();
+
+            // If the onboarding has not completed yet, pause the timer so that it doesn't run during the onboarding
+            if (!context
+                .read<SettingsProvider>()
+                .onboardingSessionActiveComplete) {
+              sessionStateData.pause();
+            }
 
             // Android 12+: SCHEDULE_EXACT_ALARM lets us fire beep sounds
             // exactly on time even when the screen is locked. Show a rationale
@@ -565,6 +594,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                     Positioned(
                                       right: 20,
                                       child: _PauseResumeOvertimeButton(
+                                        key: keyPauseResumeOvertimeButton,
                                         sessionStateData: sessionStateData,
                                       ),
                                     ),
@@ -699,6 +729,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                                     Spacer(),
                                     //EDIT
                                     MyIconButton(
+                                      key: keyEditButton,
                                       onTap:
                                           sessionStateData.phase ==
                                                   TimerPhase.overtime
@@ -740,7 +771,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
               ],
             ),
           ),
-          bottomNavigationBar: ActiveSessionBottomBar(),
+          bottomNavigationBar: ActiveSessionBottomBar(key: keyNavigationBar),
         );
       },
     );
@@ -932,6 +963,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
 
                         children: [
                           OutlinedButton(
+                            key: keyActiveSessionEditButton,
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -955,7 +987,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
                             ),
                             child: Center(
                               child: Text(
-                                "Edit this session's workouts and exercises.",
+                                "Edit session",
                                 style: context.titleMedium.copyWith(
                                   color: context.colorScheme.primary,
                                 ),
@@ -1391,12 +1423,77 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen>
       _ => 'Maximum',
     };
   }
+
+  void showTutorial() {
+    if (!mounted) return;
+    tutorialCoachMark.show(context: context);
+  }
+
+  /// Polls until [key] is attached to a laid-out widget (its currentContext has
+  /// a RenderBox), or [maxAttempts] frames pass. Used to hold the tutorial on
+  /// the current step until a target inside a freshly-opened modal exists.
+  Future<void> _waitForKey(
+    GlobalKey key, {
+    int maxAttempts = 30,
+  }) async {
+    for (var i = 0; i < maxAttempts; i++) {
+      final renderObject = key.currentContext?.findRenderObject();
+      if (renderObject is RenderBox && renderObject.hasSize) return;
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
+  }
+
+  void createTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: createSessionActiveOnboardingTargets(
+        onboardingKeys: onboardingKeys,
+      ),
+      colorShadow: Colors.black,
+      skipWidget: SkipOnboarding(),
+      paddingFocus: 20,
+      opacityShadow: 0.7,
+      onClickTarget: (target) async {
+        if (target.identify == "keyEditButton") {
+          final SessionStateProvider sessionStateData =
+              Provider.of<SessionStateProvider>(context, listen: false);
+          final progress = sessionStateData.progress;
+          final activeExercise =
+              sessionStateData.activeSession!.workouts[0].exercises[0];
+          _showEditExerciseDialog(
+            context,
+            activeExercise,
+            sessionStateData,
+            progress.workoutIndex,
+            progress.exerciseIndex,
+          );
+          // The next tutorial target (activeSessionEditButton) lives inside the
+          // modal we just opened. The package awaits this callback before
+          // advancing, so block here until that button is actually laid out —
+          // a fixed delay races the modal's open animation and crashes with
+          // NotFoundTargetException when the key isn't mounted yet.
+          await _waitForKey(keyActiveSessionEditButton);
+        }
+        if (target.identify == "keyActiveSessionEditButton") {
+          if (mounted) Navigator.pop(context);
+        }
+      },
+      onFinish: () {
+        context.read<SettingsProvider>().markOnboardingSessionActiveComplete();
+        context.read<SessionStateProvider>().resume();
+      },
+      onSkip: () {
+        context.read<SettingsProvider>().markOnboardingSessionActiveComplete();
+        context.read<SessionStateProvider>().resume();
+        return true;
+      },
+    );
+  }
 }
 
 class _PauseResumeOvertimeButton extends StatelessWidget {
   final SessionStateProvider sessionStateData;
 
-  const _PauseResumeOvertimeButton({required this.sessionStateData});
+  const _PauseResumeOvertimeButton({required this.sessionStateData, super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -187,6 +187,29 @@ class SettingsDrawer extends StatelessWidget {
                                 (value) =>
                                     settings.setRestOvertimeOnBackground(value),
                           ),
+                          const SizedBox(height: 20),
+                          Text('Onboarding', style: context.titleMedium),
+                          const SizedBox(height: 4),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              'Show onboarding again upon app restart.',
+                              style: context.bodyMedium,
+                            ),
+                            trailing: Text(
+                              settings.onboardingSessionSelectComplete
+                                  ? 'No'
+                                  : 'Yes',
+                              style: context.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            onTap: () {
+                              if (settings.onboardingSessionSelectComplete) {
+                                settings.enableOnboarding();
+                              } else {
+                                settings.disableOnboarding();
+                              }
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -206,12 +229,13 @@ class SettingsDrawer extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.restore_rounded),
                   title: Text('Restore trash', style: context.bodyLarge),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RestoreItemsScreen(),
-                    ),
-                  ),
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RestoreItemsScreen(),
+                        ),
+                      ),
                 ),
               const Divider(height: 1),
               Padding(
@@ -250,12 +274,13 @@ class SettingsDrawer extends StatelessWidget {
                     'Sign in / Create account',
                     style: context.bodyLarge,
                   ),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LoginScreen(popOnSuccess: true),
-                    ),
-                  ),
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LoginScreen(popOnSuccess: true),
+                        ),
+                      ),
                 ),
             ],
           ),

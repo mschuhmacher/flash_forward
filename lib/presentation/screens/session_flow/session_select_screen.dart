@@ -1,9 +1,12 @@
+import 'package:flash_forward/core/settings_provider.dart';
 import 'package:flash_forward/models/exercise.dart';
 import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/session_flow/session_active_screen.dart';
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_badge.dart';
+import 'package:flash_forward/presentation/widgets/onboarding_skip_button.dart';
+import 'package:flash_forward/presentation/widgets/onboarding_targets.dart';
 import 'package:flash_forward/themes/app_shadow.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +16,7 @@ import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/presentation/widgets/start_session_button.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 class SessionSelectScreen extends StatefulWidget {
   final dynamic index;
@@ -30,6 +34,24 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
   String _query = '';
   bool _isSearching = false;
   final _searchController = TextEditingController();
+  late TutorialCoachMark tutorialCoachMark;
+
+  GlobalKey keySessionListItem = GlobalKey();
+  GlobalKey keySessionSelectFAB = GlobalKey();
+  late final Map<String, GlobalKey> onboardingKeys;
+
+  @override
+  void initState() {
+    onboardingKeys = {
+      'sessionListItem': keySessionListItem,
+      'sessionSelectFAB': keySessionSelectFAB,
+    };
+    WidgetsBinding.instance.addPostFrameCallback((_) => createTutorial());
+    if (!context.read<SettingsProvider>().onboardingSessionSelectComplete) {
+      Future.delayed(Duration(milliseconds: 300), showTutorial);
+    }
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -143,6 +165,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                           });
                         },
                         child: _SessionCard(
+                          key: index == 0 ? keySessionListItem : null,
                           isSelected: selectedId == session.id,
                           session: session,
                           isExpanded: isExpandedIds.contains(session.id),
@@ -209,6 +232,7 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                   ),
                 ),
                 FloatingActionButton(
+                  key: keySessionSelectFAB,
                   backgroundColor: context.colorScheme.secondary,
                   foregroundColor: context.colorScheme.onSecondary,
                   onPressed: () {
@@ -296,13 +320,16 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
                             (context) => NewSessionScreen(
                               mode: NewSessionScreenMode.editBeforeStart,
                               session: session,
-                              onSaveAndStart: (s) => Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ActiveSessionScreen(session: s),
-                                ),
-                                (route) => route.isFirst,
-                              ),
+                              onSaveAndStart:
+                                  (s) => Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) =>
+                                              ActiveSessionScreen(session: s),
+                                    ),
+                                    (route) => route.isFirst,
+                                  ),
                             ),
                       ),
                     );
@@ -316,6 +343,30 @@ class _SessionSelectScreenState extends State<SessionSelectScreen> {
       },
     );
   }
+
+  void showTutorial() {
+    if (!mounted) return;
+    tutorialCoachMark.show(context: context);
+  }
+
+  void createTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: createSessionSelectOnboardingTargets(
+        onboardingKeys: onboardingKeys,
+      ),
+      colorShadow: context.colorScheme.primary,
+      skipWidget: SkipOnboarding(),
+      paddingFocus: 20,
+      opacityShadow: 0.7,
+      onFinish: () {
+        context.read<SettingsProvider>().markOnboardingSessionSelectComplete();
+      },
+      onSkip: () {
+        context.read<SettingsProvider>().markOnboardingSessionSelectComplete();
+        return true;
+      },
+    );
+  }
 }
 
 class _SessionCard extends StatelessWidget {
@@ -324,6 +375,7 @@ class _SessionCard extends StatelessWidget {
     required this.session,
     required this.isExpanded,
     required this.onTapExpanded,
+    super.key,
   });
 
   final bool isSelected;
