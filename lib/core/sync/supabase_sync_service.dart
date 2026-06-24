@@ -48,12 +48,14 @@ class SupabaseSyncService {
       });
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: session.id,
-          type: 'uploadSession',
-          data: session.toJson(),
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: session.id,
+            type: 'uploadSession',
+            data: session.toJson(),
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -78,7 +80,10 @@ class SupabaseSyncService {
 
   /// Delete a session from the cloud
   /// If delete fails, queues the operation for retry
-  Future<void> deleteSession(String sessionId, {bool isRetry = false}) async {
+  Future<void> deleteUserSession(
+    String sessionId, {
+    bool isRetry = false,
+  }) async {
     try {
       await supabase
           .from('user_sessions')
@@ -87,12 +92,14 @@ class SupabaseSyncService {
           .eq('user_id', userId);
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: sessionId,
-          type: 'deleteSession',
-          data: {'sessionId': sessionId},
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: sessionId,
+            type: 'deleteSession',
+            data: {'sessionId': sessionId},
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -103,26 +110,29 @@ class SupabaseSyncService {
   /// Log a completed session to workout history
   /// This creates a permanent record separate from the session itself
   /// If log fails, queues the operation for retry
-  Future<void> logCompletedSession(Session session, {bool isRetry = false}) async {
-    final completedAt = DateTime.now().toIso8601String();
+  Future<void> logCompletedSession(
+    Session session, {
+    DateTime? completedAt,
+    bool isRetry = false,
+  }) async {
+    final completedAtDate = (completedAt ?? DateTime.now()).toIso8601String();
     try {
       await supabase.from('session_logs').insert({
         'user_id': userId,
         'session_id': session.id,
-        'completed_at': completedAt,
+        'completed_at': completedAtDate,
         'session_data': session.toJson(),
       });
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: '${session.id}_$completedAt',
-          type: 'logSession',
-          data: {
-            'session': session.toJson(),
-            'completedAt': completedAt,
-          },
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: '${session.id}_$completedAtDate',
+            type: 'logSession',
+            data: {'session': session.toJson(), 'completedAt': completedAtDate},
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -164,6 +174,33 @@ class SupabaseSyncService {
     }).toList();
   }
 
+  /// Delete a single logged session (workout history) from the cloud
+  /// If delete fails, queues the operation for retry
+  Future<void> deleteLoggedSession(
+    String sessionId, {
+    bool isRetry = false,
+  }) async {
+    try {
+      await supabase
+          .from('session_logs')
+          .delete()
+          .eq('session_id', sessionId)
+          .eq('user_id', userId);
+    } catch (e) {
+      if (!isRetry) {
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: sessionId,
+            type: 'deleteLoggedSession',
+            data: {'sessionId': sessionId},
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
   /// Clear all logged sessions (workout history)
   /// Use with caution - this deletes workout history permanently
   Future<void> clearLoggedSessions() async {
@@ -191,12 +228,14 @@ class SupabaseSyncService {
       });
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: workout.id,
-          type: 'uploadWorkout',
-          data: workout.toJson(),
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: workout.id,
+            type: 'uploadWorkout',
+            data: workout.toJson(),
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -231,12 +270,14 @@ class SupabaseSyncService {
           .eq('user_id', userId);
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: workoutId,
-          type: 'deleteWorkout',
-          data: {'workoutId': workoutId},
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: workoutId,
+            type: 'deleteWorkout',
+            data: {'workoutId': workoutId},
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -250,7 +291,10 @@ class SupabaseSyncService {
 
   /// Upload a trash entry to the cloud
   /// If upload fails, queues the operation for retry
-  Future<void> uploadTrashEntry(TrashEntry entry, {bool isRetry = false}) async {
+  Future<void> uploadTrashEntry(
+    TrashEntry entry, {
+    bool isRetry = false,
+  }) async {
     try {
       await supabase.from('trash_entries').upsert({
         'id': entry.id,
@@ -261,12 +305,14 @@ class SupabaseSyncService {
       });
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: entry.id,
-          type: 'uploadTrashEntry',
-          data: entry.toJson(),
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: entry.id,
+            type: 'uploadTrashEntry',
+            data: entry.toJson(),
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -300,12 +346,14 @@ class SupabaseSyncService {
           .eq('user_id', userId);
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: id,
-          type: 'deleteTrashEntry',
-          data: {'trashEntryId': id},
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: id,
+            type: 'deleteTrashEntry',
+            data: {'trashEntryId': id},
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -338,12 +386,14 @@ class SupabaseSyncService {
       });
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: exercise.id,
-          type: 'uploadExercise',
-          data: exercise.toJson(),
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: exercise.id,
+            type: 'uploadExercise',
+            data: exercise.toJson(),
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -391,12 +441,14 @@ class SupabaseSyncService {
           .eq('user_id', userId);
     } catch (e) {
       if (!isRetry) {
-        await _syncQueue.enqueue(SyncOperation(
-          id: exerciseId,
-          type: 'deleteExercise',
-          data: {'exerciseId': exerciseId},
-          createdAt: DateTime.now(),
-        ));
+        await _syncQueue.enqueue(
+          SyncOperation(
+            id: exerciseId,
+            type: 'deleteExercise',
+            data: {'exerciseId': exerciseId},
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       rethrow;
     }
@@ -418,7 +470,10 @@ class SupabaseSyncService {
           await uploadSession(session, isRetry: true);
           return true;
         case 'deleteSession':
-          await deleteSession(operation.data['sessionId'] as String, isRetry: true);
+          await deleteUserSession(
+            operation.data['sessionId'] as String,
+            isRetry: true,
+          );
           return true;
         case 'logSession':
           final session = Session.fromJson(operation.data['session']);
@@ -440,11 +495,15 @@ class SupabaseSyncService {
           return true;
         case 'deleteWorkout':
           await deleteWorkout(
-              operation.data['workoutId'] as String, isRetry: true);
+            operation.data['workoutId'] as String,
+            isRetry: true,
+          );
           return true;
         case 'deleteExercise':
           await deleteExercise(
-              operation.data['exerciseId'] as String, isRetry: true);
+            operation.data['exerciseId'] as String,
+            isRetry: true,
+          );
           return true;
         case 'uploadTrashEntry':
           final entry = TrashEntry.fromJson(operation.data);
@@ -452,7 +511,9 @@ class SupabaseSyncService {
           return true;
         case 'deleteTrashEntry':
           await deleteTrashEntry(
-              operation.data['trashEntryId'] as String, isRetry: true);
+            operation.data['trashEntryId'] as String,
+            isRetry: true,
+          );
           return true;
         default:
           // Unknown op type — un-handleable; processQueue discards + reports.

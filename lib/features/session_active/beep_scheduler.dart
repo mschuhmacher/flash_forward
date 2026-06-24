@@ -24,7 +24,7 @@ class BeepScheduler {
   Future<void> init() async {
     tz.initializeTimeZones();
     await _plugin.initialize(
-      const InitializationSettings(
+      settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(
           // iOS: triggers the system permission dialog on first launch if the
@@ -82,14 +82,10 @@ class BeepScheduler {
       if (beep.at.isBefore(DateTime.now())) continue;
       try {
         await _plugin.zonedSchedule(
-          _baseId + i,
-          null,
-          null,
-          tz.TZDateTime.from(beep.at, tz.local),
-          _detailsFor(beep.type),
+          id: _baseId + i,
+          scheduledDate: tz.TZDateTime.from(beep.at, tz.local),
+          notificationDetails: _detailsFor(beep.type),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
         );
       } catch (_) {
         // Permission denied or revoked (e.g. SCHEDULE_EXACT_ALARM) —
@@ -102,7 +98,7 @@ class BeepScheduler {
   /// Cancels all pending beep notifications.
   Future<void> cancelAll() async {
     for (var i = 0; i < maxBeeps; i++) {
-      await _plugin.cancel(_baseId + i);
+      await _plugin.cancel(id: _baseId + i);
     }
   }
 

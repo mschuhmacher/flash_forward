@@ -1,12 +1,9 @@
+import 'package:flash_forward/features/auth/guest_mode_store.dart';
+import 'package:flash_forward/features/auth/sign_in_coordinator.dart';
 import 'package:flash_forward/presentation/screens/root_screen.dart';
-import 'package:flash_forward/core/sync/sync_status_provider.dart';
-import 'package:flash_forward/features/catalog/trash_provider.dart';
-import 'package:flash_forward/core/sync/supabase_sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/features/auth/auth_provider.dart';
-import 'package:flash_forward/features/catalog/catalog_provider.dart';
-import 'package:flash_forward/features/session_log/session_log_provider.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/signup_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -15,12 +12,16 @@ class LoginScreen extends StatefulWidget {
   final bool showEmailConfirmationMessage;
   final bool showEmailConfirmedMessage;
   final bool showPasswordResetMessage;
+  final bool popOnSuccess;
+  final bool guestMode;
 
   const LoginScreen({
     super.key,
     this.showEmailConfirmationMessage = false,
     this.showEmailConfirmedMessage = false,
     this.showPasswordResetMessage = false,
+    this.popOnSuccess = false,
+    this.guestMode = false
   });
 
   @override
@@ -35,6 +36,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -193,35 +196,24 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Initialize providers with the newly authenticated user
       final userId = authProvider.userId;
-      final sessionLogProvider = Provider.of<SessionLogProvider>(
-        context,
-        listen: false,
-      );
-      final catalogProvider = Provider.of<CatalogProvider>(
-        context,
-        listen: false,
-      );
-      final syncStatus = context.read<SyncStatusProvider>();
-      final trashProvider = context.read<TrashProvider>();
+      if (userId == null) return;
+      final coordinator = SignInCoordinator.of(context);
 
-      // Four-step wiring: attach the cloud service, then plug the catalog
-      // into both sync-status and trash, then init.
-      if (userId != null) {
-        syncStatus.attach(SupabaseSyncService(userId: userId));
+      if (widget.popOnSuccess) {
+        // Detour: came from the auth wall. Upgrade the already-running guest
+        // session, then hand `true` back to whoever opened the wall.
+        await coordinator.onSignedIn(userId);
+        if (!mounted) return;
+        Navigator.of(context).pop(true);
+      } else {
+        // Cold start: wire up for the signed-in user and go home.
+        await coordinator.initForUser(userId);
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const RootScreen()),
+        );
       }
-      catalogProvider.attachSyncStatus(syncStatus);
-      catalogProvider.attachTrashProvider(trashProvider);
-      await sessionLogProvider.init(userId: userId);
-      await catalogProvider.init(trash: trashProvider);
-
-      if (!mounted) return;
-
-      // Navigate to home screen
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const RootScreen()));
     } else if (authProvider.errorMessage?.contains('email not confirmed') ==
         true) {
       // Show email not confirmed error
@@ -273,6 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.guestMode ? AppBar() : null,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -403,12 +396,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: context.bodyMedium,
                       ),
                       TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
+                        onPressed: () async {
+                          final ok = await Navigator.of(context).push<bool>(
                             MaterialPageRoute(
-                              builder: (_) => const SignUpScreen(),
+                              builder:
+                                  (_) => SignUpScreen(
+                                    popOnSuccess: widget.popOnSuccess,
+                                  ),
                             ),
                           );
+                          // In detour mode, a successful signup must bubble
+                          // past login back to the wall.
+                          if (widget.popOnSuccess &&
+                              ok == true &&
+                              context.mounted) {
+                            Navigator.of(context).pop(true);
+                          }
                         },
                         child: Text(
                           'Sign up',
@@ -420,6 +423,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
+
+                  // Continue as guest — hidden in detour mode (the user is
+                  // already a guest; backing out of the wall is their "not now").
+                  if (!widget.popOnSuccess) ...[
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: _continueAsGuest,
+                      child: Text(
+                        'Continue as guest',
+                        style: context.titleLargePrimary,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -427,5 +443,15 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _continueAsGuest() async {
+    await GuestModeStore.enable();
+    if (!mounted) return;
+    await SignInCoordinator.of(context).initForGuest();
+    if (!mounted) return;
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const RootScreen()));
   }
 }

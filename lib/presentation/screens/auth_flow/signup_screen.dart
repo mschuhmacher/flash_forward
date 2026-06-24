@@ -10,7 +10,8 @@ import 'package:flutter/gestures.dart';
 import 'package:country_picker/country_picker.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  const SignUpScreen({super.key, this.popOnSuccess = false});
+  final bool popOnSuccess;
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -41,6 +42,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _pageController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -117,14 +120,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       // Navigate to email confirmation screen.
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder:
-              (_) =>
-                  EmailConfirmationScreen(email: _emailController.text.trim()),
-        ),
-        (route) => false,
-      );
+      if (widget.popOnSuccess) {
+        // Detour: keep the confirmation screen on the stack so its success
+        // can pop back up through here to the wall.
+        final ok = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => EmailConfirmationScreen(
+              email: _emailController.text.trim(),
+              popOnSuccess: true,
+            ),
+          ),
+        );
+        if (ok == true && mounted) Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) =>
+                EmailConfirmationScreen(email: _emailController.text.trim()),
+          ),
+          (route) => false,
+        );
+      }
     } else {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(

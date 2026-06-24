@@ -156,12 +156,16 @@ crossing into a later workout's first exercise).
 ```mermaid
 flowchart TD
     subgraph NEXT["calculateNextStop"]
-        N0{In a superset?} -->|No, solo| N1["firstStopAtOrAfter<br>exerciseIndex + 1"]
+        NC{"Phase ==<br>workoutComplete?"} -->|Yes| NCN["null<br>(show finish checkmark)"]
+        NC -->|No| N0{In a superset?}
+        N0 -->|No, solo| N1["firstStopAtOrAfter<br>exerciseIndex + 1"]
         N0 -->|Yes| N2{hasNextInSuperset?}
         N2 -->|Yes| N3["next member,<br>same set"]
         N2 -->|No, last member| N4{"currentSet <<br>effectiveSets?"}
         N4 -->|Yes, more rounds| N5["wrap to groupStart,<br>set + 1"]
         N4 -->|No, last round| N6["firstStopAtOrAfter<br>groupEnd + 1<br>(exit the block)"]
+        N1 -.->|null = exhausted| NW["workoutComplete stop<br>(same indices,<br>phase = workoutComplete)"]
+        N6 -.->|null = exhausted| NW
     end
 
     subgraph PREV["calculatePreviousStop"]
@@ -180,7 +184,10 @@ flowchart TD
 
 - **`firstStopAtOrAfter(workoutIndex, index)`** — the stop at exercise `index`,
   rolling into the next workout's first exercise (`getReady`) if `index` runs
-  off the end, or `null` if the session is exhausted.
+  off the end, or `null` if the session is exhausted. (`calculateNextStop`
+  turns that exhausted-`null` into a `workoutComplete` stop so forward nav lands
+  on the completion screen before the finish checkmark; only when already on
+  that screen does `calculateNextStop` itself return `null`.)
 - **`lastStopBefore(workoutIndex, index)`** — the stop at `index - 1`. When that
   previous exercise is a superset member, it lands on the **group's last member
   at its final round** (`groupEnd`, `currentSet = effectiveSets`), so a single

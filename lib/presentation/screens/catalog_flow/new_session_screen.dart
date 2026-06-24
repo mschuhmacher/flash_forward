@@ -4,6 +4,7 @@ import 'package:flash_forward/models/session.dart';
 import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
+import 'package:flash_forward/presentation/widgets/auth_wall.dart';
 import 'package:flash_forward/presentation/widgets/group_form_card.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
@@ -86,6 +87,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _titleController.dispose();
     _descriptionController.dispose();
     _itemLabelController.dispose();
@@ -140,6 +143,13 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
   }
 
   Future<void> _saveToCatalog(Session session) async {
+    // Reached only for create / editCatalog — both persist, so gate here.
+    final allowed = await requireAuth(
+      context,
+      message: 'save sessions to your catalog',
+    );
+    if (!allowed || !mounted) return;
+
     final catalogProvider = Provider.of<CatalogProvider>(
       context,
       listen: false,
@@ -195,7 +205,12 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
         }
       }
     }
-    if (mounted) Navigator.pop(context);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved to catalog')),
+      );
+      Navigator.pop(context);
+    }
   }
 
   Future<void> _saveWorkoutToCatalog(Workout workout) async {
@@ -207,6 +222,12 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
       );
       return;
     }
+    final allowed = await requireAuth(
+      context,
+      message: 'save workouts to your catalog',
+    );
+    if (!allowed || !mounted) return;
+
     final catalog = Provider.of<CatalogProvider>(context, listen: false);
     final titles = catalog.presetWorkouts.map((w) => w.title).toList();
     String? finalTitle = workout.title;
@@ -443,12 +464,8 @@ class _NewSessionScreenState extends State<NewSessionScreen> {
                             },
                           );
                         },
-                        onReorder: (int oldIndex, int newIndex) {
+                        onReorderItem: (int oldIndex, int newIndex) {
                           setState(() {
-                            if (oldIndex < newIndex) {
-                              newIndex -=
-                                  1; // Since the widget if removed from its old index
-                            }
                             final Workout workout = session.workouts.removeAt(
                               oldIndex,
                             );
