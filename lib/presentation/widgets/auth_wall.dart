@@ -32,12 +32,12 @@ Future<bool> requireAuth(
           SizedBox(height: 32),
           ElevatedButton(
             onPressed: () async {
-              final result = await Navigator.of(context).push<bool>(
+              final result = await Navigator.of(modalContext).push<bool>(
                 MaterialPageRoute(
                   builder: (_) => SignUpScreen(popOnSuccess: true),
                 ),
               );
-              if (!context.mounted) return;
+              if (!modalContext.mounted) return;
               Navigator.pop(modalContext, result);
             },
             child: Text('Create account', style: context.h4.copyWith(color: context.colorScheme.onPrimary)),
@@ -45,12 +45,12 @@ Future<bool> requireAuth(
           SizedBox(height: 16),
           OutlinedButton(
             onPressed: () async {
-              final result = await Navigator.of(context).push<bool>(
+              final result = await Navigator.of(modalContext).push<bool>(
                 MaterialPageRoute(
-                  builder: (_) => LoginScreen(popOnSuccess: true),
+                  builder: (_) => LoginScreen(popOnSuccess: true, guestMode: true,),
                 ),
               );
-              if (!context.mounted) return;
+              if (!modalContext.mounted) return;
               Navigator.pop(modalContext, result);
             },
             child: Text('Log in', style: context.titleLargePrimary),
