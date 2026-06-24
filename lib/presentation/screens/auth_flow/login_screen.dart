@@ -13,6 +13,7 @@ class LoginScreen extends StatefulWidget {
   final bool showEmailConfirmedMessage;
   final bool showPasswordResetMessage;
   final bool popOnSuccess;
+  final bool guestMode;
 
   const LoginScreen({
     super.key,
@@ -20,6 +21,7 @@ class LoginScreen extends StatefulWidget {
     this.showEmailConfirmedMessage = false,
     this.showPasswordResetMessage = false,
     this.popOnSuccess = false,
+    this.guestMode = false
   });
 
   @override
@@ -263,6 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.guestMode ? AppBar() : null,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -396,13 +399,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () async {
                           final ok = await Navigator.of(context).push<bool>(
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  SignUpScreen(popOnSuccess: widget.popOnSuccess),
+                              builder:
+                                  (_) => SignUpScreen(
+                                    popOnSuccess: widget.popOnSuccess,
+                                  ),
                             ),
                           );
                           // In detour mode, a successful signup must bubble
                           // past login back to the wall.
-                          if (widget.popOnSuccess && ok == true && context.mounted) {
+                          if (widget.popOnSuccess &&
+                              ok == true &&
+                              context.mounted) {
                             Navigator.of(context).pop(true);
                           }
                         },
@@ -423,7 +430,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: _continueAsGuest,
-                      child: Text('Continue as guest', style: context.titleLargePrimary),
+                      child: Text(
+                        'Continue as guest',
+                        style: context.titleLargePrimary,
+                      ),
                     ),
                   ],
                 ],
