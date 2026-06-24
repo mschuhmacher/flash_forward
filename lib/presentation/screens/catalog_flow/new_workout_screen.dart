@@ -9,6 +9,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/add_item_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/superset_modal.dart';
+import 'package:flash_forward/presentation/widgets/auth_wall.dart';
 import 'package:flash_forward/presentation/widgets/group_form_card.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
@@ -34,11 +35,13 @@ class NewWorkoutScreen extends StatefulWidget {
   /// or catalog). Leave false when used as a sub-editor inside another form
   /// (e.g. editing a workout within a session).
   final bool persistToProvider;
+  final Map<String, GlobalKey> onboardingKeys;
 
   const NewWorkoutScreen({
     super.key,
     this.workout,
     this.persistToProvider = false,
+    this.onboardingKeys = const {},
   });
 
   @override
@@ -102,6 +105,8 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _titleController.dispose();
     _descriptionController.dispose();
     _itemLabelController.dispose();
@@ -143,6 +148,13 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             Provider.of<AuthProvider>(context, listen: false).userId,
       );
       if (widget.persistToProvider) {
+        // Gate only the persisting path; a nested editor never gates.
+        final allowed = await requireAuth(
+          context,
+          message: 'save workouts to your catalog',
+        );
+        if (!allowed || !mounted) return;
+
         final catalogProvider = Provider.of<CatalogProvider>(
           context,
           listen: false,
@@ -201,6 +213,11 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
         }
       }
       if (mounted) {
+        if (widget.persistToProvider) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Saved to catalog')));
+        }
         Navigator.pop(context, (workout: workout, pending: _pending));
       }
     }
@@ -223,7 +240,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             ? exercise
             : exercise.copyWith(title: finalTitle);
     await catalog.upsertExercise(toSave);
-    
+
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -424,8 +441,6 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
   /// or placing one block inside another) snap back with a snackbar.
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
-      if (oldIndex < newIndex) newIndex -= 1;
-
       final exercises = List<Exercise>.from(_workout.exercises);
       final dragged = exercises[oldIndex];
       final draggedSuperset = supersetForExercise(_workout, dragged.id);
@@ -712,6 +727,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                     )
                     : Expanded(
                       child: ReorderableListView.builder(
+                        key: widget.onboardingKeys['exerciseList'],
                         padding: EdgeInsets.only(top: 4, bottom: 16),
                         itemCount: workout.exercises.length,
                         itemBuilder: (BuildContext context, int index) {
@@ -814,7 +830,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                             ),
                           );
                         },
-                        onReorder: _onReorder,
+                        onReorderItem: _onReorder,
                         onReorderStart: (index) {
                           final exercise = _workout.exercises[index];
                           final ss = _supersetForExercise(exercise);

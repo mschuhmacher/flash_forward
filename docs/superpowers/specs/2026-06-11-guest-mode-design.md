@@ -1,7 +1,7 @@
 # Guest Mode (Demo Before Sign-In) — Design
 
 **Date:** 2026-06-11
-**Status:** Approved by user (pending spec review)
+**Status:** Implemented (Tasks 1–12); manual device walkthrough pending (Task 13)
 **Depends on:** caller-wires init refactor (`refactor/preset-provider` branch) — `CatalogProvider.init()` without userId, `refreshAfterSignIn()` seams on `CatalogProvider` and `TrashProvider`.
 
 ## Goal

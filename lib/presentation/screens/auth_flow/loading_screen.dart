@@ -1,12 +1,9 @@
 import 'package:flash_forward/presentation/screens/root_screen.dart';
-import 'package:flash_forward/core/sync/sync_status_provider.dart';
-import 'package:flash_forward/features/catalog/trash_provider.dart';
-import 'package:flash_forward/core/sync/supabase_sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/features/auth/auth_provider.dart';
-import 'package:flash_forward/features/catalog/catalog_provider.dart';
-import 'package:flash_forward/features/session_log/session_log_provider.dart';
+import 'package:flash_forward/features/auth/guest_mode_store.dart';
+import 'package:flash_forward/features/auth/sign_in_coordinator.dart';
 import 'package:flash_forward/core/settings_provider.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -39,28 +36,30 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
     if (!mounted) return;
 
-    // Navigate based on auth state
-    if (authProvider.isAuthenticated) {
-      if (!authProvider.isEmailConfirmed) {
-        // User exists but email not confirmed - sign out and redirect to login
-        await authProvider.signOut();
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder:
-                (context) =>
-                    const LoginScreen(showEmailConfirmationMessage: true),
-          ),
-        );
-        return;
-      }
-      // Email confirmed - proceed to home
+    // Authenticated but email not confirmed: sign out, back to login. Checked
+    // here (and in _loadData) before any provider wiring, so we never half-init
+    // for a user we're about to sign out.
+    if (authProvider.isAuthenticated && !authProvider.isEmailConfirmed) {
+      await authProvider.signOut();
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const RootScreen()),
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(showEmailConfirmationMessage: true),
+        ),
+      );
+      return;
+    }
+
+    // Authenticated, or a remembered guest → home. Otherwise → login.
+    if (authProvider.isAuthenticated || await GuestModeStore.isEnabled()) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const RootScreen()),
       );
     } else {
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
   }
@@ -72,43 +71,20 @@ class _LoadingScreenState extends State<LoadingScreen> {
     await authProvider.init();
 
     if (!mounted) return;
-    final settingsProvider = Provider.of<SettingsProvider>(
-      context,
-      listen: false,
-    );
-    await settingsProvider.init();
+    // Settings init runs once regardless of which route is taken; it stays
+    // here rather than in the coordinator.
+    await Provider.of<SettingsProvider>(context, listen: false).init();
+    if (!mounted) return;
 
-    // If user is authenticated, load their data
-    if (authProvider.isAuthenticated) {
-      if (!mounted) return;
-
+    final coordinator = SignInCoordinator.of(context);
+    if (authProvider.isAuthenticated && authProvider.isEmailConfirmed) {
       final userId = authProvider.userId;
-
-      final sessionLogProvider = Provider.of<SessionLogProvider>(
-        context,
-        listen: false,
-      );
-      final catalogProvider = Provider.of<CatalogProvider>(
-        context,
-        listen: false,
-      );
-      final syncStatus = context.read<SyncStatusProvider>();
-      final trashProvider = context.read<TrashProvider>();
-
-      // Four-step wiring: attach the cloud service, then plug the catalog
-      // into both sync-status and trash, then init.
-      if (userId != null) {
-        syncStatus.attach(SupabaseSyncService(userId: userId));
-      }
-      catalogProvider.attachSyncStatus(syncStatus);
-      catalogProvider.attachTrashProvider(trashProvider);
-      await sessionLogProvider.init(userId: userId);
-      await catalogProvider.init(trash: trashProvider);
-
-      // Process any pending sync operations from previous offline sessions
-      await sessionLogProvider.processPendingSync();
-      await syncStatus.processPendingSync();
+      if (userId != null) await coordinator.initForUser(userId);
+    } else if (await GuestModeStore.isEnabled()) {
+      await coordinator.initForGuest();
     }
+    // Unconfirmed-email or not-yet-guest: no provider wiring; _initializeApp
+    // routes to login.
   }
 
   @override

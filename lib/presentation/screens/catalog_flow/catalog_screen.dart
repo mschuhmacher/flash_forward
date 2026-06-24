@@ -6,6 +6,7 @@ import 'package:flash_forward/models/workout.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_exercise_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_session_screen.dart';
 import 'package:flash_forward/presentation/screens/catalog_flow/new_workout_screen.dart';
+import 'package:flash_forward/presentation/widgets/auth_wall.dart';
 import 'package:flash_forward/presentation/widgets/search_filter_row_program_screen.dart';
 import 'package:flash_forward/features/catalog/catalog_provider.dart';
 import 'package:flash_forward/features/catalog/trash_provider.dart';
@@ -22,7 +23,13 @@ enum ItemType { sessions, workouts, exercises }
 class CatalogScreen extends StatefulWidget {
   final TabController tabController;
 
-  const CatalogScreen({super.key, required this.tabController});
+  final Map<String, GlobalKey> onboardingKeys;
+
+  const CatalogScreen({
+    super.key,
+    this.onboardingKeys = const {},
+    required this.tabController,
+  });
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -31,27 +38,39 @@ class CatalogScreen extends StatefulWidget {
 class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) {
+    // final tabController = widget.tabController;
+    // tabController.
+
     return TabBarView(
       controller: widget.tabController,
-      children: const [
-        ProgramListview(itemType: ItemType.sessions),
-        ProgramListview(itemType: ItemType.workouts),
-        ProgramListview(itemType: ItemType.exercises),
+      children: [
+        // Only the Sessions tab gets the onboarding keys since the screen opens on this tab.
+        const CatalogListview(itemType: ItemType.sessions),
+         CatalogListview(
+          itemType: ItemType.workouts,
+          onboardingKeys: widget.onboardingKeys,
+        ),
+        const CatalogListview(itemType: ItemType.exercises),
       ],
     );
   }
 }
 
-class ProgramListview extends StatefulWidget {
-  const ProgramListview({super.key, required this.itemType});
+class CatalogListview extends StatefulWidget {
+  const CatalogListview({
+    super.key,
+    required this.itemType,
+    this.onboardingKeys = const {},
+  });
 
   final ItemType itemType;
+  final Map<String, GlobalKey> onboardingKeys;
 
   @override
-  State<ProgramListview> createState() => _ProgramListviewState();
+  State<CatalogListview> createState() => _CatalogListviewState();
 }
 
-class _ProgramListviewState extends State<ProgramListview> {
+class _CatalogListviewState extends State<CatalogListview> {
   String _query = '';
   String _filterLabel = '';
 
@@ -67,7 +86,10 @@ class _ProgramListviewState extends State<ProgramListview> {
   }
 
   Future<void> _copyItem(dynamic item) async {
-    final catalogProvider = Provider.of<CatalogProvider>(context, listen: false);
+    final catalogProvider = Provider.of<CatalogProvider>(
+      context,
+      listen: false,
+    );
     final userId = supabase.auth.currentUser?.id;
     switch (widget.itemType) {
       case ItemType.sessions:
@@ -89,7 +111,18 @@ class _ProgramListviewState extends State<ProgramListview> {
   }
 
   Future<void> _moveToTrash(dynamic item) async {
-    final catalogProvider = Provider.of<CatalogProvider>(context, listen: false);
+    // Deleting a stock default forks it into a user item — a persisted
+    // mutation — so gate the whole delete behind an account.
+    final allowed = await requireAuth(
+      context,
+      message: 'customize your catalog',
+    );
+    if (!allowed || !mounted) return;
+
+    final catalogProvider = Provider.of<CatalogProvider>(
+      context,
+      listen: false,
+    );
     final trashProvider = context.read<TrashProvider>();
     final kind = switch (widget.itemType) {
       ItemType.sessions => TrashKind.session,
@@ -219,6 +252,7 @@ class _ProgramListviewState extends State<ProgramListview> {
         return Column(
           children: [
             SearchFilterRow(
+              key: widget.onboardingKeys['catalogSearchFilter'],
               onQueryChanged: (value) => setState(() => _query = value),
               onFilterLabelChanged:
                   (value) => setState(() => _filterLabel = value ?? ''),
@@ -239,6 +273,8 @@ class _ProgramListviewState extends State<ProgramListview> {
                     final item = filteredListItems[index];
 
                     return CatalogListviewCard(
+                      key:
+                          index == 0 ? widget.onboardingKeys['listItem'] : null,
                       filteredListItem: item,
                       itemType: widget.itemType,
                       onCopy: () => _copyItem(item),
@@ -281,7 +317,10 @@ class CatalogListviewCard extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) => NewSessionScreen(mode: NewSessionScreenMode.editCatalog, session: filteredListItem),
+                      (context) => NewSessionScreen(
+                        mode: NewSessionScreenMode.editCatalog,
+                        session: filteredListItem,
+                      ),
                 ),
               );
 

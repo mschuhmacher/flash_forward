@@ -1036,11 +1036,11 @@ class SessionStateProvider extends ChangeNotifier {
   void exitOvertime() {
     if (_progress.phase != TimerPhase.overtime) return;
 
-    SessionProgress? _nextState = SessionStateMachine.calculateNextState(
+    SessionProgress? nextState = SessionStateMachine.calculateNextState(
       _progress.copyWith(phase: _overtimeSourcePhase),
       _activeSession!,
     );
-    if (_nextState == null) {
+    if (nextState == null) {
       _onPhaseTransition(
         TimerPhase.overtime,
         TimerPhase.workoutComplete,
@@ -1050,7 +1050,7 @@ class SessionStateProvider extends ChangeNotifier {
       _remaining = Duration.zero;
       _sound.cancelAll();
     } else {
-      final target = _nextState.copyWith(phase: TimerPhase.getReady);
+      final target = nextState.copyWith(phase: TimerPhase.getReady);
       _onPhaseTransition(TimerPhase.overtime, target.phase, target);
       _progress = target;
       _remaining = const Duration(seconds: 10);

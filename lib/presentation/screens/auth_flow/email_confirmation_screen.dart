@@ -1,6 +1,7 @@
 import 'package:flash_forward/presentation/screens/auth_flow/loading_screen.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/login_screen.dart';
 import 'package:flash_forward/features/auth/auth_provider.dart';
+import 'package:flash_forward/features/auth/sign_in_coordinator.dart';
 import 'package:flash_forward/features/auth/auth_service.dart';
 import 'package:flash_forward/themes/app_colors.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
@@ -11,8 +12,13 @@ import 'package:provider/provider.dart';
 
 class EmailConfirmationScreen extends StatefulWidget {
   final String email;
+  final bool popOnSuccess;
 
-  const EmailConfirmationScreen({required this.email, super.key});
+  const EmailConfirmationScreen({
+    required this.email,
+    this.popOnSuccess = false,
+    super.key,
+  });
 
   @override
   State<EmailConfirmationScreen> createState() =>
@@ -45,14 +51,16 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
       // Timed out — send the user back to login with the "please confirm" message
       timer.cancel();
       _pollingTimer?.cancel();
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder:
-                (_) => const LoginScreen(showEmailConfirmationMessage: true),
-          ),
-        );
+      if (!mounted) return;
+      if (widget.popOnSuccess) {
+        Navigator.of(context).pop(false);
+        return;
       }
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(showEmailConfirmationMessage: true),
+        ),
+      );
     });
   }
 
@@ -70,6 +78,23 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
           widget.email,
         );
         if (!mounted) return;
+
+        if (widget.popOnSuccess) {
+          // Detour: upgrade the guest session in place, then pop the whole
+          // auth detour back to the wall with the result.
+          if (success) {
+            final userId = _authProvider.userId;
+            if (userId != null) {
+              await SignInCoordinator.of(context).onSignedIn(userId);
+            }
+            if (!mounted) return;
+            Navigator.of(context).pop(true);
+          } else {
+            Navigator.of(context).pop(false);
+          }
+          return;
+        }
+
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder:
@@ -117,6 +142,10 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
             SizedBox(height: 16),
             OutlinedButton(
               onPressed: () {
+                if (widget.popOnSuccess) {
+                  Navigator.of(context).pop(false);
+                  return;
+                }
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(builder: (context) => LoginScreen()),
                 );

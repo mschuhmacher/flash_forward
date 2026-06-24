@@ -47,6 +47,8 @@ class _RenameOnCollisionDialogState extends State<_RenameOnCollisionDialog> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _controller.dispose();
     super.dispose();
   }

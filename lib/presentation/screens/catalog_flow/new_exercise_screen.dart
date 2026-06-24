@@ -8,6 +8,7 @@ import 'package:flash_forward/presentation/widgets/increment_decrement_number.da
 import 'package:flash_forward/presentation/widgets/keyboard_dismiss_button.dart';
 import 'package:flash_forward/presentation/widgets/label_dropdownbutton.dart';
 import 'package:flash_forward/presentation/widgets/propagate_changes_dialog.dart';
+import 'package:flash_forward/presentation/widgets/auth_wall.dart';
 import 'package:flash_forward/features/auth/auth_provider.dart';
 import 'package:flash_forward/features/catalog/edit_commit_controller.dart';
 import 'package:flash_forward/features/catalog/catalog_provider.dart';
@@ -169,6 +170,8 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
 
   @override
   void dispose() {
+    // Close any live IME connection before disposing controllers.
+    FocusManager.instance.primaryFocus?.unfocus();
     _titleController.dispose();
     _descriptionController.dispose();
     _equipmentController.dispose();
@@ -235,6 +238,14 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
                 : _notesController.text.trim(),
       );
       if (widget.persistToProvider) {
+        // Gate only the persisting path — a nested editor (persistToProvider
+        // false) pops its result up without saving and must not gate.
+        final allowed = await requireAuth(
+          context,
+          message: 'save exercises to your catalog',
+        );
+        if (!allowed || !mounted) return;
+
         final catalogProvider = Provider.of<CatalogProvider>(
           context,
           listen: false,
@@ -271,6 +282,11 @@ class _NewExerciseScreenState extends State<NewExerciseScreen> {
         }
       }
       if (mounted) {
+        if (widget.persistToProvider) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved to catalog')),
+          );
+        }
         Navigator.pop(
           context,
           NewExerciseResult(
