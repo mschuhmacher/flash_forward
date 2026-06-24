@@ -37,7 +37,7 @@ final TextTheme appTextTheme = TextTheme(
   ),
   bodyMedium: TextStyle(
     // Secondary body text
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: FontWeight.normal,
   ),
   labelLarge: TextStyle(

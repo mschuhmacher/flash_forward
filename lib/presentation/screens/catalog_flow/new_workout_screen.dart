@@ -35,11 +35,13 @@ class NewWorkoutScreen extends StatefulWidget {
   /// or catalog). Leave false when used as a sub-editor inside another form
   /// (e.g. editing a workout within a session).
   final bool persistToProvider;
+  final Map<String, GlobalKey> onboardingKeys;
 
   const NewWorkoutScreen({
     super.key,
     this.workout,
     this.persistToProvider = false,
+    this.onboardingKeys = const {},
   });
 
   @override
@@ -212,9 +214,9 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
       }
       if (mounted) {
         if (widget.persistToProvider) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Saved to catalog')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Saved to catalog')));
         }
         Navigator.pop(context, (workout: workout, pending: _pending));
       }
@@ -238,7 +240,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
             ? exercise
             : exercise.copyWith(title: finalTitle);
     await catalog.upsertExercise(toSave);
-    
+
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -725,6 +727,7 @@ class _NewWorkoutScreenState extends State<NewWorkoutScreen> {
                     )
                     : Expanded(
                       child: ReorderableListView.builder(
+                        key: widget.onboardingKeys['exerciseList'],
                         padding: EdgeInsets.only(top: 4, bottom: 16),
                         itemCount: workout.exercises.length,
                         itemBuilder: (BuildContext context, int index) {

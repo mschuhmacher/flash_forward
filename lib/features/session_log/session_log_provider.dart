@@ -150,7 +150,7 @@ class SessionLogProvider extends ChangeNotifier {
 
     if (_syncService != null) {
       try {
-        await _syncService!.deleteSession(sessionId);
+        await _syncService!.deleteLoggedSession(sessionId);
       } catch (e, stackTrace) {
         Sentry.captureException(e, stackTrace: stackTrace);
       }

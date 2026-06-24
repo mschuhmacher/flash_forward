@@ -414,7 +414,7 @@ class CatalogProvider extends ChangeNotifier {
       cloudOp:
           _syncStatus?.service == null
               ? null
-              : () => _syncStatus!.service!.deleteSession(id),
+              : () => _syncStatus!.service!.deleteUserSession(id),
       onCloudError:
           (e, stackTrace) => Sentry.captureException(e, stackTrace: stackTrace),
     );
