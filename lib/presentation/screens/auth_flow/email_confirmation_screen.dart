@@ -121,42 +121,45 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.mail_outline_rounded,
-              size: 80,
-              color: context.colorScheme.primary,
-            ),
-            SizedBox(height: 16),
-            Text('Check your email', style: context.h1),
-            SizedBox(height: 16),
-            Text('The confirmation email was sent to: \n${widget.email}'),
-            SizedBox(height: 16),
-            Text(
-              "Please check your spam folder if you can't find the confirmation email", style: context.titleMedium,
-            ),
-            SizedBox(height: 16),
-            Text(formatCountdown(_remainingToResend), style: context.h3),
-            SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () {
-                if (widget.popOnSuccess) {
-                  Navigator.of(context).pop(false);
-                  return;
-                }
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                );
-              },
-              child: Text('Go back to login', style: context.h3),
-            ),
-            SizedBox(height: 16),
-            Text('Awaiting confirmation...', style: context.titleLarge),
-            SizedBox(height: 16),
-            SizedBox(height: 16),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.mail_outline_rounded,
+                size: 80,
+                color: context.colorScheme.primary,
+              ),
+              SizedBox(height: 16),
+              Text('Check your email', style: context.h1),
+              SizedBox(height: 16),
+              Text('The confirmation email was sent to: \n${widget.email}'),
+              SizedBox(height: 16),
+              Text(
+                "Please check your spam folder if you can't find the confirmation email", style: context.titleMedium,
+              ),
+              SizedBox(height: 16),
+              Text(formatCountdown(_remainingToResend), style: context.h3),
+              SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: () {
+                  if (widget.popOnSuccess) {
+                    Navigator.of(context).pop(false);
+                    return;
+                  }
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (context) => LoginScreen()),
+                  );
+                },
+                child: Text('Go back to login', style: context.h3),
+              ),
+              SizedBox(height: 16),
+              Text('Awaiting confirmation...', style: context.titleLarge),
+              SizedBox(height: 16),
+              SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
