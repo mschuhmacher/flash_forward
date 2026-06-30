@@ -6,6 +6,8 @@ import 'package:flash_forward/models/user_profile.dart';
 
 enum EmailStatus { notFound, foundButNotConfirmed, confirmed }
 
+enum ResendResult { sent, rateLimited, failed }
+
 class AuthService {
   // Sign up with email and password
   Future<AuthResponse> signUp({
@@ -84,11 +86,21 @@ class AuthService {
     }
   }
 
-  Future<void> resendConfirmationEmail({required String email}) async {
+  Future<ResendResult> resendConfirmationEmail({required String email}) async {
     try {
       await supabase.auth.resend(type: OtpType.signup, email: email);
+      return ResendResult.sent;
+    } on AuthException catch (e) {
+      // Rate limiting is expected when users tap resend repeatedly — not a bug.
+      if (e.message.toLowerCase().contains('rate limit') ||
+          e.code == 'over_email_send_rate_limit') {
+        return ResendResult.rateLimited;
+      }
+      Sentry.captureException(e);
+      return ResendResult.failed;
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
+      return ResendResult.failed;
     }
   }
 

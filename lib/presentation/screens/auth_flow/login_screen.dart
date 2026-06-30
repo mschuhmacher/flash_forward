@@ -4,6 +4,7 @@ import 'package:flash_forward/presentation/screens/root_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flash_forward/features/auth/auth_provider.dart';
+import 'package:flash_forward/features/auth/auth_service.dart';
 import 'package:flash_forward/presentation/screens/auth_flow/signup_screen.dart';
 import 'package:flash_forward/themes/app_text_theme.dart';
 import 'package:flash_forward/themes/app_colors.dart';
@@ -214,19 +215,24 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const RootScreen()),
         );
       }
-    } else if (authProvider.errorMessage?.contains('email not confirmed') ==
-        true) {
-      // Show email not confirmed error
+    } else if (authProvider.lastSignInNeedsConfirmation) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Your email address was not confirmed, please check your inbox',
+            'Please confirm your email before signing in. '
+            'Check your inbox or spam folder.',
             style: context.bodyLarge.copyWith(
               color: context.colorScheme.onPrimary,
             ),
             textAlign: TextAlign.center,
           ),
           backgroundColor: context.colorScheme.error,
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Resend',
+            textColor: context.colorScheme.onPrimary,
+            onPressed: () => _resendConfirmation(_emailController.text.trim()),
+          ),
         ),
       );
     } else if (authProvider.errorMessage?.contains(
@@ -260,6 +266,33 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _resendConfirmation(String email) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await authProvider.resendConfirmationEmail(email);
+    if (!mounted) return;
+
+    final (message, color) = switch (result) {
+      ResendResult.sent => (
+        'Confirmation email sent. Check your inbox or spam folder.',
+        Colors.green,
+      ),
+      ResendResult.rateLimited => (
+        'Please wait a minute before requesting another email.',
+        context.colorScheme.error,
+      ),
+      ResendResult.failed => (
+        'Could not send email. Please try again later.',
+        context.colorScheme.error,
+      ),
+    };
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
   }
 
   @override

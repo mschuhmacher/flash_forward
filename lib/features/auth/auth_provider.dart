@@ -15,12 +15,14 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   String? _pendingSignupPassword;
+  bool _lastSignInNeedsConfirmation = false;
 
   UserProfile? get userProfile => _userProfile;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _authService.isSignedIn();
   bool get isEmailConfirmed => _authService.isEmailConfirmed();
+  bool get lastSignInNeedsConfirmation => _lastSignInNeedsConfirmation;
   String? get userId => _userProfile?.id;
 
   /// Initialize auth state - call this on app startup
@@ -123,6 +125,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> signIn({required String email, required String password}) async {
     _isLoading = true;
     _errorMessage = null;
+    _lastSignInNeedsConfirmation = false;
     notifyListeners();
 
     try {
@@ -134,6 +137,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e, stackTrace) {
       if (e is AuthException && e.code == 'email_not_confirmed') {
         // Expected: user hasn't confirmed their email yet. Not a bug.
+        _lastSignInNeedsConfirmation = true;
         _errorMessage =
             'Please confirm your email address before signing in. '
             'Check your inbox or spam folder for the confirmation link.';
@@ -172,8 +176,8 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> resendConfirmationEmail(String email) async {
-    await _authService.resendConfirmationEmail(email: email);
+  Future<ResendResult> resendConfirmationEmail(String email) {
+    return _authService.resendConfirmationEmail(email: email);
   }
 
   /// Silently polls for email confirmation using the password stored during signup.
