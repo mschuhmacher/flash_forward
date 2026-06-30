@@ -132,8 +132,15 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e, stackTrace) {
-      Sentry.captureException(e, stackTrace: stackTrace);
-      _errorMessage = e.toString();
+      if (e is AuthException && e.code == 'email_not_confirmed') {
+        // Expected: user hasn't confirmed their email yet. Not a bug.
+        _errorMessage =
+            'Please confirm your email address before signing in. '
+            'Check your inbox or spam folder for the confirmation link.';
+      } else {
+        Sentry.captureException(e, stackTrace: stackTrace);
+        _errorMessage = e.toString();
+      }
       _isLoading = false;
       notifyListeners();
       return false;
