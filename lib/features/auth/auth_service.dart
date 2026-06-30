@@ -45,6 +45,13 @@ class AuthService {
 
       return response;
     } catch (e, stackTrace) {
+      // Email format rejected by Supabase — user input error, not a bug.
+      // Rethrow without reporting; AuthProvider surfaces a friendly message.
+      if (e is AuthException &&
+          e.code == 'validation_failed' &&
+          e.message.toLowerCase().contains('invalid format')) {
+        rethrow;
+      }
       Sentry.captureException(e, stackTrace: stackTrace);
       rethrow;
     }

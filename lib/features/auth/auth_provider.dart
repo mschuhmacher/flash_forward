@@ -104,6 +104,11 @@ class AuthProvider extends ChangeNotifier {
               e.code == 'over_email_send_rate_limit')) {
         _errorMessage =
             'Too many sign-up attempts. Please wait a few minutes before trying again.';
+      } else if (e is AuthException &&
+          e.code == 'validation_failed' &&
+          e.message.toLowerCase().contains('invalid format')) {
+        // Supabase rejected the email format — user input error, not a bug.
+        _errorMessage = 'Please enter a valid email address.';
       } else {
         Sentry.captureException(e, stackTrace: stackTrace);
         _errorMessage = e.toString();
